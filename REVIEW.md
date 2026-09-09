@@ -194,18 +194,19 @@ documentación (`SECURITY.md`, `CONTRIBUTING.md`, este archivo).
 - Validación zod en `casos` y `estudiantes` (§4.3).
 - `src/lib/scopedDb.ts` + test de aislamiento con base real (§3.2, §4.2).
 
+- Exportación de respaldo por institución para ADMIN/DECE (§1.3).
+
 **Pendiente (tú)**
 1. Rotar las credenciales expuestas (§1.2) y cambiar contraseñas de SUPERADMIN.
 
 **Siguiente**
-2. Exportación de respaldo filtrada por institución para ADMIN (§1.3);
-   `/api/reportes/export` ya cubre el caso de reportes.
-3. Migrar el resto de comprobaciones de pertenencia y listados a `scopedDb` (§3.2).
-4. Sentry + eliminar `catch {}` mudos (§4.6).
-5. Esquemas zod en el resto de server actions (§4.3).
-6. Congelar `schema.sql` como baseline; quitar `safeAddColumn` y el
-   `case_closure_reports` duplicado (§3.1).
-7. Decisión sobre IA + datos de menores (§1.8) y cifrado en reposo (§3.3).
+2. Migrar el resto de comprobaciones de pertenencia y listados a `scopedDb` (§3.2).
+3. Sentry + eliminar `catch {}` mudos (§4.6). Requiere un DSN.
+4. Esquemas zod en el resto de server actions (§4.3).
+5. Congelar `schema.sql` como baseline; quitar `safeAddColumn` y el
+   `case_closure_reports` duplicado en `db.ts` (§3.1). Hacer contra una
+   instancia real para no cambiar el esquema de instalaciones nuevas.
+6. Decisión sobre IA + datos de menores (§1.8) y cifrado en reposo (§3.3).
 
 **Más adelante**
 11. CSP con nonce vía middleware (§1.5).
