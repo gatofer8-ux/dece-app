@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
+import { requireOwnedCase } from "@/lib/scopedDb";
 import { draftText, draftBimonthlyMatrixDraft, draftObservationComment, draftObservationGlobalAnalysis, draftCorresponsibilityDifficulty, draftCorresponsibilityLegalFramework, draftCorresponsibilityCommitments, isAiConfigured } from "@/lib/ai";
 import type { CorresponsibilityConflictType } from "@/lib/types";
 import type { CaseFileRow, StudentRow, ViolenceReportRow, CaseActionRow } from "@/lib/types";
@@ -19,11 +20,6 @@ const RISK_TYPE_LABELS: Record<string, string> = {
   CONECTIVIDAD_ACCESO_EDUCATIVO: "Conectividad / acceso educativo",
   OTRO: "Otro",
 };
-
-function requireOwnedCase(caseId: string, institutionId: string) {
-  const row = db.prepare("SELECT id FROM case_files WHERE id = ? AND institution_id = ?").get(caseId, institutionId);
-  if (!row) throw new Error("Caso no encontrado en tu institución.");
-}
 
 /** Arma un contexto completo y 360 grados del caso integrando todos los documentos registrados. */
 function buildCaseContext(caseId: string, institutionId: string): string {

@@ -36,6 +36,11 @@ CI ejecuta lo mismo más `npm run build` (ver `.github/workflows/ci.yml`).
 - **Server actions** (`"use server"`): siempre `requireRole([...])` +
   `requireInstitutionId(session)` + verificación de pertenencia del recurso a la
   institución antes de tocar la base. Consultas **parametrizadas** siempre.
+  Para comprobar pertenencia usa `src/lib/scopedDb.ts`
+  (`requireOwned("tabla", id, institutionId, "Etiqueta")`,
+  `requireOwnedCase`, `requireOwnedStudent`, `isOwned`, `findOwned`) en lugar de
+  reescribir el `SELECT ... WHERE id = ? AND institution_id = ?` a mano. La
+  tabla debe estar en la lista blanca del módulo.
 - Lee `FormData` con los helpers de `src/lib/formData.ts`, no reimplementes
   `str`/`int` en cada archivo. Para formularios grandes, valida con
   `parseForm(fd, zodSchema)`.

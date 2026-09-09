@@ -14,12 +14,7 @@ import { parseOfficialObservationData } from "@/lib/observationSheet";
 import { CONFLICT_TYPES_CATALOG } from "@/lib/corresponsibilityCatalog";
 import type { ChecklistCategory, ObservationContext, ObservationSubnivel, ObservationRiskLevel, CorresponsibilityConflictType } from "@/lib/types";
 import { str, int, getAllStr } from "@/lib/formData";
-
-/** Verifica que el caso pertenezca a la institución de la sesión; lanza error si no. */
-function requireOwnedCase(caseId: string, institutionId: string) {
-  const row = db.prepare("SELECT id FROM case_files WHERE id = ? AND institution_id = ?").get(caseId, institutionId);
-  if (!row) throw new Error("Caso no encontrado en tu institución.");
-}
+import { requireOwnedCase } from "@/lib/scopedDb";
 
 export async function createCase(formData: FormData) {
   const session = await requireRole(["ADMIN", "DECE"]);

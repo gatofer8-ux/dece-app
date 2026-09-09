@@ -94,11 +94,15 @@ base real. El bloque legado se conserva; lo nuevo se apila encima.
 → **Pendiente:** congelar `schema.sql` como baseline, dejar de añadir
 `safeAddColumn`, eliminar la definición duplicada de `case_closure_reports`.
 
-### 3.2 Aislamiento multi-tenant solo por convención — **[pendiente]**
+### 3.2 Aislamiento multi-tenant solo por convención — **[parcial]**
 El filtro `institution_id = ?` está repetido a mano en cientos de consultas.
-→ Capa de repositorio / helper que **siempre** inyecte el ámbito de institución
-(p. ej. `scopedDb(institutionId).cases.find(...)`), en vez de confiar en que
-cada consulta lo recuerde. El hallazgo 1.3 es exactamente este patrón fallando.
+→ **[hecho]** `src/lib/scopedDb.ts`: `requireOwned` / `findOwned` / `isOwned`
+con lista blanca de tablas; `requireOwnedCase` y `requireOwnedStudent`. El
+helper `requireOwnedCase` estaba copiado idéntico en 4 archivos — ahora se
+importa. Test de integración (`scopedDb.test.ts`) con **dos instituciones y
+base SQLite real** que verifica que A nunca ve recursos de B.
+→ **Pendiente:** migrar el resto de comprobaciones de pertenencia y los
+listados (`SELECT ... WHERE institution_id = ?`) al helper.
 
 ### 3.3 SQLite archivo único vs. "nivel distrital" — **[a vigilar]**
 Suficiente para una institución. Para varias con concurrencia real, respaldos y
@@ -120,10 +124,11 @@ frecuentes. Revisar el resto con `EXPLAIN QUERY PLAN` sobre las vistas pesadas
 build y en CI.
 
 ### 4.2 Sin tests — **[parcial]**
-→ Vitest + 21 tests (matriz de permisos RBAC, validación de entorno, helpers de
-formulario). `npm test` / `npm run check`.
-→ **Pendiente:** tests de integración de aislamiento entre instituciones y de
-las server actions críticas (crear/cerrar caso, suscripciones).
+→ Vitest + 30 tests: matriz de permisos RBAC, validación de entorno, helpers de
+formulario, hash de PIN, y **aislamiento multi-institución con base SQLite real**
+(`scopedDb.test.ts`). `npm test` / `npm run check`.
+→ **Pendiente:** tests de las server actions críticas de extremo a extremo
+(crear/cerrar caso, renovación de suscripciones).
 
 ### 4.3 `zod` instalado pero usado en 0 archivos — **[parcial]**
 Las 42 server actions parsean `FormData` a mano sin validación.
@@ -182,10 +187,11 @@ SUPERADMIN, cabeceras, fix del reseteo de contraseñas, ESLint + Vitest + CI,
 runner de migraciones + índices, helpers de FormData, Dockerfile multi-etapa,
 documentación (`SECURITY.md`, `CONTRIBUTING.md`, este archivo).
 
-**Segunda ronda de cambios — [hecho]**
+**Segunda/tercera ronda de cambios — [hecho]**
 - Expiración de suscripciones fuera de `getSession`, al cron (§1.6).
 - `pin_code` hasheado con bcrypt (§1.7).
-- Esquemas/validación zod en `casos` y `estudiantes` (§4.3).
+- Validación zod en `casos` y `estudiantes` (§4.3).
+- `src/lib/scopedDb.ts` + test de aislamiento con base real (§3.2, §4.2).
 
 **Pendiente (tú)**
 1. Rotar las credenciales expuestas (§1.2) y cambiar contraseñas de SUPERADMIN.
@@ -193,13 +199,12 @@ documentación (`SECURITY.md`, `CONTRIBUTING.md`, este archivo).
 **Siguiente**
 2. Exportación de respaldo filtrada por institución para ADMIN (§1.3);
    `/api/reportes/export` ya cubre el caso de reportes.
-3. Capa de acceso a datos con ámbito de institución obligatorio (§3.2).
-4. Tests de integración de aislamiento multi-tenant (§4.2).
-5. Sentry + eliminar `catch {}` mudos (§4.6).
-6. Esquemas zod en el resto de server actions (§4.3).
-7. Congelar `schema.sql` como baseline; quitar `safeAddColumn` y el
+3. Migrar el resto de comprobaciones de pertenencia y listados a `scopedDb` (§3.2).
+4. Sentry + eliminar `catch {}` mudos (§4.6).
+5. Esquemas zod en el resto de server actions (§4.3).
+6. Congelar `schema.sql` como baseline; quitar `safeAddColumn` y el
    `case_closure_reports` duplicado (§3.1).
-8. Decisión sobre IA + datos de menores (§1.8) y cifrado en reposo (§3.3).
+7. Decisión sobre IA + datos de menores (§1.8) y cifrado en reposo (§3.3).
 
 **Más adelante**
 11. CSP con nonce vía middleware (§1.5).

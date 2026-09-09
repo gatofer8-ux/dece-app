@@ -6,14 +6,10 @@ import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { logAudit } from "@/lib/audit";
 import { saveAttachmentFile, deleteAttachmentFile, isAllowedAttachmentType, MAX_ATTACHMENT_SIZE } from "@/lib/uploads";
+import { requireOwnedCase } from "@/lib/scopedDb";
 import type { AttachmentRow } from "@/lib/types";
 import type { ActionState } from "../actions";
 export type { ActionState };
-
-function requireOwnedCase(caseId: string, institutionId: string) {
-  const row = db.prepare("SELECT id FROM case_files WHERE id = ? AND institution_id = ?").get(caseId, institutionId);
-  if (!row) throw new Error("Caso no encontrado en tu institución.");
-}
 
 export async function uploadAttachment(caseId: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
   const session = await requireRole(["ADMIN", "DECE"]);
