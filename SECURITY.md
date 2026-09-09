@@ -3,22 +3,34 @@
 Este sistema almacena información sensible de **estudiantes menores de edad**
 (casos de violencia, salud mental, riesgo psicosocial). Trátalo en consecuencia.
 
-## ⚠️ Acción urgente pendiente (rotar credenciales expuestas)
+## ⚠️ Estado de las credenciales
 
 El archivo `.env` estuvo con secretos reales en texto plano fuera de control de
-versiones. Aunque ahora `.gitignore` lo excluye, **esas claves deben
-considerarse comprometidas y hay que rotarlas**:
+versiones. `.gitignore` ya lo excluye.
 
-| Credencial | Dónde se rota | Luego |
+| Credencial | Estado | Qué falta |
 |---|---|---|
-| `GEMINI_API_KEY` | https://aistudio.google.com/apikey — borra la clave actual y crea otra | Actualiza la variable en el hosting |
-| `VAPID_PRIVATE_KEY` / `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | `npx web-push generate-vapid-keys` | Actualiza ambas; los navegadores se re-suscriben solos |
-| `NEXTAUTH_SECRET` | `openssl rand -base64 32` | Al cambiarlo, todas las sesiones activas se cierran (esperado) |
+| `NEXTAUTH_SECRET` | ✅ **Rotada** en `.env` local | Copiar el nuevo valor a la variable del hosting (Railway/Render) |
+| `VAPID_PRIVATE_KEY` / `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | ✅ **Rotadas** en `.env` local | Copiar los nuevos valores al hosting. Los navegadores se re-suscriben solos |
+| `GEMINI_API_KEY` | ❌ **Sigue expuesta** | **Tú:** entra a https://aistudio.google.com/apikey, borra la clave actual, crea otra, pégala en `.env` y en el hosting |
 
-Después de rotar, **cambia las contraseñas de los usuarios SUPERADMIN**
-(`gatofer8@gmail.com`, `marlon.jacome@dece.edu.ec`) desde el propio sistema:
-`scripts/seed.js` las crea con contraseñas por defecto (`Admin123!`, `Dece123!`)
-solo en el primer arranque de una base vacía.
+Al desplegar con el nuevo `NEXTAUTH_SECRET`, todas las sesiones activas se
+cierran (esperado).
+
+### Cambiar las contraseñas de los SUPERADMIN
+
+`scripts/seed.js` crea los usuarios con contraseñas por defecto (`Admin123!`,
+`Dece123!`) solo en el primer arranque de una base vacía, y **ya no las
+sobreescribe** en despliegues posteriores. Para ponerles una contraseña fuerte:
+
+```
+node scripts/set_password.js --superadmins
+```
+
+(en producción: en la consola del contenedor, con `DATABASE_FILE=/data/dece.db`).
+El script imprime las nuevas contraseñas una sola vez — guárdalas. También
+puedes hacerlo desde el panel **Superadmin → Resetear contraseña** dentro de la
+aplicación.
 
 ## Modelo de despliegue
 

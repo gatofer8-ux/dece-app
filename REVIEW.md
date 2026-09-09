@@ -20,10 +20,13 @@ podía **firmar un JWT válido para cualquier usuario, incluido SUPERADMIN**.
 → `src/lib/env.ts` valida el entorno; la app **aborta en producción** si el
 secreto falta o es el inseguro histórico. Eliminado del Dockerfile.
 
-### 1.2 Secretos reales en `.env` — **[parcial: requiere acción del usuario]**
+### 1.2 Secretos reales en `.env` — **[parcial]**
 `GEMINI_API_KEY` y `VAPID_PRIVATE_KEY` estaban en texto plano en `.env`.
-→ `.gitignore` ahora lo excluye; `.env.example` reescrito.
-→ **Pendiente (tú):** rotar las tres credenciales. Ver `SECURITY.md`.
+→ `.gitignore` lo excluye; `.env.example` reescrito.
+→ **[hecho]** `NEXTAUTH_SECRET` y las llaves VAPID **rotadas** en `.env`.
+→ **[hecho]** `scripts/set_password.js` para poner contraseñas fuertes.
+→ **Pendiente (tú):** rotar `GEMINI_API_KEY` (solo tú tienes acceso a Google
+AI Studio) y copiar los valores nuevos al hosting. Ver `SECURITY.md`.
 
 ### 1.3 Descarga de respaldo = fuga entre instituciones — **[hecho]**
 `/api/backup/download` y la página `/respaldos` permitían a **cualquier ADMIN**
@@ -148,9 +151,13 @@ consultas dinámicas) — se reducen tipando las filas de la base.
 `ai.ts` (1381 líneas), `db.ts` (837), `casos/actions.ts` (~1300). Dividir por
 subdominio.
 
-### 4.6 `catch {}` mudos y sin observabilidad — **[pendiente]**
-Solo `console.log`. Añadir Sentry (o equivalente) y eliminar los `catch` que se
-tragan errores en `db.ts`, `session.ts`.
+### 4.6 `catch {}` mudos y sin observabilidad — **[parcial]**
+→ **[hecho]** `src/lib/logger.ts` (info/warn/error con ámbito y serialización de
+errores) + `setErrorReporter()` como gancho para Sentry sin dependencias.
+Migrados los 8 `catch {}` de `buildCaseContext` y el de la suscripción en
+`session.ts`.
+→ **Pendiente:** conectar un servicio real (necesita DSN) y barrer el resto de
+`catch {}` (quedan ~70, muchos son *fallbacks* legítimos de `JSON.parse`).
 
 ---
 
@@ -188,25 +195,31 @@ SUPERADMIN, cabeceras, fix del reseteo de contraseñas, ESLint + Vitest + CI,
 runner de migraciones + índices, helpers de FormData, Dockerfile multi-etapa,
 documentación (`SECURITY.md`, `CONTRIBUTING.md`, este archivo).
 
-**Segunda/tercera ronda de cambios — [hecho]**
+**Rondas 2-4 de cambios — [hecho]**
 - Expiración de suscripciones fuera de `getSession`, al cron (§1.6).
 - `pin_code` hasheado con bcrypt (§1.7).
 - Validación zod en `casos` y `estudiantes` (§4.3).
 - `src/lib/scopedDb.ts` + test de aislamiento con base real (§3.2, §4.2).
-
 - Exportación de respaldo por institución para ADMIN/DECE (§1.3).
+- `NEXTAUTH_SECRET` y VAPID rotadas; `scripts/set_password.js` (§1.2).
+- `src/lib/logger.ts` y fin de los `catch {}` mudos en rutas clave (§4.6).
+- `citas` y `derivaciones` migradas a `scopedDb`.
 
-**Pendiente (tú)**
-1. Rotar las credenciales expuestas (§1.2) y cambiar contraseñas de SUPERADMIN.
+**Pendiente — SOLO TÚ puedes hacerlo**
+1. Rotar `GEMINI_API_KEY` en https://aistudio.google.com/apikey y copiar TODOS
+   los valores nuevos de `.env` a las variables del hosting (Railway/Render).
+2. Poner contraseñas fuertes a los SUPERADMIN:
+   `node scripts/set_password.js --superadmins` (o el panel Superadmin).
+3. Decidir sobre IA + datos de menores (§1.8): activar con consentimiento,
+   seudonimizar, o dejar `GEMINI_API_KEY` vacía.
 
-**Siguiente**
-2. Migrar el resto de comprobaciones de pertenencia y listados a `scopedDb` (§3.2).
-3. Sentry + eliminar `catch {}` mudos (§4.6). Requiere un DSN.
-4. Esquemas zod en el resto de server actions (§4.3).
-5. Congelar `schema.sql` como baseline; quitar `safeAddColumn` y el
-   `case_closure_reports` duplicado en `db.ts` (§3.1). Hacer contra una
-   instancia real para no cambiar el esquema de instalaciones nuevas.
-6. Decisión sobre IA + datos de menores (§1.8) y cifrado en reposo (§3.3).
+**Siguiente (código, cuando quieras)**
+4. Migrar el resto de comprobaciones y listados a `scopedDb` (§3.2).
+5. Conectar Sentry al gancho `setErrorReporter` (§4.6).
+6. Esquemas zod en el resto de server actions (§4.3).
+7. Congelar `schema.sql` como baseline; quitar el `case_closure_reports`
+   duplicado en `db.ts` (§3.1) — contra una instancia real.
+8. Cifrado en reposo (§3.3).
 
 **Más adelante**
 11. CSP con nonce vía middleware (§1.5).
