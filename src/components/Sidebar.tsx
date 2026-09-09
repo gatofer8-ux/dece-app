@@ -34,7 +34,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/pasantes", label: "Pasantes y Voluntarios", icon: "🤝", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"] },
   { href: "/usuarios", label: "Usuarios", icon: "👤", roles: ["SUPERADMIN", "ADMIN", "DECE"] },
   { href: "/institucion", label: "Mi institución", icon: "🏛️", roles: ["SUPERADMIN", "ADMIN", "DECE"] },
-  { href: "/respaldos", label: "Copias de seguridad", icon: "💾", roles: ["SUPERADMIN", "ADMIN", "DECE"] },
+  { href: "/respaldos", label: "Copias de seguridad", icon: "💾", roles: ["SUPERADMIN"] },
   { href: "/auditoria", label: "Auditoría", icon: "🛡️", roles: ["SUPERADMIN", "ADMIN", "DISTRITO"] },
 ];
 

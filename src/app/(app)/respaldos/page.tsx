@@ -4,7 +4,9 @@ import { DB_PATH, db } from "@/lib/db";
 import fs from "fs";
 
 export default async function RespaldosPage() {
-  await requireRole(["ADMIN", "DECE"]);
+  // El respaldo íntegro contiene datos de TODAS las instituciones, por lo que
+  // solo el rol global (SUPERADMIN) puede acceder a esta página y a la descarga.
+  await requireRole(["SUPERADMIN"]);
 
   let fileSizeStr = "0 KB";
   let lastModifiedStr = "—";

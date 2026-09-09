@@ -8,7 +8,12 @@
     "build": "next build",
     "start": "node scripts/seed.js && next start -H 0.0.0.0",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run lint && npm run test",
     "db:seed": "node scripts/seed.js",
+    "db:seed:demo": "cross-env SEED_DEMO=1 node scripts/seed.js",
     "test:subscriptions": "node scripts/test_subscription_protection.js"
   },
   "dependencies": {
@@ -45,9 +50,13 @@
     "@types/react-dom": "18.3.0",
     "@types/web-push": "^3.6.4",
     "autoprefixer": "10.4.20",
+    "cross-env": "7.0.3",
+    "eslint": "8.57.1",
+    "eslint-config-next": "14.2.35",
     "postcss": "8.4.45",
     "tailwindcss": "3.4.10",
     "tsx": "4.19.1",
-    "typescript": "5.5.4"
+    "typescript": "5.5.4",
+    "vitest": "2.1.9"
   }
 }

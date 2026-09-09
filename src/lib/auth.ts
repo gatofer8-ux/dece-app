@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { db } from "./db";
 import type { UserRow, Role } from "./types";
 import { logAudit } from "./audit";
+import { env } from "./env";
 
 export const authOptions: AuthOptions = {
   session: { strategy: "jwt", maxAge: 8 * 60 * 60 }, // 8 horas
@@ -88,5 +89,5 @@ export const authOptions: AuthOptions = {
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET || "dece-app-default-secret-production-2026-key",
+  secret: env.NEXTAUTH_SECRET,
 };

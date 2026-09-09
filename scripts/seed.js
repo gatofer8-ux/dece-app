@@ -82,17 +82,17 @@ function upsertInstitution(name, amie, circuit) {
 
 function upsertUser(name, email, role, password, institutionId) {
   const normalizedEmail = email.toLowerCase().trim();
-  const hash = bcrypt.hashSync(password, 10);
   const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(normalizedEmail);
   if (existing) {
-    db.prepare(`UPDATE users SET password_hash = ?, active = 1, role = ?, institution_id = COALESCE(?, institution_id) WHERE id = ?`).run(
-      hash,
-      role,
-      institutionId,
-      existing.id
-    );
+    // IMPORTANTE: nunca sobrescribir la contraseña de un usuario existente.
+    // Este script se ejecuta en cada arranque del contenedor; si reseteara la
+    // contraseña, cualquier cambio hecho por el usuario se perdería en el
+    // siguiente despliegue (agujero de seguridad). Solo garantizamos que la
+    // cuenta siga activa y con su rol.
+    db.prepare(`UPDATE users SET active = 1, role = ? WHERE id = ?`).run(role, existing.id);
     return existing.id;
   }
+  const hash = bcrypt.hashSync(password, 10);
   const id = randomUUID();
   db.prepare(`INSERT INTO users (id, institution_id, name, email, password_hash, role, active) VALUES (?, ?, ?, ?, ?, ?, 1)`).run(
     id,
@@ -127,16 +127,19 @@ upsertUser("Mgr. Marlon Alberto Jácome S.", "marlon.jacome@dece.edu.ec", "SUPER
 upsertUser("Rector/a Institucional", "rectorado.demo1@institucion.edu.ec", "AUTORIDAD", "Autoridad123!", santaRosaId);
 upsertUser("Docente Tutor", "docente.demo1@institucion.edu.ec", "DOCENTE", "Docente123!", santaRosaId);
 
-// Instituciones de demostración
-const inst1 = upsertInstitution("Institución Educativa Demo Uno", "AMIE-0001", "Circuito 1");
-const inst2 = upsertInstitution("Institución Educativa Demo Dos", "AMIE-0002", "Circuito 2");
+// Instituciones y usuarios de demostración: solo con SEED_DEMO=1.
+// En producción esta sección no debe ejecutarse.
+if (process.env.SEED_DEMO === "1") {
+  const inst1 = upsertInstitution("Institución Educativa Demo Uno", "AMIE-0001", "Circuito 1");
+  const inst2 = upsertInstitution("Institución Educativa Demo Dos", "AMIE-0002", "Circuito 2");
 
-upsertUser("Coordinador/a DECE (demo1)", "admin.demo1@institucion.edu.ec", "ADMIN", "Admin123!", inst1);
-upsertUser("Psic. DECE (demo1)", "dece.demo1@institucion.edu.ec", "DECE", "Dece123!", inst1);
-upsertUser("Coordinador/a DECE (demo2)", "admin.demo2@institucion.edu.ec", "ADMIN", "Admin123!", inst2);
-upsertUser("Psic. DECE (demo2)", "dece.demo2@institucion.edu.ec", "DECE", "Dece123!", inst2);
-upsertUser("Rector/a (demo2)", "rectorado.demo2@institucion.edu.ec", "AUTORIDAD", "Autoridad123!", inst2);
-upsertUser("Docente tutor (demo2)", "docente.demo2@institucion.edu.ec", "DOCENTE", "Docente123!", inst2);
+  upsertUser("Coordinador/a DECE (demo1)", "admin.demo1@institucion.edu.ec", "ADMIN", "Admin123!", inst1);
+  upsertUser("Psic. DECE (demo1)", "dece.demo1@institucion.edu.ec", "DECE", "Dece123!", inst1);
+  upsertUser("Coordinador/a DECE (demo2)", "admin.demo2@institucion.edu.ec", "ADMIN", "Admin123!", inst2);
+  upsertUser("Psic. DECE (demo2)", "dece.demo2@institucion.edu.ec", "DECE", "Dece123!", inst2);
+  upsertUser("Rector/a (demo2)", "rectorado.demo2@institucion.edu.ec", "AUTORIDAD", "Autoridad123!", inst2);
+  upsertUser("Docente tutor (demo2)", "docente.demo2@institucion.edu.ec", "DOCENTE", "Docente123!", inst2);
+}
 
 // Sincronizar actas de corresponsabilidad existentes hacia case_actions si aún no están registradas
 try {
@@ -215,12 +218,14 @@ CREATE INDEX IF NOT EXISTS idx_distributivo_assign_user ON dece_distributivo_ass
 
 console.log("[DB SEED] Usuarios y contraseñas actualizados exitosamente en la base de datos.");
 
-// Cargar Entorno de Demostración (U.E. Los Álamos) si no existen estudiantes
-try {
-  const demoCheck = db.prepare("SELECT COUNT(*) as c FROM students WHERE institution_id = 'demo-los-alamos'").get();
-  if (!demoCheck || demoCheck.c < 50) {
-    require("./seedDemoData").runDemoSeed();
+// Cargar Entorno de Demostración (U.E. Los Álamos) — solo con SEED_DEMO=1.
+if (process.env.SEED_DEMO === "1") {
+  try {
+    const demoCheck = db.prepare("SELECT COUNT(*) as c FROM students WHERE institution_id = 'demo-los-alamos'").get();
+    if (!demoCheck || demoCheck.c < 50) {
+      require("./seedDemoData").runDemoSeed();
+    }
+  } catch (e) {
+    console.warn("[DB SEED] Error verificando o cargando datos demo:", e.message);
   }
-} catch (e) {
-  console.warn("[DB SEED] Error verificando o cargando datos demo:", e.message);
 }
