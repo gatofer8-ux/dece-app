@@ -20,15 +20,13 @@ export async function getSession() {
       // Ignorado fuera del contexto de solicitud de Next.js
     }
 
-    // Verificar si existe una delegación temporal de coordinador activa para este usuario
+    // Delegación temporal de coordinador activa para este usuario.
+    // NOTA: solo lectura. La desactivación de delegaciones vencidas la hace el
+    // cron (src/lib/subscriptions.ts); aquí la condición de fecha del propio
+    // SELECT ya excluye las que expiraron aunque sigan con is_active = 1.
     if (session.user.institution_id && session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN") {
       try {
         const { db } = await import("./db");
-        // Desactivar delegaciones temporales cuya fecha límite ya venció
-        db.prepare(
-          "UPDATE dece_coordinator_delegations SET is_active = 0, updated_at = datetime('now') WHERE is_active = 1 AND end_date IS NOT NULL AND date('now') > end_date"
-        ).run();
-
         const activeDelegation = db.prepare(`
           SELECT * FROM dece_coordinator_delegations
           WHERE delegated_user_id = ?
@@ -49,43 +47,14 @@ export async function getSession() {
       }
     }
 
-    // Verificar estado individual de suscripción (Regla: aislamiento por usuario)
+    // Estado individual de suscripción (Regla: aislamiento por usuario).
+    // NOTA: solo lectura. La suspensión automática por vencimiento la hace el
+    // cron; aquí se calcula `is_overdue` en tiempo de lectura para que la UI
+    // ponga la cuenta en modo solo lectura de inmediato aunque el estado
+    // persistido aún diga "activo".
     if (session.user.role !== "SUPERADMIN") {
       try {
         const { db } = await import("./db");
-        // Suspensión automática si la fecha de vencimiento ya pasó y no es cuenta demo
-        const expired = db.prepare(`
-          SELECT * FROM user_subscriptions
-          WHERE user_id = ?
-            AND status IN ('activo', 'en_prueba')
-            AND end_date IS NOT NULL
-            AND date('now') > end_date
-            AND is_demo = 0
-        `).get(session.user.id) as any;
-
-        if (expired) {
-          db.prepare(`
-            UPDATE user_subscriptions
-            SET status = 'suspendido', updated_at = datetime('now')
-            WHERE id = ?
-          `).run(expired.id);
-
-          try {
-            const { randomUUID } = await import("crypto");
-            db.prepare(`
-              INSERT INTO user_subscription_history (
-                id, user_id, institution_id_snapshot, event_type, billing_type,
-                package_id, package_name, frozen_price, start_date, end_date,
-                executed_by_id, reason
-              ) VALUES (?, ?, ?, 'SUSPENSION_AUTOMATICA', ?, ?, ?, ?, ?, ?, NULL, 'Vencimiento automático de suscripción por falta de renovación')
-            `).run(
-              randomUUID(), session.user.id, session.user.institution_id, expired.billing_type,
-              expired.package_id, expired.package_name, expired.frozen_price,
-              expired.start_date, expired.end_date
-            );
-          } catch {}
-        }
-
         const sub = db.prepare("SELECT * FROM user_subscriptions WHERE user_id = ?").get(session.user.id) as any;
         if (sub) {
           const todayMs = new Date().setHours(0, 0, 0, 0);
@@ -97,7 +66,10 @@ export async function getSession() {
             isOverdue = daysLeft < 0;
           }
 
-          const isReadOnly = sub.status === "suspendido" || sub.status === "cancelado";
+          const isReadOnly =
+            sub.status === "suspendido" ||
+            sub.status === "cancelado" ||
+            (isOverdue && !sub.is_demo && sub.status !== "demo");
           (session.user as any).subscription = {
             id: sub.id,
             status: sub.status,
