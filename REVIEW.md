@@ -45,15 +45,16 @@ datos e instituciones demo requieren `SEED_DEMO=1`.
 `Referrer-Policy`, `Permissions-Policy`, `poweredByHeader: false`.
 → **Pendiente:** CSP con nonce (necesita middleware).
 
-### 1.6 Efectos secundarios en el camino de lectura — **[pendiente]**
-`getSession()` (en cada request) ejecuta `UPDATE`/`INSERT` para expirar
-suscripciones y escribir historial, con `catch {}` mudos.
-→ Mover esa lógica a un job del cron ya existente (`instrumentation-node.ts`);
-`getSession` debe solo leer.
+### 1.6 Efectos secundarios en el camino de lectura — **[hecho]**
+`getSession()` (en cada request) ejecutaba `UPDATE`/`INSERT` para expirar
+suscripciones y desactivar delegaciones, con `catch {}` mudos.
+→ `src/lib/subscriptions.ts` con los barridos; los corre el cron cada 15 min
+(+ un barrido inicial al arrancar). `getSession` ya solo lee; `is_read_only`
+se calcula con `is_overdue` en tiempo de lectura para que la UI sea inmediata.
 
-### 1.7 PIN de pasantes en texto plano — **[pendiente]**
-`interns.pin_code` se guarda sin hashear (`scripts`/`lib/pasantes.ts`).
-→ Hashear con bcrypt como las contraseñas; comparar en el check-in.
+### 1.7 PIN de pasantes en texto plano — **[hecho]**
+→ `hashPin` / `verifyInternPin` (bcrypt) en `src/lib/pasantes.ts`. Los valores
+heredados de 4 dígitos se aceptan una vez y se re-guardan hasheados.
 
 ### 1.8 Datos de menores enviados a Google Gemini — **[pendiente / decisión]**
 `buildCaseContext` envía nombre, documento y relato del caso a la API de Gemini.
@@ -127,9 +128,10 @@ las server actions críticas (crear/cerrar caso, suscripciones).
 ### 4.3 `zod` instalado pero usado en 0 archivos — **[parcial]**
 Las 42 server actions parsean `FormData` a mano sin validación.
 → **[hecho]** `src/lib/formData.ts` con helpers compartidos + `parseForm(fd,
-schema)`. Migrado `casos/actions.ts`.
-→ **Pendiente:** definir un esquema zod por acción y migrar el resto (estaba
-duplicado el bloque `str`/`int` en 14 archivos).
+schema)`. Migrados `casos/actions.ts` y `estudiantes/actions.ts` (este último
+con `studentCoreSchema` de zod validando nombre, documento, correo y fecha).
+→ **Pendiente:** esquemas zod en el resto de acciones (el bloque `str`/`int`
+seguía duplicado en ~12 archivos más).
 
 ### 4.4 `(session.user as any)` ×203 — **[parcial]**
 → **[hecho]** `next-auth.d.ts` ahora tipa `subscription` y la delegación de
@@ -180,20 +182,24 @@ SUPERADMIN, cabeceras, fix del reseteo de contraseñas, ESLint + Vitest + CI,
 runner de migraciones + índices, helpers de FormData, Dockerfile multi-etapa,
 documentación (`SECURITY.md`, `CONTRIBUTING.md`, este archivo).
 
-**Siguiente (1–2 semanas)**
-1. Rotar las credenciales expuestas (§1.2) y cambiar contraseñas de SUPERADMIN.
-2. Mover la expiración de suscripciones fuera de `getSession` (§1.6).
-3. Hashear `pin_code` (§1.7).
-4. Exportación de respaldo filtrada por institución para ADMIN (§1.3).
-5. Esquema zod en las server actions de casos y estudiantes (§4.3).
+**Segunda ronda de cambios — [hecho]**
+- Expiración de suscripciones fuera de `getSession`, al cron (§1.6).
+- `pin_code` hasheado con bcrypt (§1.7).
+- Esquemas/validación zod en `casos` y `estudiantes` (§4.3).
 
-**Después (1 mes)**
-6. Capa de acceso a datos con ámbito de institución obligatorio (§3.2).
-7. Tests de integración de aislamiento multi-tenant (§4.2).
-8. Sentry + eliminar `catch {}` mudos (§4.6).
-9. Congelar `schema.sql` como baseline; quitar `safeAddColumn` y el
+**Pendiente (tú)**
+1. Rotar las credenciales expuestas (§1.2) y cambiar contraseñas de SUPERADMIN.
+
+**Siguiente**
+2. Exportación de respaldo filtrada por institución para ADMIN (§1.3);
+   `/api/reportes/export` ya cubre el caso de reportes.
+3. Capa de acceso a datos con ámbito de institución obligatorio (§3.2).
+4. Tests de integración de aislamiento multi-tenant (§4.2).
+5. Sentry + eliminar `catch {}` mudos (§4.6).
+6. Esquemas zod en el resto de server actions (§4.3).
+7. Congelar `schema.sql` como baseline; quitar `safeAddColumn` y el
    `case_closure_reports` duplicado (§3.1).
-10. Decisión sobre IA + datos de menores (§1.8) y cifrado en reposo (§3.3).
+8. Decisión sobre IA + datos de menores (§1.8) y cifrado en reposo (§3.3).
 
 **Más adelante**
 11. CSP con nonce vía middleware (§1.5).

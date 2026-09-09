@@ -3,26 +3,48 @@
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { logAudit } from "@/lib/audit";
+import { str, num as intOrNull, getAllStr } from "@/lib/formData";
 
-function str(fd: FormData, key: string): string | null {
-  const v = fd.get(key);
-  if (typeof v !== "string") return null;
-  const t = v.trim();
-  return t.length ? t : null;
-}
+/** Validación de los campos críticos de la ficha del estudiante. */
+const studentCoreSchema = z.object({
+  full_name: z
+    .string()
+    .trim()
+    .min(3, "El nombre completo del estudiante es obligatorio."),
+  document_id: z
+    .string()
+    .trim()
+    .regex(/^[0-9A-Za-z-]{4,20}$/, "El número de documento no tiene un formato válido.")
+    .optional()
+    .or(z.literal("")),
+  rep_email: z
+    .string()
+    .trim()
+    .email("El correo del representante no es válido.")
+    .optional()
+    .or(z.literal("")),
+  birth_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "La fecha de nacimiento debe tener formato AAAA-MM-DD.")
+    .optional()
+    .or(z.literal("")),
+});
 
-function intOrNull(fd: FormData, key: string): number | null {
-  const v = str(fd, key);
-  if (v === null) return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
-
-function getAllStr(fd: FormData, key: string): string[] {
-  return fd.getAll(key).filter((v): v is string => typeof v === "string");
+/** Lanza con un mensaje legible si los campos críticos del formulario no validan. */
+function assertValidStudent(formData: FormData) {
+  const result = studentCoreSchema.safeParse({
+    full_name: formData.get("full_name") ?? "",
+    document_id: formData.get("document_id") ?? "",
+    rep_email: formData.get("rep_email") ?? "",
+    birth_date: formData.get("birth_date") ?? "",
+  });
+  if (!result.success) {
+    throw new Error(result.error.issues[0]?.message ?? "Datos del estudiante inválidos.");
+  }
 }
 
 /** Campos de la ficha ampliada del estudiante (ronda 17), compartidos entre crear y editar. */
@@ -71,6 +93,7 @@ function extendedStudentFields(formData: FormData) {
 export async function createStudent(formData: FormData) {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
+  assertValidStudent(formData);
   const id = randomUUID();
 
   try {
@@ -124,6 +147,7 @@ export async function createStudent(formData: FormData) {
 export async function updateStudent(id: string, formData: FormData) {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
+  assertValidStudent(formData);
 
   try {
     db.prepare(
