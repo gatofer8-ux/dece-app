@@ -13,8 +13,31 @@ import { CHECKLIST_CATALOGS, CHECKLIST_REVIEW_ROLES, checklistRoleKey } from "@/
 import { parseOfficialObservationData } from "@/lib/observationSheet";
 import { CONFLICT_TYPES_CATALOG } from "@/lib/corresponsibilityCatalog";
 import type { ChecklistCategory, ObservationContext, ObservationSubnivel, ObservationRiskLevel, CorresponsibilityConflictType } from "@/lib/types";
+import { z } from "zod";
 import { str, int, getAllStr } from "@/lib/formData";
-import { requireOwnedCase } from "@/lib/scopedDb";
+import { requireOwnedCase, requireOwnedStudent } from "@/lib/scopedDb";
+
+// Valores de catálogo aceptados. Un valor fuera de rango (formulario manipulado)
+// se coacciona al valor por defecto en vez de propagarse a la base.
+const prioritySchema = z.enum(["ALTA", "MEDIA", "BAJA"]).catch("MEDIA");
+const actionAxisSchema = z
+  .enum(["PROMOCION", "PREVENCION", "ATENCION", "SEGUIMIENTO"])
+  .catch("ATENCION");
+const riskTypeSchema = z
+  .enum([
+    "VIOLENCIA_INTRAFAMILIAR",
+    "VIOLENCIA_ESCOLAR_BULLYING",
+    "VIOLENCIA_SEXUAL",
+    "CONSUMO_SUSTANCIAS",
+    "SALUD_MENTAL",
+    "EMBARAZO_ADOLESCENTE",
+    "VULNERACION_DERECHOS",
+    "DIFICULTAD_APRENDIZAJE",
+    "CONFLICTO_FAMILIAR",
+    "CONECTIVIDAD_ACCESO_EDUCATIVO",
+    "OTRO",
+  ])
+  .catch("OTRO");
 
 export async function createCase(formData: FormData) {
   const session = await requireRole(["ADMIN", "DECE"]);
@@ -23,10 +46,7 @@ export async function createCase(formData: FormData) {
   const code = nextCaseCode(institutionId);
   const studentId = str(formData, "student_id");
   if (!studentId) throw new Error("Estudiante requerido");
-  const student = db
-    .prepare("SELECT id FROM students WHERE id = ? AND institution_id = ?")
-    .get(studentId, institutionId);
-  if (!student) throw new Error("Estudiante no encontrado en tu institución.");
+  requireOwnedStudent(studentId, institutionId);
 
   db.prepare(
     `INSERT INTO case_files
@@ -41,9 +61,9 @@ export async function createCase(formData: FormData) {
     student_id: studentId,
     opened_by_id: session.user.id,
     assigned_to_id: str(formData, "assigned_to_id") || session.user.id,
-    priority: str(formData, "priority") || "MEDIA",
-    action_axis: str(formData, "action_axis") || "ATENCION",
-    risk_type: str(formData, "risk_type") || "OTRO",
+    priority: prioritySchema.parse(str(formData, "priority")),
+    action_axis: actionAxisSchema.parse(str(formData, "action_axis")),
+    risk_type: riskTypeSchema.parse(str(formData, "risk_type")),
     risk_type_other: str(formData, "risk_type_other"),
     detection_date: str(formData, "detection_date") || new Date().toISOString(),
     detection_source: str(formData, "detection_source"),
@@ -74,7 +94,10 @@ export async function updateCaseStatus(caseId: string, formData: FormData) {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
   requireOwnedCase(caseId, institutionId);
-  const status = str(formData, "status");
+  const status = z
+    .enum(["ABIERTO", "EN_SEGUIMIENTO", "DERIVADO", "CERRADO"])
+    .catch("ABIERTO")
+    .parse(str(formData, "status"));
   const closureReason = str(formData, "closure_reason");
 
   db.prepare(
@@ -102,9 +125,9 @@ export async function updateCaseFields(caseId: string, formData: FormData) {
   ).run({
     id: caseId,
     institution_id: institutionId,
-    priority: str(formData, "priority") || "MEDIA",
-    action_axis: str(formData, "action_axis") || "ATENCION",
-    risk_type: str(formData, "risk_type") || "OTRO",
+    priority: prioritySchema.parse(str(formData, "priority")),
+    action_axis: actionAxisSchema.parse(str(formData, "action_axis")),
+    risk_type: riskTypeSchema.parse(str(formData, "risk_type")),
     risk_type_other: str(formData, "risk_type_other"),
     assigned_to_id: str(formData, "assigned_to_id"),
     description: str(formData, "description") || "",
