@@ -63,16 +63,36 @@ instituciones. Ver `REVIEW.md` → "Aislamiento multi-tenant".
 
 ## Datos enviados a terceros (IA)
 
-Si `GEMINI_API_KEY` está configurada, el asistente de redacción envía a Google
-Gemini el **nombre, documento y relato del caso**. Antes de activarlo en
-producción:
+El asistente de redacción usa la API de Google Gemini. Protecciones aplicadas
+(`src/lib/aiPrivacy.ts`):
 
-1. Consentimiento institucional informado y documentado.
-2. Revisar el acuerdo de tratamiento de datos (DPA) con Google.
-3. Considerar seudonimizar el texto antes de enviarlo, o usar un modelo local.
+1. **Seudonimización.** Antes de enviar cualquier texto a Google, se reemplazan
+   nombre y apellidos del estudiante, del representante, del padre y de la
+   madre por su rol (`[estudiante]`, `[representante]`, …), y se barren cédulas,
+   RUC, teléfonos y correos. El barrido genérico se aplica además como última
+   barrera en `src/lib/ai.ts` a **todo** prompt saliente.
+2. **Confidencialidad reforzada.** Para los tipos de caso
+   `VIOLENCIA_SEXUAL`, `SALUD_MENTAL` y `CONSUMO_SUSTANCIAS` (lista editable en
+   `HEIGHTENED_CONFIDENTIALITY_RISK_TYPES`) **no se envía el relato ni los
+   documentos del caso** — solo código, tipo de riesgo y estado. La interfaz lo
+   avisa.
+3. **Minimización.** El nombre real nunca se pasa como campo a los prompts; se
+   usa "el/la estudiante".
 
-Sin la clave, las funciones de IA se desactivan y el resto del sistema funciona
-con normalidad.
+**Riesgo residual:** si el profesional DECE escribió un nombre a mano dentro de
+un campo de texto libre que el filtro no reconoce (p. ej. el de la abuela), ese
+nombre puede pasar. La interfaz recuerda revisar el borrador antes de guardar.
+
+**Pendiente / recomendado:**
+
+- **Activar facturación** en el proyecto de Google Cloud de la clave: la API
+  pasa a "nivel de pago" y Google deja de poder entrenar con los datos o
+  revisarlos con personas. Es el cambio de mayor impacto y cuesta ~$0.
+- Documentar la decisión (consentimiento institucional, base legal) con quien
+  lleve la parte legal.
+
+Sin `GEMINI_API_KEY`, las funciones de IA se desactivan y el resto del sistema
+funciona con normalidad.
 
 ## Reportar una vulnerabilidad
 

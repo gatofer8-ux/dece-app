@@ -5,6 +5,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { requireOwnedCase } from "@/lib/scopedDb";
 import { logger } from "@/lib/logger";
 import { draftText, draftBimonthlyMatrixDraft, draftObservationComment, draftObservationGlobalAnalysis, draftCorresponsibilityDifficulty, draftCorresponsibilityLegalFramework, draftCorresponsibilityCommitments, isAiConfigured } from "@/lib/ai";
+import { pseudonymize, isHeightenedConfidentiality, minimalCaseContext, type CaseEntities } from "@/lib/aiPrivacy";
 import type { CorresponsibilityConflictType } from "@/lib/types";
 import type { CaseFileRow, StudentRow, ViolenceReportRow, CaseActionRow } from "@/lib/types";
 
@@ -22,12 +23,62 @@ const RISK_TYPE_LABELS: Record<string, string> = {
   OTRO: "Otro",
 };
 
-/** Arma un contexto completo y 360 grados del caso integrando todos los documentos registrados. */
+/** Referencia neutra al estudiante para las llamadas a la IA (nunca el nombre real). */
+const STUDENT_REF = "el/la estudiante";
+
+/**
+ * Texto de un caso listo para enviar a la IA: vacío si el caso es de
+ * confidencialidad reforzada; seudonimizado en el resto.
+ */
+function caseTextForAi(
+  text: string | null | undefined,
+  caseFile: CaseFileRow,
+  student: StudentRow | undefined
+): string {
+  if (isHeightenedConfidentiality(caseFile.risk_type)) return "";
+  return pseudonymize(text ?? "", caseEntities(caseFile, student));
+}
+
+/** Reúne los datos identificativos del caso para poder seudonimizarlos antes de enviar a la IA. */
+function caseEntities(caseFile: CaseFileRow, student: StudentRow | undefined): CaseEntities {
+  const s = student as any;
+  return {
+    studentName: student?.full_name,
+    studentDocument: student?.document_id,
+    representativeName: (student as any)?.representative,
+    fatherName: s?.father_name,
+    motherName: s?.mother_name,
+    phones: [s?.rep_phone, s?.father_phone, s?.mother_phone],
+    addresses: [s?.address, s?.father_address, s?.mother_address, s?.representative_address],
+    emails: [s?.rep_email],
+  };
+}
+
+/**
+ * Arma el contexto del caso para la IA.
+ *
+ * - Casos de confidencialidad reforzada (violencia sexual, salud mental,
+ *   consumo): devuelve solo un contexto mínimo NO identificativo.
+ * - Resto de casos: contexto completo, pero seudonimizado (nombres, cédula,
+ *   teléfonos y direcciones reemplazados por su rol).
+ */
 function buildCaseContext(caseId: string, institutionId: string): string {
   const caseFile = db.prepare("SELECT * FROM case_files WHERE id = ?").get(caseId) as CaseFileRow | undefined;
   if (!caseFile) return "";
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow | undefined;
 
+  const riskLabel = RISK_TYPE_LABELS[caseFile.risk_type] || caseFile.risk_type;
+
+  if (isHeightenedConfidentiality(caseFile.risk_type)) {
+    return minimalCaseContext({
+      code: caseFile.code,
+      riskLabel,
+      status: caseFile.status,
+      priority: caseFile.priority,
+    });
+  }
+
+  const entities = caseEntities(caseFile, student);
   const lines: string[] = [];
 
   // 1. Datos del Estudiante y Expediente
@@ -149,14 +200,14 @@ function buildCaseContext(caseId: string, institutionId: string): string {
     logger.warn("ai-context", "sección de contexto del caso omitida por error", e);
   }
 
-  return lines.join("\n");
+  return pseudonymize(lines.join("\n"), entities);
 }
 
 export async function generateAiDraft(
   caseId: string,
   fieldLabel: string,
   currentText: string
-): Promise<{ text?: string; error?: string }> {
+): Promise<{ text?: string; error?: string; heightenedConfidentiality?: boolean }> {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
 
@@ -170,10 +221,15 @@ export async function generateAiDraft(
     return { error: err?.message || "Caso no encontrado." };
   }
 
+  const caseFile = db.prepare("SELECT risk_type FROM case_files WHERE id = ?").get(caseId) as
+    | { risk_type: string }
+    | undefined;
+  const heightened = isHeightenedConfidentiality(caseFile?.risk_type);
+
   const context = buildCaseContext(caseId, institutionId);
   const result = await draftText({ fieldLabel, context, currentText: currentText || "" });
   if ("error" in result) return { error: result.error };
-  return { text: result.text };
+  return { text: result.text, heightenedConfidentiality: heightened };
 }
 
 export async function generateBimonthlyMatrixSuggestions(
@@ -228,13 +284,17 @@ export async function generateObservationCommentAi(params: {
     .prepare("SELECT type, description FROM case_actions WHERE case_file_id = ? ORDER BY date DESC LIMIT 3")
     .all(params.caseId) as CaseActionRow[];
 
-  const previousActionsSummary = actions.map((a) => `${a.type}: ${a.description.slice(0, 100)}`).join("; ");
+  const previousActionsSummary = caseTextForAi(
+    actions.map((a) => `${a.type}: ${a.description.slice(0, 100)}`).join("; "),
+    caseFile,
+    student
+  );
 
   const res = await draftObservationComment({
-    studentName: student.full_name,
+    studentName: STUDENT_REF,
     course: `${student.course || ""} ${student.parallel || ""}`.trim(),
     riskType: RISK_TYPE_LABELS[caseFile.risk_type] || caseFile.risk_type,
-    caseDescription: caseFile.description,
+    caseDescription: caseTextForAi(caseFile.description, caseFile, student),
     previousActionsSummary,
     currentObservationContext: params.currentObservationContext,
     answeredQuestionsSummary: params.answeredQuestionsSummary,
@@ -271,10 +331,10 @@ export async function generateObservationGlobalAnalysisAi(params: {
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
 
   return await draftObservationGlobalAnalysis({
-    studentName: student.full_name,
+    studentName: STUDENT_REF,
     course: `${student.course || ""} ${student.parallel || ""}`.trim(),
     riskType: RISK_TYPE_LABELS[caseFile.risk_type] || caseFile.risk_type,
-    caseDescription: caseFile.description,
+    caseDescription: caseTextForAi(caseFile.description, caseFile, student),
     observationSummary: params.observationSummary,
   });
 }
@@ -310,20 +370,24 @@ export async function generateCorresponsibilityDifficultyAi(params: {
       const actions = db
         .prepare("SELECT type, description FROM case_actions WHERE case_file_id = ? ORDER BY date DESC, created_at DESC LIMIT 5")
         .all(params.caseId) as { type: string; description: string }[];
-      actionsSummary = actions.map((a) => `${a.type}: ${(a.description || "").slice(0, 100)}`).join("; ");
+      actionsSummary = caseTextForAi(
+        actions.map((a) => `${a.type}: ${(a.description || "").slice(0, 100)}`).join("; "),
+        caseFile,
+        student
+      );
     } catch {
       actionsSummary = "";
     }
 
     return await draftCorresponsibilityDifficulty({
-      studentName: student.full_name,
+      studentName: STUDENT_REF,
       studentGrade: `${student.course || ""} ${student.parallel || ""}`.trim(),
       conflictType: params.conflictType,
       detectedNotes: params.detectedNotes,
       caseContext: {
         code: caseFile.code,
         situationType: RISK_TYPE_LABELS[caseFile.risk_type] || caseFile.risk_type,
-        background: caseFile.description,
+        background: caseTextForAi(caseFile.description, caseFile, student),
         actionsSummary,
       },
     });
@@ -360,7 +424,7 @@ export async function generateCorresponsibilityLegalFrameworkAi(params: {
     return await draftCorresponsibilityLegalFramework({
       conflictType: params.conflictType,
       difficultySummary: params.difficultySummary,
-      studentName: student.full_name,
+      studentName: STUDENT_REF,
     });
   } catch (err: any) {
     console.error("[generateCorresponsibilityLegalFrameworkAi]", err);
@@ -393,7 +457,7 @@ export async function generateCorresponsibilityCommitmentsAi(params: {
     if (!student) return { error: "Estudiante no encontrado." };
 
     return await draftCorresponsibilityCommitments({
-      studentName: student.full_name,
+      studentName: STUDENT_REF,
       conflictType: params.conflictType,
       detectedDifficulty: params.detectedDifficulty,
     });

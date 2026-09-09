@@ -60,9 +60,15 @@ se calcula con `is_overdue` en tiempo de lectura para que la UI sea inmediata.
 → `hashPin` / `verifyInternPin` (bcrypt) en `src/lib/pasantes.ts`. Los valores
 heredados de 4 dígitos se aceptan una vez y se re-guardan hasheados.
 
-### 1.8 Datos de menores enviados a Google Gemini — **[pendiente / decisión]**
-`buildCaseContext` envía nombre, documento y relato del caso a la API de Gemini.
-→ Consentimiento + DPA, o seudonimizar, o modelo local. Ver `SECURITY.md`.
+### 1.8 Datos de menores enviados a Google Gemini — **[parcial]**
+`buildCaseContext` enviaba nombre, documento y relato del caso a Gemini.
+→ **[hecho]** `src/lib/aiPrivacy.ts`: seudonimización (nombres → rol; cédula,
+teléfono, correo barridos), barrido genérico en `ai.ts` sobre todo prompt
+saliente, **corte total del relato** para violencia sexual / salud mental /
+consumo, y aviso en la interfaz. 11 tests.
+→ **Pendiente (tú):** activar facturación en Google Cloud (la API pasa a nivel
+de pago → Google ya no entrena ni revisa con humanos) y documentar la base
+legal. Ver `SECURITY.md`.
 
 ---
 
@@ -206,9 +212,9 @@ documentación (`SECURITY.md`, `CONTRIBUTING.md`, este archivo).
 - `citas` y `derivaciones` migradas a `scopedDb`.
 
 **Pendiente — decisión tuya (no técnica)**
-1. IA + datos de menores (§1.8): conseguir consentimiento institucional
-   informado, o pedir seudonimizar el texto antes de enviarlo a Gemini, o
-   dejarlo como está asumiendo el riesgo de forma documentada.
+1. IA + datos de menores (§1.8): la seudonimización y el corte de relato ya
+   están; falta **activar facturación en Google Cloud** (la API pasa a nivel de
+   pago y Google deja de entrenar/revisar) y dejar por escrito la base legal.
 2. En producción, cambiar la contraseña de los SUPERADMIN desde el panel
    Superadmin (el reset por script se hizo en la base local).
 

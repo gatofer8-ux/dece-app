@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { pseudonymize } from "./aiPrivacy";
 
 // Asistente de redacción con IA para los documentos técnicos del DECE.
 // Usa la API gratuita de Gemini (Google AI Studio) — a diferencia de la API
@@ -42,7 +43,21 @@ function getClient(): GoogleGenAI | null {
   if (keys.length === 0) return null;
   const apiKey = keys[currentKeyIndex % keys.length];
   currentKeyIndex++;
-  return new GoogleGenAI({ apiKey });
+  const client = new GoogleGenAI({ apiKey });
+
+  // Red de seguridad: antes de que CUALQUIER prompt salga hacia Google, se le
+  // pasa un barrido genérico que elimina cédulas, RUC, teléfonos y correos que
+  // se hayan colado en texto libre. La seudonimización de nombres se hace en
+  // origen (buildCaseContext / aiPrivacy), esto es la última barrera.
+  const realGenerate = client.models.generateContent.bind(client.models);
+  client.models.generateContent = ((params: any) => {
+    if (typeof params?.contents === "string") {
+      params = { ...params, contents: pseudonymize(params.contents) };
+    }
+    return realGenerate(params);
+  }) as typeof client.models.generateContent;
+
+  return client;
 }
 
 export function isAiConfigured(): boolean {

@@ -25,6 +25,7 @@ export default function AIAssistButton({
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [heightened, setHeightened] = useState(false);
 
   async function handleClick() {
     const target = document.getElementById(targetId) as HTMLTextAreaElement | HTMLInputElement | null;
@@ -37,6 +38,7 @@ export default function AIAssistButton({
         setError(result.error);
         return;
       }
+      setHeightened(Boolean(result.heightenedConfidentiality));
       if (result.text) {
         const prototype = target instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
         const valueSetter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
@@ -73,6 +75,14 @@ export default function AIAssistButton({
         <span aria-hidden>✨</span> {loading ? "Redactando…" : "Ayuda de IA"}
       </button>
       {error && <span className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded px-1">{error}</span>}
+      {heightened && !error && (
+        <span
+          className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-1"
+          title="Por el tipo de caso (violencia sexual, salud mental o consumo), no se envió el relato ni los documentos del caso a la IA — solo datos mínimos. Revisa el borrador."
+        >
+          🔒 Confidencialidad reforzada: sin datos del caso
+        </span>
+      )}
     </span>
   );
 }
