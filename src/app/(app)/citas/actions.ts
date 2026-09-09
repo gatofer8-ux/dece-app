@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
+import { requireOwned, requireOwnedCase } from "@/lib/scopedDb";
 import { logAudit } from "@/lib/audit";
 import { sendEmail, emailShell } from "@/lib/email";
 import { sendPushToUser } from "@/lib/push";
@@ -33,8 +34,7 @@ export async function createAppointment(formData: FormData) {
   const notes = str(formData, "notes");
 
   if (caseId) {
-    const ownedCase = db.prepare("SELECT id FROM case_files WHERE id = ? AND institution_id = ?").get(caseId, institutionId);
-    if (!ownedCase) throw new Error("Caso no encontrado en tu institución.");
+    requireOwnedCase(caseId, institutionId);
   }
 
   db.prepare(
@@ -115,10 +115,7 @@ export async function createAppointment(formData: FormData) {
 export async function updateAppointmentStatus(id: string, status: string) {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
-  const appt = db
-    .prepare("SELECT * FROM appointments WHERE id = ? AND institution_id = ?")
-    .get(id, institutionId) as AppointmentRow | undefined;
-  if (!appt) throw new Error("Cita no encontrada en tu institución.");
+  const appt = requireOwned<AppointmentRow>("appointments", id, institutionId, "Cita");
 
   db.prepare(`UPDATE appointments SET status=?, updated_at=datetime('now') WHERE id=? AND institution_id=?`).run(status, id, institutionId);
 
@@ -139,10 +136,12 @@ export async function rescheduleAppointment(
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
 
-  const appt = db
-    .prepare("SELECT * FROM appointments WHERE id = ? AND institution_id = ?")
-    .get(appointmentId, institutionId) as (AppointmentRow & { student_name?: string | null }) | undefined;
-  if (!appt) throw new Error("Cita no encontrada en tu institución.");
+  const appt = requireOwned<AppointmentRow & { student_name?: string | null }>(
+    "appointments",
+    appointmentId,
+    institutionId,
+    "Cita"
+  );
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) throw new Error("Fecha inválida.");
   if (!newStartTime) throw new Error("Hora de inicio obligatoria.");

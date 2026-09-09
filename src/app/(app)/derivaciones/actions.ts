@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
+import { requireOwnedCase } from "@/lib/scopedDb";
 import { logAudit } from "@/lib/audit";
 
 export type ActionState = { error: string | null };
@@ -23,8 +24,7 @@ function insertReferral(
   userName: string,
   formData: FormData
 ): string {
-  const ownedCase = db.prepare("SELECT id FROM case_files WHERE id = ? AND institution_id = ?").get(caseId, institutionId);
-  if (!ownedCase) throw new Error("Caso no encontrado en tu institución.");
+  requireOwnedCase(caseId, institutionId);
   const id = randomUUID();
 
   db.prepare(
@@ -100,8 +100,7 @@ export async function createOfficialReferral(
 export async function updateReferralStatus(referralId: string, caseId: string, formData: FormData) {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
-  const ownedCase = db.prepare("SELECT id FROM case_files WHERE id = ? AND institution_id = ?").get(caseId, institutionId);
-  if (!ownedCase) throw new Error("Caso no encontrado en tu institución.");
+  requireOwnedCase(caseId, institutionId);
 
   db.prepare(
     `UPDATE referrals SET status=@status, response_notes=@response_notes, follow_up_date=@follow_up_date, updated_at=datetime('now') WHERE id=@id AND case_file_id=@case_file_id`
@@ -122,8 +121,7 @@ export async function updateReferralStatus(referralId: string, caseId: string, f
 export async function deleteReferral(referralId: string, caseId: string) {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
-  const ownedCase = db.prepare("SELECT id FROM case_files WHERE id = ? AND institution_id = ?").get(caseId, institutionId);
-  if (!ownedCase) throw new Error("Caso no encontrado en tu institución.");
+  requireOwnedCase(caseId, institutionId);
 
   db.prepare("DELETE FROM referrals WHERE id = ? AND case_file_id = ?").run(referralId, caseId);
   logAudit({ userId: session.user.id, action: "BORRAR", entityType: "Referral", entityId: referralId, institutionId });
