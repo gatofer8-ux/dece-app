@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { requireOwnedCase } from "@/lib/scopedDb";
+import { logger } from "@/lib/logger";
 import { draftText, draftBimonthlyMatrixDraft, draftObservationComment, draftObservationGlobalAnalysis, draftCorresponsibilityDifficulty, draftCorresponsibilityLegalFramework, draftCorresponsibilityCommitments, isAiConfigured } from "@/lib/ai";
 import type { CorresponsibilityConflictType } from "@/lib/types";
 import type { CaseFileRow, StudentRow, ViolenceReportRow, CaseActionRow } from "@/lib/types";
@@ -50,7 +51,9 @@ function buildCaseContext(caseId: string, institutionId: string): string {
       if (violenceReport.immediate_actions) lines.push(`Acciones inmediatas adoptadas: ${violenceReport.immediate_actions}`);
       if (violenceReport.observations) lines.push(`Observaciones: ${violenceReport.observations}`);
     }
-  } catch {}
+  } catch (e) {
+    logger.warn("ai-context", "sección de contexto del caso omitida por error", e);
+  }
 
   // 3. Entrevistas Semiestructuradas (si existen)
   try {
@@ -69,7 +72,9 @@ function buildCaseContext(caseId: string, institutionId: string): string {
         if (iv.commitment) lines.push(`  - Compromisos asumidos: ${iv.commitment}`);
       });
     }
-  } catch {}
+  } catch (e) {
+    logger.warn("ai-context", "sección de contexto del caso omitida por error", e);
+  }
 
   // 4. Fichas de Observación Áulica (si existen)
   try {
@@ -80,7 +85,9 @@ function buildCaseContext(caseId: string, institutionId: string): string {
       if (obs.observations) lines.push(`Observaciones en clase: ${obs.observations}`);
       if (obs.protective_factors) lines.push(`Factores protectores: ${obs.protective_factors}`);
     }
-  } catch {}
+  } catch (e) {
+    logger.warn("ai-context", "sección de contexto del caso omitida por error", e);
+  }
 
   // 5. Informe Técnico Situacional (si existe)
   try {
@@ -91,7 +98,9 @@ function buildCaseContext(caseId: string, institutionId: string): string {
       if (sitReport.conclusions) lines.push(`Conclusiones: ${sitReport.conclusions}`);
       if (sitReport.recommendations) lines.push(`Recomendaciones institucionales: ${sitReport.recommendations}`);
     }
-  } catch {}
+  } catch (e) {
+    logger.warn("ai-context", "sección de contexto del caso omitida por error", e);
+  }
 
   // 6. Actas de Corresponsabilidad Familiar (si existen)
   try {
@@ -102,7 +111,9 @@ function buildCaseContext(caseId: string, institutionId: string): string {
       if (corrAct.commitments_representative) lines.push(`Compromisos del representante: ${corrAct.commitments_representative}`);
       if (corrAct.commitments_dece) lines.push(`Compromisos DECE: ${corrAct.commitments_dece}`);
     }
-  } catch {}
+  } catch (e) {
+    logger.warn("ai-context", "sección de contexto del caso omitida por error", e);
+  }
 
   // 7. Plan de Atención Psicosocial y Seguimiento (si existe)
   try {
@@ -111,7 +122,9 @@ function buildCaseContext(caseId: string, institutionId: string): string {
       lines.push(`\n--- PLAN DE ATENCIÓN PSICOSOCIAL ---`);
       if (carePlan.diagnosis_summary || carePlan.diagnosis) lines.push(`Diagnóstico del plan: ${carePlan.diagnosis_summary || carePlan.diagnosis}`);
     }
-  } catch {}
+  } catch (e) {
+    logger.warn("ai-context", "sección de contexto del caso omitida por error", e);
+  }
 
   // 8. Actas de Socialización Previas (si existen)
   try {
@@ -121,7 +134,9 @@ function buildCaseContext(caseId: string, institutionId: string): string {
       if (socAct.vulnerability_type || socAct.vulnerability_situation) lines.push(`Situación de vulnerabilidad: ${socAct.vulnerability_type || socAct.vulnerability_situation}`);
       if (socAct.psychosocial_strategies) lines.push(`Estrategias previas: ${socAct.psychosocial_strategies}`);
     }
-  } catch {}
+  } catch (e) {
+    logger.warn("ai-context", "sección de contexto del caso omitida por error", e);
+  }
 
   // 9. Bitácora de Acciones Recientes
   try {
@@ -130,7 +145,9 @@ function buildCaseContext(caseId: string, institutionId: string): string {
       lines.push(`\n--- ACCIONES RECIENTES EN BITÁCORA ---`);
       actions.forEach(a => lines.push(`- [${a.type}] ${a.description}`));
     }
-  } catch {}
+  } catch (e) {
+    logger.warn("ai-context", "sección de contexto del caso omitida por error", e);
+  }
 
   return lines.join("\n");
 }

@@ -87,7 +87,10 @@ export async function getSession() {
             is_read_only: isReadOnly,
           };
         }
-      } catch {}
+      } catch (e) {
+        const { logger } = await import("./logger");
+        logger.warn("session", "no se pudo leer la suscripción del usuario", e);
+      }
     } else {
       (session.user as any).subscription = {
         status: "activo",
