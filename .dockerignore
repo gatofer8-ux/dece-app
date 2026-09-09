@@ -1,0 +1,14 @@
+node_modules
+.next
+data
+dece-app
+tmp_extracted_dumps
+.env
+.env.local
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.git
+*.tsbuildinfo
+cloudflared.exe

@@ -1,0 +1,24 @@
+# Normaliza los finales de línea: el repositorio guarda LF, el checkout usa
+# el estilo nativo del SO. Evita "diffs fantasma" entre Windows y Linux/CI.
+* text=auto eol=lf
+
+# Binarios: nunca convertir
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.docx binary
+*.xlsx binary
+*.xls binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.db binary
+
+# Windows scripts conservan CRLF
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf

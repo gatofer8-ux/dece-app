@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: dece-gestion-app
+    env: docker
+    plan: starter
+    region: oregon
+    disk:
+      name: dece-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: NEXTAUTH_SECRET
+        generateValue: true
+      - key: NEXTAUTH_URL
+        value: https://dece-gestion-app.onrender.com
+      - key: DATABASE_FILE
+        value: /data/dece.db
+      - key: GEMINI_API_KEY
+        sync: false

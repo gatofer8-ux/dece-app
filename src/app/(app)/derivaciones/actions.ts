@@ -1,0 +1,132 @@
+"use server";
+
+import { randomUUID } from "crypto";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
+import { requireRole, requireInstitutionId } from "@/lib/session";
+import { logAudit } from "@/lib/audit";
+
+export type ActionState = { error: string | null };
+
+function str(fd: FormData, key: string): string | null {
+  const v = fd.get(key);
+  if (typeof v !== "string") return null;
+  const t = v.trim();
+  return t.length ? t : null;
+}
+
+function insertReferral(
+  caseId: string,
+  institutionId: string,
+  userId: string,
+  userName: string,
+  formData: FormData
+): string {
+  const ownedCase = db.prepare("SELECT id FROM case_files WHERE id = ? AND institution_id = ?").get(caseId, institutionId);
+  if (!ownedCase) throw new Error("Caso no encontrado en tu institución.");
+  const id = randomUUID();
+
+  db.prepare(
+    `INSERT INTO referrals
+      (id, case_file_id, created_by_id, scope, institution, reason, informed_consent, consent_signed_by, referral_date, status,
+       destination_detail, background_summary, actions_taken, care_type_required, observations,
+       elaborated_by_name, received_by, authority_name,
+       student_age, student_disability, student_nationality, representative_document_id, district_office_label)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    id,
+    caseId,
+    userId,
+    str(formData, "scope") || "EXTERNA",
+    str(formData, "institution") || "",
+    str(formData, "reason") || "",
+    formData.get("informed_consent") ? 1 : 0,
+    str(formData, "consent_signed_by"),
+    str(formData, "referral_date") || new Date().toISOString(),
+    str(formData, "destination_detail"),
+    str(formData, "background_summary"),
+    str(formData, "actions_taken"),
+    str(formData, "care_type_required"),
+    str(formData, "observations"),
+    str(formData, "elaborated_by_name") || userName,
+    str(formData, "received_by"),
+    str(formData, "authority_name"),
+    str(formData, "student_age"),
+    str(formData, "student_disability"),
+    str(formData, "student_nationality"),
+    str(formData, "representative_document_id"),
+    str(formData, "district_office_label")
+  );
+
+  db.prepare(
+    `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Derivación', ?)`
+  ).run(randomUUID(), caseId, userId, `Derivación registrada hacia: ${str(formData, "institution")}`);
+
+  db.prepare(`UPDATE case_files SET status='DERIVADO', updated_at=datetime('now') WHERE id=? AND status != 'CERRADO'`).run(caseId);
+
+  logAudit({ userId, action: "CREAR", entityType: "Referral", entityId: id, details: caseId, institutionId });
+  return id;
+}
+
+export async function createReferral(caseId: string, formData: FormData) {
+  const session = await requireRole(["ADMIN", "DECE"]);
+  const institutionId = requireInstitutionId(session);
+  insertReferral(caseId, institutionId, session.user.id, session.user.name || "", formData);
+  revalidatePath(`/casos/${caseId}`);
+  revalidatePath("/derivaciones");
+}
+
+// Variante para el formulario completo de la Ficha de Derivación oficial
+// (usa el patrón ActionState/useFormState para mostrar errores sin crashear).
+export async function createOfficialReferral(
+  caseId: string,
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const session = await requireRole(["ADMIN", "DECE"]);
+  const institutionId = requireInstitutionId(session);
+  let referralId: string;
+  try {
+    referralId = insertReferral(caseId, institutionId, session.user.id, session.user.name || "", formData);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Ocurrió un error inesperado al registrar la derivación." };
+  }
+  revalidatePath(`/casos/${caseId}`);
+  revalidatePath("/derivaciones");
+  redirect(`/casos/${caseId}/derivaciones/${referralId}/imprimir`);
+}
+
+export async function updateReferralStatus(referralId: string, caseId: string, formData: FormData) {
+  const session = await requireRole(["ADMIN", "DECE"]);
+  const institutionId = requireInstitutionId(session);
+  const ownedCase = db.prepare("SELECT id FROM case_files WHERE id = ? AND institution_id = ?").get(caseId, institutionId);
+  if (!ownedCase) throw new Error("Caso no encontrado en tu institución.");
+
+  db.prepare(
+    `UPDATE referrals SET status=@status, response_notes=@response_notes, follow_up_date=@follow_up_date, updated_at=datetime('now') WHERE id=@id AND case_file_id=@case_file_id`
+  ).run({
+    id: referralId,
+    case_file_id: caseId,
+    status: str(formData, "status") || "PENDIENTE",
+    response_notes: str(formData, "response_notes"),
+    follow_up_date: str(formData, "follow_up_date"),
+  });
+
+  logAudit({ userId: session.user.id, action: "EDITAR", entityType: "Referral", entityId: referralId, institutionId });
+  revalidatePath(`/casos/${caseId}`);
+  revalidatePath("/derivaciones");
+}
+
+/** Borra una derivación duplicada o registrada por error (ronda 19). */
+export async function deleteReferral(referralId: string, caseId: string) {
+  const session = await requireRole(["ADMIN", "DECE"]);
+  const institutionId = requireInstitutionId(session);
+  const ownedCase = db.prepare("SELECT id FROM case_files WHERE id = ? AND institution_id = ?").get(caseId, institutionId);
+  if (!ownedCase) throw new Error("Caso no encontrado en tu institución.");
+
+  db.prepare("DELETE FROM referrals WHERE id = ? AND case_file_id = ?").run(referralId, caseId);
+  logAudit({ userId: session.user.id, action: "BORRAR", entityType: "Referral", entityId: referralId, institutionId });
+  revalidatePath(`/casos/${caseId}`);
+  revalidatePath("/derivaciones");
+}

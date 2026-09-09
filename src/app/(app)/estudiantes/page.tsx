@@ -1,0 +1,206 @@
+import Link from "next/link";
+import { db } from "@/lib/db";
+import UploadStudentListPDFButton from "@/components/UploadStudentListPDFButton";
+import { requireRole, requireInstitutionId } from "@/lib/session";
+import { PageHeader, Badge, EmptyState } from "@/components/ui";
+import type { StudentRow } from "@/lib/types";
+import { getUserCoverage } from "@/lib/distributivo";
+
+export default async function EstudiantesPage({
+  searchParams,
+}: {
+  searchParams: { estado?: string; q?: string; course?: string; parallel?: string; specialty?: string };
+}) {
+  const session = await requireRole(["ADMIN", "DECE", "AUTORIDAD", "DOCENTE"]);
+  const institutionId = requireInstitutionId(session);
+  const coverage = await getUserCoverage(session.user.id, institutionId, session.user.role);
+
+  let coursesRaw = db.prepare("SELECT DISTINCT course FROM students WHERE institution_id = ? AND course IS NOT NULL ORDER BY course ASC").all(institutionId) as { course: string }[];
+  const parallelsRaw = db.prepare("SELECT DISTINCT parallel FROM students WHERE institution_id = ? AND parallel IS NOT NULL ORDER BY parallel ASC").all(institutionId) as { parallel: string }[];
+  const specialtiesRaw = db.prepare("SELECT DISTINCT bachillerato_specialty FROM students WHERE institution_id = ? AND bachillerato_specialty IS NOT NULL ORDER BY bachillerato_specialty ASC").all(institutionId) as { bachillerato_specialty: string }[];
+
+  if (!coverage.isAllInstitutional && coverage.courses.length > 0) {
+    coursesRaw = coursesRaw.filter((r) => coverage.courses.includes(r.course));
+  }
+
+  const courses = coursesRaw.map(r => r.course);
+  const parallels = parallelsRaw.map(r => r.parallel);
+  const specialties = specialtiesRaw.map(r => r.bachillerato_specialty);
+
+  const { estado = "activos", q, course, parallel, specialty } = searchParams;
+
+  let where = "WHERE institution_id = ?";
+  const params: any[] = [institutionId];
+
+  if (!coverage.isAllInstitutional) {
+    if (coverage.courses.length > 0) {
+      const courseClauses: string[] = [];
+      const courseParams: any[] = [];
+      for (const c of coverage.courses) {
+        const match = c.match(/^(.*?)\s*\((Matutina|Vespertina|Nocturna)\)$/i);
+        if (match) {
+          const rawCourse = match[1].trim();
+          const jVal = match[2].toUpperCase();
+          courseClauses.push("(course = ? AND (jornada = ? OR jornada IS NULL))");
+          courseParams.push(rawCourse, jVal);
+        } else {
+          courseClauses.push("course = ?");
+          courseParams.push(c);
+        }
+      }
+      where += ` AND (${courseClauses.join(" OR ")})`;
+      params.push(...courseParams);
+    } else {
+      where += " AND (created_by_id = ? OR created_by_id IS NULL)";
+      params.push(session.user.id);
+    }
+  }
+  if (estado === "activos") where += " AND active = 1";
+  if (estado === "inactivos") where += " AND active = 0";
+  if (course) {
+    where += " AND course = ?";
+    params.push(course);
+  }
+  if (parallel) {
+    where += " AND parallel = ?";
+    params.push(parallel);
+  }
+  if (specialty) {
+    where += " AND bachillerato_specialty = ?";
+    params.push(specialty);
+  }
+  if (q) {
+    where += " AND (full_name LIKE ? OR document_id LIKE ? OR course LIKE ?)";
+    params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+  }
+
+  const students = db
+    .prepare(`SELECT * FROM students ${where} ORDER BY full_name ASC LIMIT 300`)
+    .all(...params) as StudentRow[];
+
+  const caseCounts = db
+    .prepare(
+      `SELECT student_id, COUNT(*) as n FROM case_files WHERE status != 'CERRADO' AND institution_id = ? GROUP BY student_id`
+    )
+    .all(institutionId) as { student_id: string; n: number }[];
+  const caseCountMap = new Map(caseCounts.map((c) => [c.student_id, c.n]));
+
+  return (
+    <div>
+      <PageHeader
+        title="Estudiantes"
+        description="Registro base de estudiantes de la institución."
+        action={
+          <>
+            <UploadStudentListPDFButton />
+            <Link href="/estudiantes/importar" className="btn-secondary">
+              Importar desde Excel
+            </Link>
+            <Link href="/estudiantes/nuevo" className="btn-primary">
+              + Nuevo estudiante
+            </Link>
+          </>
+        }
+      />
+
+      {!coverage.isAllInstitutional && (
+        <div className="mb-4 p-3 bg-indigo-50/80 border border-indigo-200 rounded-lg text-xs text-indigo-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-indigo-700">📌 Cobertura Asignada DECE:</span>
+            <span>
+              {coverage.courses.length > 0
+                ? `Mostrando cursos a tu cargo: ${coverage.courses.join(", ")}`
+                : "Sin cursos asignados en el distributivo actual."}
+            </span>
+          </div>
+          <Link href="/distributivo" className="text-indigo-700 hover:underline font-semibold shrink-0">
+            Ver Distributivo →
+          </Link>
+        </div>
+      )}
+
+      <form className="card p-4 mb-4 flex flex-col sm:flex-row gap-3" method="get">
+        <input
+          type="text"
+          name="q"
+          defaultValue={q}
+          placeholder="Buscar por nombre, cédula o curso..."
+          className="input sm:max-w-xs"
+        />
+        <select name="estado" defaultValue={estado} className="select sm:max-w-[120px]">
+          <option value="activos">Activos</option>
+          <option value="inactivos">Inactivos</option>
+          <option value="todos">Todos</option>
+        </select>
+        <select name="course" defaultValue={course} className="select sm:max-w-[160px]">
+          <option value="">Años / Cursos</option>
+          {courses.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select name="parallel" defaultValue={parallel} className="select sm:max-w-[100px]">
+          <option value="">Paralelo</option>
+          {parallels.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select name="specialty" defaultValue={specialty} className="select sm:max-w-[160px]">
+          <option value="">Especialidad</option>
+          {specialties.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <button type="submit" className="btn-secondary">
+          Filtrar
+        </button>
+      </form>
+
+      {students.length === 0 ? (
+        <EmptyState
+          title="No se encontraron estudiantes"
+          description="Registra el primer estudiante para comenzar a usar el sistema."
+          action={
+            <Link href="/estudiantes/nuevo" className="btn-primary">
+              + Nuevo estudiante
+            </Link>
+          }
+        />
+      ) : (
+        <div className="card overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
+              <tr>
+                <th className="text-left px-4 py-3">Nombre</th>
+                <th className="text-left px-4 py-3">Curso</th>
+                <th className="text-left px-4 py-3">Cédula</th>
+                <th className="text-left px-4 py-3">Representante</th>
+                <th className="text-left px-4 py-3">Casos activos</th>
+                <th className="text-left px-4 py-3">Estado</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {students.map((s) => (
+                <tr key={s.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <Link href={`/estudiantes/${s.id}`} className="font-medium text-brand-700 hover:underline">
+                      {s.full_name}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {s.course} {s.parallel || ""}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{s.document_id || "—"}</td>
+                  <td className="px-4 py-3 text-slate-600">{s.representative || "—"}</td>
+                  <td className="px-4 py-3">
+                    {caseCountMap.get(s.id) ? (
+                      <Badge color="amber">{caseCountMap.get(s.id)} activo(s)</Badge>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {s.active ? <Badge color="green">Activo</Badge> : <Badge color="slate">Inactivo</Badge>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}

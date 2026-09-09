@@ -1,0 +1,1075 @@
+"use client";
+
+import { useState } from "react";
+import { useFormState, useFormStatus } from "react-dom";
+import Link from "next/link";
+import {
+  createCaseClosureReport,
+  updateCaseClosureReport,
+  type ActionState,
+} from "../../../actions";
+import { generateClosureReportAiDraft } from "../../ai-actions";
+import type {
+  CaseClosureReportRow,
+  ClosureType,
+  StudentRow,
+  CaseFileRow,
+  InstitutionRow,
+} from "@/lib/types";
+import { CLOSURE_TYPE_LABELS } from "@/lib/types";
+import {
+  DEFAULT_LEGAL_FRAMEWORK,
+  DEFAULT_METHODOLOGY,
+  buildDefaultTopic,
+  buildDefaultClosureReasons,
+  buildDefaultScope,
+  buildDefaultObjective,
+  type BimonthlyConsolidatedItem,
+} from "@/lib/caseClosureReport";
+import VoiceDictationButton from "@/components/VoiceDictationButton";
+import AIAssistButton from "@/components/AIAssistButton";
+
+const initialState: ActionState = { error: null };
+
+function SubmitButton({ isEditing }: { isEditing: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="btn-primary disabled:opacity-60 text-xs px-5 py-2.5 flex items-center gap-2 shadow-sm font-semibold"
+    >
+      {pending ? (
+        <>
+          <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" />
+          <span>Guardando informe...</span>
+        </>
+      ) : isEditing ? (
+        "Actualizar Informe de Cierre"
+      ) : (
+        "Guardar Informe de Cierre"
+      )}
+    </button>
+  );
+}
+
+export default function CaseClosureReportForm({
+  caseId,
+  student,
+  caseFile,
+  institution,
+  schoolYearText,
+  defaultReportNumber,
+  defaultPsychosocialSummary,
+  bimonthlyItems,
+  report,
+}: {
+  caseId: string;
+  student: StudentRow;
+  caseFile: CaseFileRow;
+  institution: InstitutionRow;
+  schoolYearText?: string;
+  defaultReportNumber: string;
+  defaultPsychosocialSummary: string;
+  bimonthlyItems: BimonthlyConsolidatedItem[];
+  report?: CaseClosureReportRow;
+}) {
+  const isEditing = Boolean(report);
+  const actionFn = report
+    ? updateCaseClosureReport.bind(null, report.id, caseId)
+    : createCaseClosureReport.bind(null, caseId);
+  const [state, formAction] = useFormState(actionFn, initialState);
+
+  const activeSchoolYear = schoolYearText || report?.school_year_text || "2024 - 2025";
+  const calculatedAge = student.birth_date
+    ? Math.floor((Date.now() - new Date(student.birth_date).getTime()) / (365.25 * 24 * 3600 * 1000))
+    : "";
+
+  // Estados interactivos
+  const [closureType, setClosureType] = useState<ClosureType>(
+    report?.closure_type || "FINALIZACION_ANO_LECTIVO"
+  );
+  const [topic, setTopic] = useState(
+    report?.topic ||
+      buildDefaultTopic(
+        "FINALIZACION_ANO_LECTIVO",
+        student.full_name,
+        student.course,
+        student.parallel || "",
+        "MATUTINA"
+      )
+  );
+  const [closureReasons, setClosureReasons] = useState(
+    report?.closure_reasons ||
+      buildDefaultClosureReasons(
+        "FINALIZACION_ANO_LECTIVO",
+        student.full_name,
+        activeSchoolYear
+      )
+  );
+  const [scope, setScope] = useState(
+    report?.scope || buildDefaultScope("FINALIZACION_ANO_LECTIVO")
+  );
+  const [objective, setObjective] = useState(
+    report?.objective ||
+      buildDefaultObjective("FINALIZACION_ANO_LECTIVO", student.full_name)
+  );
+  const [psychosocialSummary, setPsychosocialSummary] = useState(
+    report?.activities_psychosocial || defaultPsychosocialSummary
+  );
+  const [conclusions, setConclusions] = useState(
+    report?.conclusions ||
+      `1. Se brindó acompañamiento continuo, contención emocional y seguimiento pedagógico al estudiante ${student.full_name} durante todo el año lectivo.\n2. Se garantizó la restitución de sus derechos y la no revictimización en el contexto escolar, verificando avances favorables en su desarrollo integral.\n3. Se coordinó activamente con el representante legal y las instancias distritales e interinstitucionales correspondientes.`
+  );
+  const [recommendations, setRecommendations] = useState(
+    report?.recommendations ||
+      `1. Mantener un ambiente escolar protector, inclusivo y libre de estigmatizaciones para garantizar la continuidad pedagógica.\n2. Al representante legal: continuar fortaleciendo la corresponsabilidad familiar y los vínculos afectivos seguros en el hogar.\n3. A los docentes tutores: observar el desenvolvimiento socioafectivo y académico reportando cualquier señal de alerta al DECE institucional.`
+  );
+
+  // Estados de carga de IA
+  const [loadingAiField, setLoadingAiField] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  const handleClosureTypeChange = (newType: ClosureType) => {
+    setClosureType(newType);
+    if (!report) {
+      setTopic(
+        buildDefaultTopic(
+          newType,
+          student.full_name,
+          student.course,
+          student.parallel || "",
+          "MATUTINA"
+        )
+      );
+      setClosureReasons(
+        buildDefaultClosureReasons(
+          newType,
+          student.full_name,
+          activeSchoolYear
+        )
+      );
+      setScope(buildDefaultScope(newType));
+      setObjective(buildDefaultObjective(newType, student.full_name));
+    }
+  };
+
+  const handleAiDraft = async (
+    field: "closure_reasons" | "conclusions" | "recommendations" | "psychosocial_summary",
+    setter: (val: string) => void,
+    currentVal: string
+  ) => {
+    setLoadingAiField(field);
+    setAiError(null);
+    try {
+      const res = await generateClosureReportAiDraft({
+        caseId,
+        field,
+        closureType,
+        currentText: currentVal,
+      });
+      if (res.error) {
+        setAiError(res.error);
+      } else if (res.text) {
+        setter(res.text);
+      }
+    } catch {
+      setAiError("Ocurrió un error al consultar el asistente de IA.");
+    } finally {
+      setLoadingAiField(null);
+    }
+  };
+
+  return (
+    <form action={formAction} className="card p-6 space-y-8 max-w-5xl">
+      {state.error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {state.error}
+        </div>
+      )}
+
+      {aiError && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800 flex items-center justify-between">
+          <span>{aiError}</span>
+          <button
+            type="button"
+            onClick={() => setAiError(null)}
+            className="text-amber-600 hover:text-amber-900 font-bold ml-2"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Tipo de Informe de Cierre y Metadatos */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+          <div>
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide flex items-center gap-2">
+              <span>📋 Modalidad y Datos del Informe</span>
+            </h3>
+            <p className="text-xs text-slate-500">
+              Seleccione la modalidad de cierre para pre-configurar la estructura oficial.
+            </p>
+          </div>
+          <div className="text-xs text-slate-500">
+            Caso: <strong className="text-slate-800">{caseFile.code}</strong> | Estudiante: <strong className="text-slate-800">{student.full_name}</strong>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="label text-xs font-semibold">Tipo de Cierre / Finalización *</label>
+            <select
+              name="closure_type"
+              value={closureType}
+              onChange={(e) => handleClosureTypeChange(e.target.value as ClosureType)}
+              className="select text-xs font-medium"
+              required
+            >
+              {Object.entries(CLOSURE_TYPE_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="label text-xs font-semibold">Número de Informe Técnico *</label>
+            <input
+              type="text"
+              name="report_number"
+              defaultValue={report?.report_number || defaultReportNumber}
+              required
+              className="input text-xs font-mono uppercase"
+              placeholder="IT-DECE-UE-2024-2025-01"
+            />
+          </div>
+
+          <div>
+            <label className="label text-xs font-semibold">Fecha del Informe *</label>
+            <input
+              type="date"
+              name="report_date"
+              defaultValue={report?.report_date || new Date().toISOString().split("T")[0]}
+              required
+              className="input text-xs"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="label text-xs font-semibold">Año Lectivo *</label>
+            <input
+              type="text"
+              name="school_year_text"
+              defaultValue={report?.school_year_text || activeSchoolYear}
+              required
+              className="input text-xs"
+              placeholder="2024-2025"
+            />
+          </div>
+          <div>
+            <label className="label text-xs font-semibold">Institución Educativa</label>
+            <input
+              type="text"
+              disabled
+              value={institution.name}
+              className="input text-xs bg-slate-100 text-slate-600"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Remitente DECE y Destinatario Autoridad */}
+      <div className="border border-slate-200 rounded-xl p-5 space-y-4">
+        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide border-b border-slate-200 pb-2">
+          1. Datos de Remitente y Autoridad Destinataria
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* DECE */}
+          <div className="space-y-3 bg-blue-50/40 p-4 rounded-lg border border-blue-100">
+            <h4 className="text-xs font-bold text-blue-900 uppercase">Profesional DECE Remitente</h4>
+            <div>
+              <label className="label text-xs">Nombre y Apellido *</label>
+              <input
+                type="text"
+                name="dece_name"
+                defaultValue={report?.dece_name || "Profesional DECE"}
+                required
+                className="input text-xs"
+              />
+            </div>
+            <div>
+              <label className="label text-xs">Cargo Institucional *</label>
+              <input
+                type="text"
+                name="dece_role"
+                defaultValue={report?.dece_role || "PROFESIONAL DECE INSTITUCIONAL"}
+                required
+                className="input text-xs"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="label text-xs">Teléfono / Extensión</label>
+                <input
+                  type="text"
+                  name="dece_phone_ext"
+                  defaultValue={report?.dece_phone_ext || ""}
+                  className="input text-xs"
+                  placeholder="Ext. 104"
+                />
+              </div>
+              <div>
+                <label className="label text-xs">Correo Electrónico</label>
+                <input
+                  type="email"
+                  name="dece_email"
+                  defaultValue={report?.dece_email || ""}
+                  className="input text-xs"
+                  placeholder="dece@institucion.edu.ec"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Autoridad */}
+          <div className="space-y-3 bg-slate-50 p-4 rounded-lg border border-slate-200">
+            <h4 className="text-xs font-bold text-slate-900 uppercase">Máxima Autoridad Destinataria</h4>
+            <div>
+              <label className="label text-xs">Nombre y Título *</label>
+              <input
+                type="text"
+                name="authority_name"
+                defaultValue={report?.authority_name || "Msc. Máxima Autoridad Institucional"}
+                required
+                className="input text-xs"
+              />
+            </div>
+            <div>
+              <label className="label text-xs">Cargo *</label>
+              <input
+                type="text"
+                name="authority_role"
+                defaultValue={report?.authority_role || "RECTOR (E) DE LA UNIDAD EDUCATIVA"}
+                required
+                className="input text-xs"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="label text-xs">Teléfono / Extensión</label>
+                <input
+                  type="text"
+                  name="authority_phone_ext"
+                  defaultValue={report?.authority_phone_ext || ""}
+                  className="input text-xs"
+                  placeholder="Ext. 101"
+                />
+              </div>
+              <div>
+                <label className="label text-xs">Correo Electrónico</label>
+                <input
+                  type="email"
+                  name="authority_email"
+                  defaultValue={report?.authority_email || ""}
+                  className="input text-xs"
+                  placeholder="rectorado@institucion.edu.ec"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tema, Razones, Marco Legal, Alcance, Objetivo */}
+      <div className="border border-slate-200 rounded-xl p-5 space-y-5">
+        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide border-b border-slate-200 pb-2">
+          2. Justificación y Fundamentación Técnica
+        </h3>
+
+        {/* Tema */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="label text-xs font-bold uppercase text-slate-700">Tema del Informe *</label>
+            <div className="flex items-center gap-1.5">
+              <VoiceDictationButton targetId="closure-topic" compact />
+              <AIAssistButton targetId="closure-topic" caseId={caseId} fieldLabel="Tema del informe de cierre" compact />
+            </div>
+          </div>
+          <textarea
+            id="closure-topic"
+            name="topic"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            required
+            rows={2}
+            className="input text-xs font-semibold uppercase"
+          />
+        </div>
+
+        {/* Razones del Cierre o Traslado */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="label text-xs font-bold uppercase text-slate-700">
+              Razones del Cierre o Traslado de Caso *
+            </label>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleAiDraft("closure_reasons", setClosureReasons, closureReasons)}
+                disabled={loadingAiField === "closure_reasons"}
+                className="text-[11px] px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 border border-violet-300 hover:bg-violet-100 font-medium inline-flex items-center gap-1 transition-colors"
+                title="Redactar razones técnicas con IA según el expediente"
+              >
+                <span>✨</span>
+                <span>{loadingAiField === "closure_reasons" ? "Redactando con IA..." : "Redactar Razones con IA"}</span>
+              </button>
+              <VoiceDictationButton targetId="closure-reasons" compact />
+            </div>
+          </div>
+          <textarea
+            id="closure-reasons"
+            name="closure_reasons"
+            value={closureReasons}
+            onChange={(e) => setClosureReasons(e.target.value)}
+            required
+            rows={4}
+            className="input text-xs leading-relaxed"
+          />
+        </div>
+
+        {/* Marco Legal */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="label text-xs font-bold uppercase text-slate-700">Marco Legal Aplicable *</label>
+            <VoiceDictationButton targetId="closure-legal-framework" compact />
+          </div>
+          <textarea
+            id="closure-legal-framework"
+            name="legal_framework"
+            defaultValue={report?.legal_framework || DEFAULT_LEGAL_FRAMEWORK}
+            required
+            rows={6}
+            className="input text-xs font-mono leading-relaxed"
+          />
+        </div>
+
+        {/* Alcance y Objetivo */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="label text-xs font-bold uppercase text-slate-700">Alcance *</label>
+              <VoiceDictationButton targetId="closure-scope" compact />
+            </div>
+            <textarea
+              id="closure-scope"
+              name="scope"
+              value={scope}
+              onChange={(e) => setScope(e.target.value)}
+              required
+              rows={3}
+              className="input text-xs"
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="label text-xs font-bold uppercase text-slate-700">Objetivo *</label>
+              <div className="flex items-center gap-1">
+                <VoiceDictationButton targetId="closure-objective" compact />
+                <AIAssistButton targetId="closure-objective" caseId={caseId} fieldLabel="Objetivo del informe de cierre" compact />
+              </div>
+            </div>
+            <textarea
+              id="closure-objective"
+              name="objective"
+              value={objective}
+              onChange={(e) => setObjective(e.target.value)}
+              required
+              rows={3}
+              className="input text-xs"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla 1: Datos Generales del Estudiante y Representante */}
+      <div className="border border-slate-200 rounded-xl p-5 space-y-4">
+        <div className="border-b border-slate-200 pb-2">
+          <h3 className="text-xs font-bold text-[#366092] uppercase tracking-wide">
+            3. Datos Generales de la Niña, Niño o Adolescente (Tabla 1)
+          </h3>
+          <p className="text-[11px] text-slate-500">
+            Formato oficial con membrete ministerial y estilo institucional azul.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="lg:col-span-2">
+            <label className="label text-xs">Nombres y Apellidos Completos *</label>
+            <input
+              type="text"
+              name="student_name"
+              defaultValue={report?.student_name || student.full_name}
+              required
+              className="input text-xs font-semibold"
+            />
+          </div>
+          <div>
+            <label className="label text-xs">N° Cédula / Identificación</label>
+            <input
+              type="text"
+              name="student_id_num"
+              defaultValue={report?.student_id_num || student.document_id || ""}
+              className="input text-xs font-mono"
+            />
+          </div>
+          <div>
+            <label className="label text-xs">Edad (Años)</label>
+            <input
+              type="number"
+              name="student_age"
+              defaultValue={report?.student_age || calculatedAge || ""}
+              className="input text-xs"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="label text-xs">Fecha de Nacimiento</label>
+            <input
+              type="date"
+              name="student_birth_date"
+              defaultValue={report?.student_birth_date || student.birth_date || ""}
+              className="input text-xs"
+            />
+          </div>
+          <div>
+            <label className="label text-xs">Año de Educación / Grado *</label>
+            <input
+              type="text"
+              name="student_grade"
+              defaultValue={report?.student_grade || student.course}
+              required
+              className="input text-xs"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="label text-xs">Paralelo</label>
+              <input
+                type="text"
+                name="student_parallel"
+                defaultValue={report?.student_parallel || student.parallel || ""}
+                className="input text-xs font-bold uppercase text-center"
+              />
+            </div>
+            <div>
+              <label className="label text-xs">Sección</label>
+              <input
+                type="text"
+                name="student_section"
+                defaultValue={report?.student_section || student.jornada || "MATUTINA"}
+                className="input text-xs font-semibold uppercase text-center"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="label text-xs">Dirección Domiciliaria</label>
+            <input
+              type="text"
+              name="student_address"
+              defaultValue={report?.student_address || student.address || ""}
+              className="input text-xs"
+              placeholder="Barrio Central, Calle 10 de Agosto"
+            />
+          </div>
+          <div>
+            <label className="label text-xs">Referencia Domiciliaria</label>
+            <input
+              type="text"
+              name="student_address_ref"
+              defaultValue={report?.student_address_ref || ""}
+              className="input text-xs"
+              placeholder="Frente al parque infantil"
+            />
+          </div>
+        </div>
+
+        <div className="border-t border-slate-100 pt-3">
+          <h4 className="text-[11px] font-bold text-slate-700 uppercase mb-2">
+            Datos del Representante Legal
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="label text-xs">Nombres y Apellidos Representante</label>
+              <input
+                type="text"
+                name="rep_name"
+                defaultValue={report?.rep_name || student.representative || ""}
+                className="input text-xs"
+              />
+            </div>
+            <div>
+              <label className="label text-xs">N° Cédula Representante</label>
+              <input
+                type="text"
+                name="rep_id_num"
+                defaultValue={report?.rep_id_num || student.representative_document_id || ""}
+                className="input text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label className="label text-xs">Teléfono / Celular de Contacto</label>
+              <input
+                type="text"
+                name="rep_phone"
+                defaultValue={report?.rep_phone || student.rep_phone || ""}
+                className="input text-xs"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla 2: Actividades Realizadas por Ejes y Consolidado Bimensual */}
+      <div className="border border-slate-200 rounded-xl p-5 space-y-6">
+        <div className="border-b border-slate-200 pb-2">
+          <h3 className="text-xs font-bold text-[#366092] uppercase tracking-wide flex items-center justify-between">
+            <span>4. Actividades Realizadas por Ejes de Intervención (Tabla 2)</span>
+            <span className="text-[11px] font-normal text-slate-500 lowercase">
+              Consolidación anual obligatoria
+            </span>
+          </h3>
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            Incluye Consejería, Prevención, Atención Psicosocial integral y el{" "}
+            <strong>Consolidado de todos los Informes Bimensuales del año</strong>.
+          </p>
+        </div>
+
+        {/* Eje 1: Consejería */}
+        <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-200">
+          <div className="flex items-center justify-between mb-1">
+            <label className="label text-xs font-bold text-slate-700">
+              Eje de Consejería
+            </label>
+            <div className="flex items-center gap-1.5">
+              <VoiceDictationButton targetId="closure-counseling" compact />
+              <AIAssistButton targetId="closure-counseling" caseId={caseId} fieldLabel="Eje de Consejería en informe de cierre" compact />
+            </div>
+          </div>
+          <textarea
+            id="closure-counseling"
+            name="activities_counseling"
+            defaultValue={
+              report?.activities_counseling ||
+              "Orientación y acompañamiento socioemocional individual periódico, fomento de habilidades para la vida y toma de decisiones."
+            }
+            rows={2}
+            className="input text-xs leading-relaxed"
+          />
+        </div>
+
+        {/* Eje 2: Promoción y Prevención */}
+        <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-200">
+          <div className="flex items-center justify-between mb-1">
+            <label className="label text-xs font-bold text-slate-700">
+              Eje de Promoción y Prevención
+            </label>
+            <div className="flex items-center gap-1.5">
+              <VoiceDictationButton targetId="closure-prevention" compact />
+              <AIAssistButton targetId="closure-prevention" caseId={caseId} fieldLabel="Eje de Promoción y Prevención en informe de cierre" compact />
+            </div>
+          </div>
+          <textarea
+            id="closure-prevention"
+            name="activities_prevention"
+            defaultValue={
+              report?.activities_prevention ||
+              "Talleres áulicos de sensibilización sobre resolución pacífica de conflictos, prevención de violencia escolar y autocuidado dirigidos a la comunidad educativa."
+            }
+            rows={2}
+            className="input text-xs leading-relaxed"
+          />
+        </div>
+
+        {/* Eje 3: Atención Psicosocial */}
+        <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-200">
+          <div className="flex items-center justify-between mb-1">
+            <div>
+              <label className="label text-xs font-bold text-slate-700">
+                Eje de Atención Psicosocial (Detección, Intervención, Seguimiento, Derivación, Reparación)
+              </label>
+              <p className="text-[11px] text-slate-500">
+                Se recopilan cronológicamente las fechas y acciones registradas en el expediente del caso.
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleAiDraft("psychosocial_summary", setPsychosocialSummary, psychosocialSummary)}
+                disabled={loadingAiField === "psychosocial_summary"}
+                className="text-[11px] px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 border border-violet-300 hover:bg-violet-100 font-medium inline-flex items-center gap-1 transition-colors"
+                title="Sintetizar y redactar con IA el eje psicosocial"
+              >
+                <span>✨</span>
+                <span>{loadingAiField === "psychosocial_summary" ? "Redactando..." : "Sintetizar con IA"}</span>
+              </button>
+              <VoiceDictationButton targetId="closure-psychosocial" compact />
+            </div>
+          </div>
+          <textarea
+            id="closure-psychosocial"
+            name="activities_psychosocial"
+            value={psychosocialSummary}
+            onChange={(e) => setPsychosocialSummary(e.target.value)}
+            rows={7}
+            className="input text-xs leading-relaxed"
+          />
+        </div>
+
+        {/* Eje 4: Inclusión Socioeducativa */}
+        <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-200">
+          <div className="flex items-center justify-between mb-1">
+            <label className="label text-xs font-bold text-slate-700">
+              Eje de Inclusión Socioeducativa
+            </label>
+            <div className="flex items-center gap-1.5">
+              <VoiceDictationButton targetId="closure-inclusion" compact />
+              <AIAssistButton targetId="closure-inclusion" caseId={caseId} fieldLabel="Eje de Inclusión Socioeducativa en informe de cierre" compact />
+            </div>
+          </div>
+          <textarea
+            id="closure-inclusion"
+            name="activities_inclusion"
+            defaultValue={
+              report?.activities_inclusion ||
+              "Articulación docente para la adaptación pedagógica, garantía de permanencia educativa y seguimiento a la convivencia escolar armónica."
+            }
+            rows={2}
+            className="input text-xs leading-relaxed"
+          />
+        </div>
+
+        {/* CONSOLIDADO DE INFORMES BIMENSUALES DEL AÑO LECTIVO */}
+        <div className="border border-blue-200 bg-blue-50/30 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-xs font-bold text-blue-900 uppercase flex items-center gap-2">
+                <span>📁 Consolidado de Informes Bimensuales del Año Lectivo</span>
+                <span className="bg-blue-200 text-blue-800 text-[10px] px-2 py-0.5 rounded-full font-semibold">
+                  {bimonthlyItems.length} {bimonthlyItems.length === 1 ? "informe registrado" : "informes registrados"}
+                </span>
+              </h4>
+              <p className="text-[11px] text-slate-600 mt-0.5">
+                La normativa dispone que la información de todos los seguimientos bimensuales debe constar en este informe final.
+              </p>
+            </div>
+          </div>
+
+          <input
+            type="hidden"
+            name="bimonthly_summary_json"
+            value={JSON.stringify(bimonthlyItems)}
+          />
+
+          {bimonthlyItems.length === 0 ? (
+            <div className="text-center py-6 bg-white rounded-lg border border-dashed border-slate-300">
+              <p className="text-xs text-slate-500">
+                No se registran informes bimensuales previos para este caso.
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Puede guardar este informe de cierre de todas formas, o registrar los seguimientos bimensuales desde la ficha del caso.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {bimonthlyItems.map((item, idx) => (
+                <div
+                  key={item.id || idx}
+                  className="bg-white border border-slate-200 rounded-lg p-3 shadow-xs"
+                >
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                    <span className="font-bold text-xs text-slate-800">
+                      Bimestre: {item.period_months} ({item.school_year_text})
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      Fecha: {item.created_at ? item.created_at.split("T")[0] : "S/F"}
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-[11px] border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-600 border-b border-slate-200">
+                          <th className="py-1 px-2 font-semibold">Proceso</th>
+                          <th className="py-1 px-2 font-semibold">Ejecutor / Servicio</th>
+                          <th className="py-1 px-2 text-center font-semibold">Personas</th>
+                          <th className="py-1 px-2 text-center font-semibold">Vigencia</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {item.processes.map((proc, pIdx) => (
+                          <tr key={proc.id || pIdx} className="hover:bg-slate-50/50">
+                            <td className="py-1.5 px-2 font-medium text-slate-800">
+                              {proc.process_name}
+                            </td>
+                            <td className="py-1.5 px-2 text-slate-600">
+                              {proc.executed_by || "—"}
+                            </td>
+                            <td className="py-1.5 px-2 text-center text-slate-600 font-mono">
+                              {proc.beneficiaries_count || "1"}
+                            </td>
+                            <td className="py-1.5 px-2 text-center text-slate-500 text-[10px]">
+                              {proc.start_date || "—"} al {proc.end_date || "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Metodología, Conclusiones y Recomendaciones */}
+      <div className="border border-slate-200 rounded-xl p-5 space-y-6">
+        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide border-b border-slate-200 pb-2">
+          5. Metodología, Conclusiones y Recomendaciones
+        </h3>
+
+        {/* Metodología */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="label text-xs font-bold uppercase text-slate-700">Metodología Aplicada *</label>
+            <VoiceDictationButton targetId="closure-methodology" compact />
+          </div>
+          <textarea
+            id="closure-methodology"
+            name="methodology"
+            defaultValue={report?.methodology || DEFAULT_METHODOLOGY}
+            required
+            rows={4}
+            className="input text-xs leading-relaxed"
+          />
+        </div>
+
+        {/* Conclusiones */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="label text-xs font-bold uppercase text-slate-700">Conclusiones Técnicas *</label>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleAiDraft("conclusions", setConclusions, conclusions)}
+                disabled={loadingAiField === "conclusions"}
+                className="text-[11px] px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 border border-violet-300 hover:bg-violet-100 font-medium inline-flex items-center gap-1 transition-colors"
+                title="Generar conclusiones técnicas basadas en la evolución y seguimientos del caso"
+              >
+                <span>✨</span>
+                <span>{loadingAiField === "conclusions" ? "Redactando con IA..." : "Redactar Conclusiones con IA"}</span>
+              </button>
+              <VoiceDictationButton targetId="closure-conclusions" compact />
+            </div>
+          </div>
+          <textarea
+            id="closure-conclusions"
+            name="conclusions"
+            value={conclusions}
+            onChange={(e) => setConclusions(e.target.value)}
+            required
+            rows={5}
+            className="input text-xs leading-relaxed"
+          />
+        </div>
+
+        {/* Recomendaciones */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="label text-xs font-bold uppercase text-slate-700">Recomendaciones Técnicas *</label>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleAiDraft("recommendations", setRecommendations, recommendations)}
+                disabled={loadingAiField === "recommendations"}
+                className="text-[11px] px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 border border-violet-300 hover:bg-violet-100 font-medium inline-flex items-center gap-1 transition-colors"
+                title="Generar recomendaciones formales con IA adaptadas a la modalidad de cierre"
+              >
+                <span>✨</span>
+                <span>{loadingAiField === "recommendations" ? "Redactando con IA..." : "Redactar Recomendaciones con IA"}</span>
+              </button>
+              <VoiceDictationButton targetId="closure-recommendations" compact />
+            </div>
+          </div>
+          <textarea
+            id="closure-recommendations"
+            name="recommendations"
+            value={recommendations}
+            onChange={(e) => setRecommendations(e.target.value)}
+            required
+            rows={5}
+            className="input text-xs leading-relaxed"
+          />
+        </div>
+      </div>
+
+      {/* Firmas de Responsabilidad (Tabla 3 replica) */}
+      <div className="border border-slate-200 rounded-xl p-5 space-y-4">
+        <div className="border-b border-slate-200 pb-2">
+          <h3 className="text-xs font-bold text-[#366092] uppercase tracking-wide">
+            6. Firmas de Responsabilidad Institucional (Tabla 3)
+          </h3>
+          <p className="text-[11px] text-slate-500">
+            Responsables de elaboración, revisión y aprobación según el orgánico funcional DECE.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Elaborado */}
+          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
+            <span className="text-[11px] font-bold text-slate-700 uppercase block">Elaborado Por</span>
+            <div>
+              <label className="label text-[11px]">Nombre</label>
+              <input
+                type="text"
+                name="elaborated_by_name"
+                defaultValue={report?.elaborated_by_name || "Psic. Profesional DECE"}
+                required
+                className="input text-xs"
+              />
+            </div>
+            <div>
+              <label className="label text-[11px]">Cargo</label>
+              <input
+                type="text"
+                name="elaborated_by_role"
+                defaultValue={report?.elaborated_by_role || "ANALISTA DECE"}
+                required
+                className="input text-xs"
+              />
+            </div>
+            <div>
+              <label className="label text-[11px]">Fecha</label>
+              <input
+                type="date"
+                name="elaborated_date"
+                defaultValue={report?.elaborated_date || new Date().toISOString().split("T")[0]}
+                required
+                className="input text-xs"
+              />
+            </div>
+          </div>
+
+          {/* Revisado */}
+          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
+            <span className="text-[11px] font-bold text-slate-700 uppercase block">Revisado Por</span>
+            <div>
+              <label className="label text-[11px]">Nombre</label>
+              <input
+                type="text"
+                name="reviewed_by_name"
+                defaultValue={report?.reviewed_by_name || "Coordinadora DECE Institucional"}
+                required
+                className="input text-xs"
+              />
+            </div>
+            <div>
+              <label className="label text-[11px]">Cargo</label>
+              <input
+                type="text"
+                name="reviewed_by_role"
+                defaultValue={report?.reviewed_by_role || "COORDINADORA DECE INSTITUCIONAL"}
+                required
+                className="input text-xs"
+              />
+            </div>
+            <div>
+              <label className="label text-[11px]">Fecha</label>
+              <input
+                type="date"
+                name="reviewed_date"
+                defaultValue={report?.reviewed_date || new Date().toISOString().split("T")[0]}
+                required
+                className="input text-xs"
+              />
+            </div>
+          </div>
+
+          {/* Aprobado */}
+          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
+            <span className="text-[11px] font-bold text-slate-700 uppercase block">Aprobado Por</span>
+            <div>
+              <label className="label text-[11px]">Nombre</label>
+              <input
+                type="text"
+                name="approved_by_name"
+                defaultValue={report?.approved_by_name || "Msc. Máxima Autoridad Institucional"}
+                required
+                className="input text-xs"
+              />
+            </div>
+            <div>
+              <label className="label text-[11px]">Cargo</label>
+              <input
+                type="text"
+                name="approved_by_role"
+                defaultValue={report?.approved_by_role || "RECTOR (E) DE LA UNIDAD EDUCATIVA"}
+                required
+                className="input text-xs"
+              />
+            </div>
+            <div>
+              <label className="label text-[11px]">Fecha</label>
+              <input
+                type="date"
+                name="approved_date"
+                defaultValue={report?.approved_date || new Date().toISOString().split("T")[0]}
+                required
+                className="input text-xs"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Anexos */}
+      <div className="border border-slate-200 rounded-xl p-5 space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="label text-xs font-bold uppercase text-slate-700">7. Anexos y Documentos de Respaldo</label>
+          <VoiceDictationButton targetId="closure-annexes" compact />
+        </div>
+        <textarea
+          id="closure-annexes"
+          name="annexes_notes"
+          defaultValue={
+            report?.annexes_notes ||
+            "• Expediente confidencial de caso\n• Ficha de detección de presunta vulneración de derechos\n• Plan de Acompañamiento Psicosocial Integral\n• Informes bimensuales de seguimiento al plan de acompañamiento\n• Notificaciones y derivaciones a organismos de protección externa\n• Actas de compromisos y corresponsabilidad familiar"
+          }
+          rows={4}
+          className="input text-xs leading-relaxed"
+        />
+      </div>
+
+      {/* Botones de acción final */}
+      <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+        <Link
+          href={`/casos/${caseId}`}
+          className="btn-secondary text-xs px-4 py-2 hover:bg-slate-100"
+        >
+          Cancelar y volver al caso
+        </Link>
+        <SubmitButton isEditing={isEditing} />
+      </div>
+    </form>
+  );
+}

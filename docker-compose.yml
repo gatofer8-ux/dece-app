@@ -1,0 +1,18 @@
+services:
+  dece-app:
+    build: .
+    container_name: dece-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:?Debes definir NEXTAUTH_SECRET en un archivo .env}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - DATABASE_FILE=/data/dece.db
+    volumes:
+      # Los datos (estudiantes, casos, etc.) se guardan aquí de forma persistente.
+      # Haz respaldos periódicos de esta carpeta.
+      - dece_data:/data
+
+volumes:
+  dece_data:
