@@ -12,7 +12,10 @@ versiones. `.gitignore` ya lo excluye.
 |---|---|---|
 | `NEXTAUTH_SECRET` | ✅ **Rotada** en `.env` local | Copiar el nuevo valor a la variable del hosting (Railway/Render) |
 | `VAPID_PRIVATE_KEY` / `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | ✅ **Rotadas** en `.env` local | Copiar los nuevos valores al hosting. Los navegadores se re-suscriben solos |
-| `GEMINI_API_KEY` | ❌ **Sigue expuesta** | **Tú:** entra a https://aistudio.google.com/apikey, borra la clave actual, crea otra, pégala en `.env` y en el hosting |
+| `GEMINI_API_KEY` | ✅ **Rotada** (2026-09-09); la clave vieja se eliminó en Google AI Studio | Copiar el nuevo valor a la variable del hosting |
+
+**Único paso que falta: copiar los tres valores nuevos de `.env` a las
+variables de entorno de tu hosting (Railway/Render) y redesplegar.**
 
 Al desplegar con el nuevo `NEXTAUTH_SECRET`, todas las sesiones activas se
 cierran (esperado).

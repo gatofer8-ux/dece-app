@@ -20,13 +20,15 @@ podía **firmar un JWT válido para cualquier usuario, incluido SUPERADMIN**.
 → `src/lib/env.ts` valida el entorno; la app **aborta en producción** si el
 secreto falta o es el inseguro histórico. Eliminado del Dockerfile.
 
-### 1.2 Secretos reales en `.env` — **[parcial]**
+### 1.2 Secretos reales en `.env` — **[casi listo]**
 `GEMINI_API_KEY` y `VAPID_PRIVATE_KEY` estaban en texto plano en `.env`.
 → `.gitignore` lo excluye; `.env.example` reescrito.
-→ **[hecho]** `NEXTAUTH_SECRET` y las llaves VAPID **rotadas** en `.env`.
+→ **[hecho]** `NEXTAUTH_SECRET`, VAPID y `GEMINI_API_KEY` **rotadas** en `.env`
+(la clave Gemini vieja fue eliminada en Google AI Studio; la nueva verificada
+con una llamada real).
 → **[hecho]** `scripts/set_password.js` para poner contraseñas fuertes.
-→ **Pendiente (tú):** rotar `GEMINI_API_KEY` (solo tú tienes acceso a Google
-AI Studio) y copiar los valores nuevos al hosting. Ver `SECURITY.md`.
+→ **Pendiente (tú):** copiar los tres valores nuevos de `.env` a las variables
+del hosting y redesplegar. Ver `SECURITY.md`.
 
 ### 1.3 Descarga de respaldo = fuga entre instituciones — **[hecho]**
 `/api/backup/download` y la página `/respaldos` permitían a **cualquier ADMIN**
@@ -206,12 +208,12 @@ documentación (`SECURITY.md`, `CONTRIBUTING.md`, este archivo).
 - `citas` y `derivaciones` migradas a `scopedDb`.
 
 **Pendiente — SOLO TÚ puedes hacerlo**
-1. Rotar `GEMINI_API_KEY` en https://aistudio.google.com/apikey y copiar TODOS
-   los valores nuevos de `.env` a las variables del hosting (Railway/Render).
+1. Copiar los tres valores nuevos de `.env` (`NEXTAUTH_SECRET`, VAPID,
+   `GEMINI_API_KEY`) a las variables del hosting (Railway/Render) y redesplegar.
 2. Poner contraseñas fuertes a los SUPERADMIN:
    `node scripts/set_password.js --superadmins` (o el panel Superadmin).
-3. Decidir sobre IA + datos de menores (§1.8): activar con consentimiento,
-   seudonimizar, o dejar `GEMINI_API_KEY` vacía.
+3. Decidir sobre IA + datos de menores (§1.8): consentimiento institucional,
+   seudonimizar el texto, o dejarlo como está asumiendo el riesgo.
 
 **Siguiente (código, cuando quieras)**
 4. Migrar el resto de comprobaciones y listados a `scopedDb` (§3.2).
