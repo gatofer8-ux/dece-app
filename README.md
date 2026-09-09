@@ -28,6 +28,15 @@ los exporta a Excel con un clic.
 > público sin las protecciones adicionales descritas en la sección
 > [Seguridad](#seguridad-y-protección-de-datos).
 
+### Documentación del proyecto
+
+| Archivo | Contenido |
+|---|---|
+| [`REVIEW.md`](REVIEW.md) | Revisión técnica: hallazgos, qué se corrigió y hoja de ruta |
+| [`SECURITY.md`](SECURITY.md) | Política de seguridad y **credenciales que hay que rotar** |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Puesta en marcha, flujo de trabajo, convenciones |
+| [`migrations/README.md`](migrations/README.md) | Cómo se cambia el esquema de la base |
+
 ---
 
 ## 1. Módulos incluidos
