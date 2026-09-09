@@ -1,87 +1,87 @@
-import { requireRole } from "@/lib/session";
-import { PageHeader, Badge } from "@/components/ui";
+import { requireRole, requireInstitutionId } from "@/lib/session";
+import { PageHeader } from "@/components/ui";
 import { DB_PATH, db } from "@/lib/db";
 import fs from "fs";
 
 export default async function RespaldosPage() {
-  // El respaldo íntegro contiene datos de TODAS las instituciones, por lo que
-  // solo el rol global (SUPERADMIN) puede acceder a esta página y a la descarga.
-  await requireRole(["SUPERADMIN"]);
+  const session = await requireRole(["SUPERADMIN", "ADMIN", "DECE"]);
+  const isSuperadmin = session.user.role === "SUPERADMIN";
 
+  // --- Datos para SUPERADMIN: archivo .db completo ---
   let fileSizeStr = "0 KB";
   let lastModifiedStr = "—";
-
-  if (fs.existsSync(DB_PATH)) {
+  if (isSuperadmin && fs.existsSync(DB_PATH)) {
     const stats = fs.statSync(DB_PATH);
     fileSizeStr = `${(stats.size / 1024).toFixed(1)} KB`;
     lastModifiedStr = new Date(stats.mtime).toLocaleString("es-EC");
   }
 
-  // Contar registros para mostrar estado
-  const studentCount = (db.prepare("SELECT COUNT(*) as c FROM students").get() as { c: number }).c;
-  const caseCount = (db.prepare("SELECT COUNT(*) as c FROM case_files").get() as { c: number }).c;
-  const auditCount = (db.prepare("SELECT COUNT(*) as c FROM audit_logs").get() as { c: number }).c;
+  // --- Datos para ADMIN/DECE: conteo de su institución ---
+  let instStudentCount = 0;
+  let instCaseCount = 0;
+  if (!isSuperadmin) {
+    const institutionId = requireInstitutionId(session);
+    instStudentCount = (db.prepare("SELECT COUNT(*) c FROM students WHERE institution_id = ?").get(institutionId) as { c: number }).c;
+    instCaseCount = (db.prepare("SELECT COUNT(*) c FROM case_files WHERE institution_id = ?").get(institutionId) as { c: number }).c;
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">
       <PageHeader
         title="Copias de Seguridad y Respaldo de Datos"
-        description="Descarga copias íntegras de la base de datos para custodia y seguridad de la información institucional."
+        description="Descarga copias de la información para custodia y seguridad."
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="card p-4">
-          <div className="text-xs text-slate-500 uppercase font-semibold">Tamaño de la Base de Datos</div>
-          <div className="text-2xl font-bold text-slate-900 mt-1">{fileSizeStr}</div>
-          <div className="text-xs text-slate-400 mt-0.5">Archivo SQLite persistente</div>
-        </div>
-
-        <div className="card p-4">
-          <div className="text-xs text-slate-500 uppercase font-semibold">Estudiantes & Casos</div>
-          <div className="text-2xl font-bold text-brand-900 mt-1">
-            {studentCount} <span className="text-sm font-normal text-slate-500">est.</span> · {caseCount} <span className="text-sm font-normal text-slate-500">casos</span>
+      {isSuperadmin ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="card p-4">
+              <div className="text-xs text-slate-500 uppercase font-semibold">Tamaño de la base de datos</div>
+              <div className="text-2xl font-bold text-slate-900 mt-1">{fileSizeStr}</div>
+              <div className="text-xs text-slate-400 mt-0.5">Archivo SQLite persistente (todas las instituciones)</div>
+            </div>
+            <div className="card p-4">
+              <div className="text-xs text-slate-500 uppercase font-semibold">Última modificación</div>
+              <div className="text-sm font-bold text-slate-800 mt-2">{lastModifiedStr}</div>
+            </div>
           </div>
-          <div className="text-xs text-slate-400 mt-0.5">Total registros activos</div>
-        </div>
 
-        <div className="card p-4">
-          <div className="text-xs text-slate-500 uppercase font-semibold">Última Modificación</div>
-          <div className="text-sm font-bold text-slate-800 mt-2">{lastModifiedStr}</div>
-          <div className="text-xs text-emerald-600 mt-0.5 font-medium">✓ Base de datos operativa</div>
-        </div>
-      </div>
-
-      <div className="card p-6 space-y-4">
-        <div className="flex items-start gap-4">
-          <div className="h-12 w-12 rounded-xl bg-brand-100 text-brand-800 flex items-center justify-center text-2xl shrink-0">
-            💾
+          <div className="card p-6 space-y-4">
+            <h3 className="text-base font-semibold text-slate-900">Copia completa de la base de datos (.db)</h3>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900">
+              <p className="font-semibold">🔒 Contiene datos de TODAS las instituciones</p>
+              <p>Incluye relatos confidenciales de menores y hashes de contraseñas. Guárdalo solo en dispositivos institucionales cifrados.</p>
+            </div>
+            <a href="/api/backup/download" className="btn-primary inline-flex items-center gap-2 text-sm px-4 py-2.5">
+              <span>⬇️</span> Descargar respaldo completo (.db)
+            </a>
           </div>
-          <div className="space-y-1">
-            <h3 className="text-base font-semibold text-slate-900">
-              Descargar Copia de Seguridad Completa (.db)
-            </h3>
+        </>
+      ) : (
+        <>
+          <div className="card p-4">
+            <div className="text-xs text-slate-500 uppercase font-semibold">Datos de tu institución</div>
+            <div className="text-2xl font-bold text-brand-900 mt-1">
+              {instStudentCount} <span className="text-sm font-normal text-slate-500">estudiantes</span> · {instCaseCount} <span className="text-sm font-normal text-slate-500">casos</span>
+            </div>
+          </div>
+
+          <div className="card p-6 space-y-4">
+            <h3 className="text-base font-semibold text-slate-900">Copia de los datos de tu institución (JSON)</h3>
             <p className="text-xs text-slate-600">
-              Genera una instantánea completa de la base de datos SQLite con todos los estudiantes, expedientes de casos, bitácoras, actas, fichas del Ministerio, citas, alertas y registros de auditoría.
+              Descarga un archivo JSON con estudiantes, casos, bitácoras, actas, fichas, citas y alertas
+              <strong> de tu institución únicamente</strong>. No incluye usuarios ni la bitácora de auditoría.
             </p>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900">
+              <p className="font-semibold">🔒 Información sensible de menores</p>
+              <p>Guarda el archivo solo en dispositivos institucionales cifrados o bóvedas autorizadas.</p>
+            </div>
+            <a href="/api/backup/institution" className="btn-primary inline-flex items-center gap-2 text-sm px-4 py-2.5">
+              <span>⬇️</span> Descargar copia de mi institución (.json)
+            </a>
           </div>
-        </div>
-
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900 space-y-1">
-          <p className="font-semibold">🔒 Protección de datos sensibles:</p>
-          <p>
-            El archivo descargado contiene información confidencial de estudiantes menores de edad. Guárdalo únicamente en dispositivos institucionales cifrados o en bóvedas de seguridad autorizadas.
-          </p>
-        </div>
-
-        <div className="pt-2">
-          <a
-            href="/api/backup/download"
-            className="btn-primary inline-flex items-center gap-2 text-sm px-4 py-2.5 shadow-sm"
-          >
-            <span>⬇️</span> Descargar Respaldo Ahora (.db)
-          </a>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }

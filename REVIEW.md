@@ -29,9 +29,10 @@ secreto falta o es el inseguro histórico. Eliminado del Dockerfile.
 `/api/backup/download` y la página `/respaldos` permitían a **cualquier ADMIN**
 de institución descargar el `dece.db` **completo**: todas las instituciones,
 todos los relatos confidenciales de menores, **todos los hashes de contraseña**.
-→ Restringido a `SUPERADMIN` (ruta + página + enlace del sidebar) + registro en
-auditoría.
-→ **Pendiente:** ofrecer a ADMIN/DECE una exportación filtrada por su institución.
+→ El `.db` completo quedó restringido a `SUPERADMIN` + registro en auditoría.
+→ ADMIN/DECE tienen `/api/backup/institution`: export JSON **solo de su
+institución**, sin `users` ni `audit_logs`. La página `/respaldos` muestra una
+u otra opción según el rol.
 
 ### 1.4 `scripts/seed.js` reseteaba contraseñas en cada arranque — **[hecho]**
 `upsertUser` hacía `UPDATE ... SET password_hash` para usuarios existentes, y

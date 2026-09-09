@@ -17,7 +17,7 @@ import { db } from "@/lib/db";
  */
 
 /** Tablas con columna `institution_id` directa (db/schema.sql + migraciones). */
-const INSTITUTION_SCOPED_TABLES = new Set<string>([
+export const INSTITUTION_SCOPED_TABLES = new Set<string>([
   "action_plans",
   "activities",
   "annual_management_reports",
