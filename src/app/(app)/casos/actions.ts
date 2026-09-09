@@ -13,24 +13,7 @@ import { CHECKLIST_CATALOGS, CHECKLIST_REVIEW_ROLES, checklistRoleKey } from "@/
 import { parseOfficialObservationData } from "@/lib/observationSheet";
 import { CONFLICT_TYPES_CATALOG } from "@/lib/corresponsibilityCatalog";
 import type { ChecklistCategory, ObservationContext, ObservationSubnivel, ObservationRiskLevel, CorresponsibilityConflictType } from "@/lib/types";
-
-function getAllStr(fd: FormData, key: string): string[] {
-  return fd.getAll(key).filter((v): v is string => typeof v === "string");
-}
-
-function str(fd: FormData, key: string): string | null {
-  const v = fd.get(key);
-  if (typeof v !== "string") return null;
-  const t = v.trim();
-  return t.length ? t : null;
-}
-
-function int(fd: FormData, key: string): number | null {
-  const v = str(fd, key);
-  if (!v) return null;
-  const n = parseInt(v, 10);
-  return isNaN(n) ? null : n;
-}
+import { str, int, getAllStr } from "@/lib/formData";
 
 /** Verifica que el caso pertenezca a la institución de la sesión; lanza error si no. */
 function requireOwnedCase(caseId: string, institutionId: string) {

@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
+import { runMigrations } from "./migrations";
 
 // Ubicación del archivo de base de datos SQLite.
 // Por defecto se guarda en /data/dece.db (pensado para volumen persistente en Docker);
@@ -826,8 +827,17 @@ CREATE INDEX IF NOT EXISTS idx_rep_gen_hist_inst ON report_generation_history(in
     } catch (e) {
       // tables already exist
     }
-    
-    return db;
+
+  // Migraciones incrementales nuevas (ver src/lib/migrations.ts y /migrations).
+  // Se apilan sobre el bloque legado de arriba; cada archivo se aplica una vez.
+  try {
+    runMigrations(db, path.join(process.cwd(), "migrations"));
+  } catch (err) {
+    console.error("[db] Error aplicando migraciones incrementales:", err);
+    throw err;
+  }
+
+  return db;
 }
 
 // Reutilizamos la conexión entre recargas en desarrollo (hot reload de Next.js)
