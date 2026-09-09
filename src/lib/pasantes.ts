@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import QRCode from "qrcode";
 import { db } from "./db";
 import type {
@@ -645,6 +646,47 @@ export function getInternByDeviceId(
   };
 }
 
+const PIN_RE = /^\d{4}$/;
+
+/** Hashea un PIN de 4 dígitos para guardarlo en `interns.pin_code`. */
+export function hashPin(pin: string): string {
+  return bcrypt.hashSync(pin.trim(), 10);
+}
+
+/**
+ * Verifica el PIN de un pasante contra el valor almacenado.
+ *
+ * Soporta valores heredados guardados en texto plano (4 dígitos): si el pasante
+ * acierta, se re-guarda hasheado de forma oportunista. Un `pin_code` nulo
+ * significa "sin PIN configurado" y conserva el comportamiento previo (permite).
+ */
+export function verifyInternPin(
+  internId: string,
+  storedValue: string | null | undefined,
+  inputPin: string
+): boolean {
+  const input = (inputPin || "").trim();
+  if (!storedValue) return true;
+
+  if (PIN_RE.test(storedValue)) {
+    const ok = storedValue === input;
+    if (ok) {
+      try {
+        db.prepare("UPDATE interns SET pin_code = ? WHERE id = ?").run(hashPin(input), internId);
+      } catch {
+        /* si falla el upgrade, no bloquear el marcaje */
+      }
+    }
+    return ok;
+  }
+
+  try {
+    return bcrypt.compareSync(input, storedValue);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Vincula un teléfono celular exclusivo a un pasante con su PIN de 4 dígitos.
  * Implementa validaciones estrictas anti-suplantación.
@@ -731,7 +773,7 @@ export function linkInternDevice(data: {
     data.deviceId,
     data.deviceName || "Teléfono Móvil",
     linkedAt,
-    cleanPin,
+    hashPin(cleanPin),
     data.internId
   );
 
@@ -786,7 +828,7 @@ export function resetInternPin(
   db.prepare(
     `UPDATE interns SET pin_code = ?, updated_at = datetime('now')
      WHERE id = ? AND institution_id = ?`
-  ).run(newPin.trim(), internId, institutionId);
+  ).run(hashPin(newPin.trim()), internId, institutionId);
 
   return { success: true, message: "PIN actualizado correctamente." };
 }

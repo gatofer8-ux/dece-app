@@ -10,6 +10,7 @@ import {
   linkInternDevice,
   unlinkInternDevice,
   resetInternPin,
+  verifyInternPin,
   createIntern,
   updateIntern,
   deleteIntern,
@@ -310,8 +311,8 @@ export async function secureAttendanceAction(data: {
       };
     }
 
-    // 2. VALIDACIÓN DEL PIN PERSONAL
-    if (intern.pin_code && intern.pin_code !== data.pinCode.trim()) {
+    // 2. VALIDACIÓN DEL PIN PERSONAL (hash bcrypt; migra valores heredados)
+    if (!verifyInternPin(intern.id, intern.pin_code, data.pinCode)) {
       return {
         error: "PIN de 4 dígitos incorrecto. Verifica e intenta nuevamente.",
       };
