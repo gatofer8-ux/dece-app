@@ -3,6 +3,7 @@ import { requireSession, requireInstitutionId } from "@/lib/session";
 import { canManageStudents, roleHomePath } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/ui";
+import { getSignatureDefaults } from "@/lib/caseDocumentDefaults";
 import CirculoConsentForm from "../CirculoConsentForm";
 import type { StudentRow, CaseFileRow } from "@/lib/types";
 
@@ -16,6 +17,7 @@ export default async function NuevoCirculoConsentPage({
     redirect(roleHomePath(session.user.role));
   }
   const institutionId = requireInstitutionId(session);
+  const sig = getSignatureDefaults(session, institutionId);
 
   let targetStudentId = searchParams.studentId || null;
   let prefilledStudent: StudentRow | null = null;
@@ -58,7 +60,7 @@ export default async function NuevoCirculoConsentPage({
         prefilledStudentId={targetStudentId}
         prefilledStudent={prefilledStudent}
         caseCode={caseCode}
-        currentUserName={session.user.name || "Profesional DECE"}
+        currentUserName={sig.deceProfessional.fullName || session.user.name || "Profesional DECE"}
       />
     </div>
   );

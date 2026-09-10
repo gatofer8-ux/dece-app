@@ -1,6 +1,7 @@
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { listSchoolYears, getSelectedSchoolYear } from "@/lib/schoolYear";
 import { getInstitutionCoursesWithCounts, getInstitutionDeceTeam } from "@/lib/distributivo";
+import { getSignatureDefaults } from "@/lib/caseDocumentDefaults";
 import DistributivoForm from "../DistributivoForm";
 import Link from "next/link";
 
@@ -12,6 +13,7 @@ export default async function NuevoDistributivoPage() {
   const activeYear = await getSelectedSchoolYear(institutionId);
   const deceTeam = getInstitutionDeceTeam(institutionId);
   const { courseSummaries, totalStudents } = getInstitutionCoursesWithCounts(institutionId, activeYear?.id);
+  const sig = getSignatureDefaults(session, institutionId);
 
   return (
     <div className="space-y-6">
@@ -39,7 +41,7 @@ export default async function NuevoDistributivoPage() {
         deceTeam={deceTeam}
         courseSummaries={courseSummaries}
         totalStudents={totalStudents}
-        currentUserName={session.user.name || ""}
+        currentUserName={sig.deceCoordinator.fullName || sig.deceProfessional.fullName || session.user.name || ""}
       />
     </div>
   );
