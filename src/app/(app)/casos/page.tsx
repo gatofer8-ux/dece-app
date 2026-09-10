@@ -64,7 +64,17 @@ export default async function CasosPage({
     )
     .all(...params) as (CaseFileRow & { student_name: string; student_course: string })[];
 
-  const inactivitySummary = getInactiveCases(institutionId, 30);
+  let inactivitySummary = {
+    totalOpenCases: 0,
+    alertCasesCount: 0,
+    urgentAlertCasesCount: 0,
+    cases: [] as import("@/lib/caseAlerts").InactiveCaseItem[],
+  };
+  try {
+    inactivitySummary = getInactiveCases(institutionId, 30);
+  } catch (err) {
+    console.error("[casos] Error consultando casos inactivos:", err);
+  }
   const inactiveMap = new Map(inactivitySummary.cases.map((c) => [c.id, c]));
 
   if (alerta === "sin_contacto") {

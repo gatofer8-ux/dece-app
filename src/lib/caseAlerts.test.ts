@@ -16,8 +16,8 @@ describe("Sistema de Alertas de Casos sin Seguimiento ni Conversación", () => {
         full_name TEXT NOT NULL,
         course TEXT,
         parallel TEXT,
-        representative_name TEXT,
-        representative_phone TEXT
+        representative TEXT,
+        rep_phone TEXT
       );
       CREATE TABLE case_files (
         id TEXT PRIMARY KEY,
@@ -55,7 +55,7 @@ describe("Sistema de Alertas de Casos sin Seguimiento ni Conversación", () => {
       );
 
       INSERT INTO institutions (id, name) VALUES ('inst-01', 'Institución Test');
-      INSERT INTO students (id, institution_id, full_name, course, representative_name)
+      INSERT INTO students (id, institution_id, full_name, course, representative)
       VALUES ('s1', 'inst-01', 'Estudiante Activo', '10mo A', 'Rep 1'),
              ('s2', 'inst-01', 'Estudiante Abandonado', '9no B', 'Rep 2'),
              ('s3', 'inst-01', 'Estudiante Caso Cerrado', '8vo C', 'Rep 3');
