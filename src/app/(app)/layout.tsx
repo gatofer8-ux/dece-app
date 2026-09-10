@@ -1,6 +1,7 @@
 import { requireSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import Sidebar from "@/components/Sidebar";
+import MobileNav from "@/components/MobileNav";
 import LogoutButton from "@/components/LogoutButton";
 import PushSubscribeButton from "@/components/PushSubscribeButton";
 import SchoolYearSelector from "@/components/SchoolYearSelector";
@@ -43,6 +44,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <UserSubscriptionStatusBanner subscription={(user as any).subscription} />
         <header className="no-print sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-4 md:px-6 py-2.5 gap-3">
           <div className="flex items-center gap-3">
+            <MobileNav role={user.role} institutionName={institution?.name} />
             <div className="md:hidden font-bold text-brand-800 text-base tracking-tight">DECE</div>
             {effectiveInstitutionId && schoolYears.length > 0 && (
               <SchoolYearSelector
