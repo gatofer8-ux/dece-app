@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow } from "@/lib/types";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import SituationalReportForm from "./SituationalReportForm";
 
 export default async function NuevoInformeSituacionalPage({ params }: { params: { id: string } }) {
@@ -12,6 +13,7 @@ export default async function NuevoInformeSituacionalPage({ params }: { params: 
     .prepare("SELECT * FROM case_files WHERE id = ? AND institution_id = ?")
     .get(params.id, institutionId) as CaseFileRow | undefined;
   if (!caseFile) notFound();
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
 
   return (
@@ -22,7 +24,7 @@ export default async function NuevoInformeSituacionalPage({ params }: { params: 
         studentName={student.full_name}
         studentCourse={student.course}
         studentParallel={student.parallel || ""}
-        defaultResponsibleName={session.user.name || ""}
+        defaultResponsibleName={defaults?.deceProfessional.fullName || session.user.name || ""}
       />
     </div>
   );

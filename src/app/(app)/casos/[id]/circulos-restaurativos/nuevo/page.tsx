@@ -4,6 +4,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import CirculoConsentForm from "@/app/(app)/circulos-restaurativos/CirculoConsentForm";
 import type { CaseFileRow, StudentRow } from "@/lib/types";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 
 export default async function NuevoCirculoConsentCasoPage({
   params,
@@ -17,6 +18,7 @@ export default async function NuevoCirculoConsentCasoPage({
     .prepare("SELECT * FROM case_files WHERE id = ? AND institution_id = ?")
     .get(params.id, institutionId) as CaseFileRow | undefined;
   if (!caseFile) notFound();
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
 
   const student = db
     .prepare("SELECT * FROM students WHERE id = ?")
@@ -40,7 +42,7 @@ export default async function NuevoCirculoConsentCasoPage({
         prefilledStudentId={student.id}
         prefilledStudent={student}
         caseCode={caseFile.code}
-        currentUserName={session.user.name || "Profesional DECE"}
+        currentUserName={defaults?.deceProfessional.fullName || session.user.name || "Profesional DECE"}
       />
     </div>
   );

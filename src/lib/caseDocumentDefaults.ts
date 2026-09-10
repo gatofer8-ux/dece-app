@@ -56,31 +56,31 @@ function withTitle(title?: string | null, name?: string | null): string {
   return [title?.trim(), name?.trim()].filter(Boolean).join(" ");
 }
 
+export interface SignatureDefaults {
+  institution: InstitutionRow;
+  schoolYear: SchoolYearRow | null;
+  schoolYearText: string;
+  deceProfessional: DeceProfessionalDefaults;
+  authority: AuthorityDefaults;
+  deceCoordinator: AuthorityDefaults;
+}
+
+type SessionLike = {
+  user: { id: string; institution_id: string | null; name?: string | null; email?: string | null };
+};
+
 /**
- * Reúne los valores por defecto para un documento del caso `caseId`.
- * Devuelve `null` si el caso o el estudiante no existen en la institución.
+ * Datos de firma (profesional + autoridad + coordinación + institución) que se
+ * precargan en cualquier documento, tenga o no un caso asociado.
  */
-export function getCaseDocumentDefaults(
-  caseId: string,
-  session: { user: { id: string; institution_id: string | null; name?: string | null; email?: string | null } },
-  institutionId: string
-): CaseDocumentDefaults | null {
-  const caseFile = db
-    .prepare("SELECT * FROM case_files WHERE id = ? AND institution_id = ?")
-    .get(caseId, institutionId) as CaseFileRow | undefined;
-  if (!caseFile) return null;
-
-  const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as
-    | StudentRow
-    | undefined;
-  if (!student) return null;
-
+export function getSignatureDefaults(session: SessionLike, institutionId: string): SignatureDefaults {
   const institution = db.prepare("SELECT * FROM institutions WHERE id = ?").get(institutionId) as InstitutionRow;
   const inst = institution as any;
 
-  const schoolYear = (db
-    .prepare("SELECT * FROM school_years WHERE institution_id = ? AND is_active = 1")
-    .get(institutionId) as SchoolYearRow | undefined) ?? null;
+  const schoolYear =
+    (db
+      .prepare("SELECT * FROM school_years WHERE institution_id = ? AND is_active = 1")
+      .get(institutionId) as SchoolYearRow | undefined) ?? null;
 
   const me = db
     .prepare("SELECT name, email, phone, job_title, document_id, title_prefix, phone_ext FROM users WHERE id = ?")
@@ -125,14 +125,45 @@ export function getCaseDocumentDefaults(
   };
 
   return {
-    caseFile,
-    student,
-    studentAge: ageFrom(student.birth_date),
     institution,
     schoolYear,
     schoolYearText: schoolYear?.name || "2024 - 2025",
     deceProfessional,
     authority,
     deceCoordinator,
+  };
+}
+
+/**
+ * Reúne los valores por defecto para un documento del caso `caseId`.
+ * Devuelve `null` si el caso o el estudiante no existen en la institución.
+ */
+export function getCaseDocumentDefaults(
+  caseId: string,
+  session: SessionLike,
+  institutionId: string
+): CaseDocumentDefaults | null {
+  const caseFile = db
+    .prepare("SELECT * FROM case_files WHERE id = ? AND institution_id = ?")
+    .get(caseId, institutionId) as CaseFileRow | undefined;
+  if (!caseFile) return null;
+
+  const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as
+    | StudentRow
+    | undefined;
+  if (!student) return null;
+
+  const sig = getSignatureDefaults(session, institutionId);
+
+  return {
+    caseFile,
+    student,
+    studentAge: ageFrom(student.birth_date),
+    institution: sig.institution,
+    schoolYear: sig.schoolYear,
+    schoolYearText: sig.schoolYearText,
+    deceProfessional: sig.deceProfessional,
+    authority: sig.authority,
+    deceCoordinator: sig.deceCoordinator,
   };
 }

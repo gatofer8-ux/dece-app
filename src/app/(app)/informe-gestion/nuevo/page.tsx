@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
+import { getSignatureDefaults } from "@/lib/caseDocumentDefaults";
 import AnnualReportForm from "../AnnualReportForm";
 import type { SchoolYearRow, InstitutionRow } from "@/lib/types";
 
@@ -24,13 +25,14 @@ export default async function NewAnnualReportPage() {
     .all(institutionId) as SchoolYearRow[];
 
   const activeYear = schoolYears.find((y) => y.is_active) || schoolYears[0];
+  const sig = getSignatureDefaults(session, institutionId);
 
   return (
     <AnnualReportForm
       schoolYears={schoolYears}
       selectedYearId={activeYear?.id}
       currentUserId={session.user.id}
-      currentUserName={session.user.name || ""}
+      currentUserName={sig.deceProfessional.fullName || session.user.name || ""}
       currentUserEmail={session.user.email || undefined}
       currentUserRole={session.user.role}
       institutionName={institution?.name || "UNIDAD EDUCATIVA"}

@@ -4,6 +4,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow } from "@/lib/types";
 import { getDefaultOfficialObservationData } from "@/lib/observationSheet";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import ObservationSheetOfficialForm from "../ObservationSheetOfficialForm";
 
 export default async function NuevaFichaObservacionPage({
@@ -17,10 +18,11 @@ export default async function NuevaFichaObservacionPage({
     .prepare("SELECT * FROM case_files WHERE id = ? AND institution_id = ?")
     .get(params.id, institutionId) as CaseFileRow | undefined;
   if (!caseFile) notFound();
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
 
   const studentCourse = `${student.course || ""} ${student.parallel || ""}`.trim() || "No especificado";
-  const defaultData = getDefaultOfficialObservationData(session.user.name || "Profesional DECE");
+  const defaultData = getDefaultOfficialObservationData(defaults?.deceProfessional.fullName || session.user.name || "Profesional DECE");
 
   return (
     <div className="space-y-6">

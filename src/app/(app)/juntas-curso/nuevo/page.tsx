@@ -1,6 +1,7 @@
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { getUserCoverage, getInstitutionCoursesWithCounts } from "@/lib/distributivo";
 import { listSchoolYears, getSelectedSchoolYear } from "@/lib/schoolYear";
+import { getSignatureDefaults } from "@/lib/caseDocumentDefaults";
 import CourseBoardReportForm from "../CourseBoardReportForm";
 
 export default async function NuevoInformeJuntaPage() {
@@ -10,6 +11,7 @@ export default async function NuevoInformeJuntaPage() {
   const schoolYears = await listSchoolYears(institutionId);
   const selectedYear = await getSelectedSchoolYear(institutionId);
   const isCoordinatorOrAdmin = session.user.role === "ADMIN";
+  const sig = getSignatureDefaults(session, institutionId);
 
   const coverage = await getUserCoverage(
     session.user.id,
@@ -55,7 +57,7 @@ export default async function NuevoInformeJuntaPage() {
         availableCourses={coursesToUse}
         schoolYears={schoolYears}
         selectedYearId={selectedYear?.id}
-        currentUserName={session.user.name || "Profesional DECE"}
+        currentUserName={sig.deceProfessional.fullName || session.user.name || "Profesional DECE"}
         currentUserEmail={session.user.email || undefined}
         isCoordinatorOrAdmin={isCoordinatorOrAdmin}
       />

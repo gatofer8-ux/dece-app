@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { listSchoolYears, getSelectedSchoolYear, ensureDefaultSchoolYear } from "@/lib/schoolYear";
 import { getDefaultActionPlanItems } from "@/lib/actionPlan";
+import { getSignatureDefaults } from "@/lib/caseDocumentDefaults";
 import ActionPlanForm from "../ActionPlanForm";
 
 export default async function NuevoPlanAccionPage() {
@@ -42,10 +43,12 @@ export default async function NuevoPlanAccionPage() {
     deceUsers[0];
   const deceResponsibleName = institutionalDece?.name || session.user.name || "Profesional DECE Responsable";
 
+  const sig = getSignatureDefaults(session, institutionId);
   const coordinatorUser =
     deceUsers.find((u) => u.role === "ADMIN" || u.name.toLowerCase().includes("coord")) ||
     deceUsers[0];
-  const defaultCoordinator = coordinatorUser?.name || session.user.name || "Coordinador(a) DECE";
+  const defaultCoordinator =
+    sig.deceCoordinator.fullName || coordinatorUser?.name || session.user.name || "Coordinador(a) DECE";
 
   const defaultAnalysts = deceUsers
     .filter((u) => u.id !== coordinatorUser?.id)
