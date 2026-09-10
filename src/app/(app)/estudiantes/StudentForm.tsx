@@ -18,6 +18,97 @@ import {
   detectDocumentType,
 } from "@/lib/documentId";
 
+function ParentDocumentInput({
+  name,
+  label,
+  defaultValue = "",
+}: {
+  name: string;
+  label: string;
+  defaultValue?: string;
+}) {
+  const [val, setVal] = useState(defaultValue);
+  const [docType, setDocType] = useState<DocumentType>(() => detectDocumentType(defaultValue));
+
+  const validation = useMemo(() => {
+    const trimmed = val.trim();
+    if (!trimmed) return { status: "empty" as const, message: "" };
+    if (docType === "CEDULA") {
+      const res = validateEcuadorianCedula(trimmed);
+      return res.ok
+        ? { status: "valid" as const, message: "Cédula válida" }
+        : { status: "invalid" as const, message: res.reason || "Cédula no válida" };
+    }
+    if (docType === "PASAPORTE") {
+      const res = validatePassport(trimmed);
+      return res.ok
+        ? { status: "valid" as const, message: "Pasaporte válido" }
+        : { status: "invalid" as const, message: res.reason || "Pasaporte no válido" };
+    }
+    return { status: "valid" as const, message: "" };
+  }, [val, docType]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let v = e.target.value;
+    if (docType === "CEDULA") {
+      v = v.replace(/\D/g, "").slice(0, 10);
+    } else if (docType === "PASAPORTE") {
+      v = v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15);
+    }
+    setVal(v);
+  };
+
+  let borderClass = "";
+  if (validation.status === "invalid") {
+    borderClass = "!border-rose-500 !ring-1 !ring-rose-500 bg-rose-50/20";
+  } else if (validation.status === "valid") {
+    borderClass = "!border-emerald-500 !ring-1 !ring-emerald-500 bg-emerald-50/20";
+  }
+
+  return (
+    <div className="space-y-1">
+      <div className="flex gap-1.5">
+        <select
+          value={docType}
+          onChange={(e) => {
+            const next = e.target.value as DocumentType;
+            setDocType(next);
+            if (next === "CEDULA") setVal((prev) => prev.replace(/\D/g, "").slice(0, 10));
+            else if (next === "PASAPORTE") setVal((prev) => prev.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15));
+          }}
+          className="select text-xs py-1 px-1.5 w-24 shrink-0"
+          aria-label={`Tipo de documento para ${label}`}
+        >
+          <option value="CEDULA">Cédula</option>
+          <option value="PASAPORTE">Pasaporte</option>
+          <option value="OTRO">Otro</option>
+        </select>
+        <input
+          name={name}
+          value={val}
+          onChange={handleChange}
+          inputMode={docType === "CEDULA" ? "numeric" : "text"}
+          maxLength={docType === "CEDULA" ? 10 : docType === "PASAPORTE" ? 15 : 20}
+          placeholder={
+            docType === "CEDULA"
+              ? "Cédula (10 dígitos)"
+              : docType === "PASAPORTE"
+              ? "Pasaporte extranjero"
+              : "N° documento"
+          }
+          className={`input text-xs py-1 px-2 flex-1 ${borderClass}`}
+        />
+      </div>
+      {validation.status === "invalid" && (
+        <p className="text-[11px] text-rose-600 font-medium">⚠️ {validation.message}</p>
+      )}
+      {validation.status === "valid" && (
+        <p className="text-[11px] text-emerald-600 font-medium">✓ {validation.message}</p>
+      )}
+    </div>
+  );
+}
+
 export default function StudentForm({
   student,
   action,
@@ -134,6 +225,8 @@ export default function StudentForm({
             name="document_id"
             value={docId}
             onChange={handleDocIdChange}
+            inputMode={docType === "CEDULA" ? "numeric" : "text"}
+            maxLength={docType === "CEDULA" ? 10 : docType === "PASAPORTE" ? 15 : 20}
             placeholder={placeholder}
             className={`input ${borderClass}`}
           />
@@ -302,7 +395,7 @@ export default function StudentForm({
           <div className="space-y-2">
             <p className="text-xs font-medium text-slate-500">Padre</p>
             <input name="father_name" placeholder="Nombres y apellidos" defaultValue={student?.father_name || ""} className="input" />
-            <input name="father_document_id" placeholder="Cédula" defaultValue={student?.father_document_id || ""} className="input" />
+            <ParentDocumentInput name="father_document_id" label="Documento Padre" defaultValue={student?.father_document_id || ""} />
             <input name="father_education" placeholder="Instrucción" defaultValue={student?.father_education || ""} className="input" />
             <input name="father_address" placeholder="Domicilio" defaultValue={student?.father_address || ""} className="input" />
             <input name="father_phone" placeholder="Teléfono/celular" defaultValue={student?.father_phone || ""} className="input" />
@@ -312,7 +405,7 @@ export default function StudentForm({
           <div className="space-y-2">
             <p className="text-xs font-medium text-slate-500">Madre</p>
             <input name="mother_name" placeholder="Nombres y apellidos" defaultValue={student?.mother_name || ""} className="input" />
-            <input name="mother_document_id" placeholder="Cédula" defaultValue={student?.mother_document_id || ""} className="input" />
+            <ParentDocumentInput name="mother_document_id" label="Documento Madre" defaultValue={student?.mother_document_id || ""} />
             <input name="mother_education" placeholder="Instrucción" defaultValue={student?.mother_education || ""} className="input" />
             <input name="mother_address" placeholder="Domicilio" defaultValue={student?.mother_address || ""} className="input" />
             <input name="mother_phone" placeholder="Teléfono/celular" defaultValue={student?.mother_phone || ""} className="input" />
@@ -321,7 +414,7 @@ export default function StudentForm({
           </div>
           <div className="space-y-2">
             <p className="text-xs font-medium text-slate-500">Representante (si es distinto de papá/mamá)</p>
-            <input name="representative_document_id" placeholder="Cédula" defaultValue={student?.representative_document_id || ""} className="input" />
+            <ParentDocumentInput name="representative_document_id" label="Documento Representante" defaultValue={student?.representative_document_id || ""} />
             <input name="representative_education" placeholder="Instrucción" defaultValue={student?.representative_education || ""} className="input" />
             <input name="representative_address" placeholder="Domicilio" defaultValue={student?.representative_address || ""} className="input" />
             <input name="representative_occupation" placeholder="Profesión u ocupación" defaultValue={student?.representative_occupation || ""} className="input" />
