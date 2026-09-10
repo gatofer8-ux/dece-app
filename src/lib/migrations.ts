@@ -41,7 +41,9 @@ export function runMigrations(db: Database.Database, migrationsDir: string): voi
     const version = file.replace(/\.sql$/, "");
     if (applied.has(version)) continue;
 
-    const sql = fs.readFileSync(path.join(migrationsDir, file), "utf-8");
+    const sql = fs
+      .readFileSync(path.join(migrationsDir, file), "utf-8")
+      .replace(/^﻿/, ""); // BOM: algunos editores guardan .sql con BOM y SQLite no lo tolera al inicio
     const statements = sql
       .split(";")
       .map((s) => s.trim())
