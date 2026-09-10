@@ -163,12 +163,13 @@ export default function ReferralForm({
             <AIAssistButton targetId="referral-actions" caseId={caseId} fieldLabel="Acciones desarrolladas en el ámbito de la atención psicosocial (ficha de derivación)" />
           </div>
         </div>
-        <p className="text-xs text-slate-400 mb-1">En el ámbito de la atención psicosocial.</p>
+        <p className="text-xs text-slate-400 mb-1">En el ámbito de la atención psicosocial (lista breve con guiones, máx. 8-10 palabras por línea).</p>
         <textarea
           id="referral-actions"
           name="actions_taken"
           defaultValue={initialData?.actions_taken || ""}
-          rows={2}
+          placeholder="- Diálogo con la madre de familia&#10;- Acta de consentimiento informado&#10;- Intervención con el estudiante&#10;- Agendamiento de cita"
+          rows={3}
           className="textarea"
         />
       </div>

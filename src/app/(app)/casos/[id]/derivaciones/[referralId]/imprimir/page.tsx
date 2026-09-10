@@ -215,7 +215,19 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
             </tr>
             <tr>
               <td className={labelCell} colSpan={1}>Acciones desarrolladas</td>
-              <td className={cell} colSpan={5}><p className="whitespace-pre-wrap font-normal">{referral.actions_taken || "—"}</p></td>
+              <td className={cell} colSpan={5}>
+                <div className="whitespace-pre-wrap font-normal">
+                  {referral.actions_taken
+                    ? referral.actions_taken
+                        .split("\n")
+                        .map((line) => line.trim())
+                        .filter(Boolean)
+                        .map((line, idx) => (
+                          <div key={idx}>{line.startsWith("-") ? line : `- ${line.replace(/^(\d+[\.\)]|[•\*\+])\s*/, "")}`}</div>
+                        ))
+                    : "—"}
+                </div>
+              </td>
             </tr>
             <tr>
               <td className={labelCell} colSpan={1}>Tipo de atención que se requiere</td>

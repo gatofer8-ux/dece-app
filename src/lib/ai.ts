@@ -218,11 +218,26 @@ export async function draftText(opts: {
       "Usa viñetas (•) con saltos de línea físicos para separar cada actor o entidad.\n"
     : "";
 
+  const isReferralActions =
+    opts.fieldLabel.toLowerCase().includes("acciones desarrolladas") &&
+    (opts.fieldLabel.toLowerCase().includes("derivaci") ||
+      opts.fieldLabel.toLowerCase().includes("psicosocial") ||
+      opts.fieldLabel.toLowerCase().includes("ficha"));
+
+  const referralActionsRule = isReferralActions
+    ? "\nEXCEPCIÓN Y REGLA OBLIGATORIA PARA 'ACCIONES DESARROLLADAS' EN FICHA DE DERIVACIÓN:\n" +
+      "1. Debes generar EXCLUSIVAMENTE una lista breve de entre 4 y 8 líneas.\n" +
+      "2. Cada línea DEBE iniciar con un guion seguido de espacio: '- '\n" +
+      "3. Cada línea debe tener un MÁXIMO de 8 a 10 palabras.\n" +
+      "4. Emplea frases nominales breves y directas (ejemplos exactos del formato oficial: '- Diálogo con la madre de familia', '- Acta de consentimiento informado', '- Intervención con el estudiante', '- Agendamiento de cita', '- Diálogo con docente tutor', '- Coordinación interinstitucional').\n" +
+      "5. NO redactes párrafos explicativos, ni introducciones, ni burocracia extensa. Devuelve ÚNICAMENTE la lista con guiones.\n"
+    : "";
+
   const prompt = `Eres un asistente que ayuda a un profesional del Departamento de Consejería Estudiantil (DECE) en Ecuador a redactar documentos técnicos oficiales de gestión de casos. Usa lenguaje profesional, claro, objetivo, respetuoso y con enfoque de derechos, sin emitir juicios de valor ni diagnósticos clínicos que no correspondan a un informe DECE.
 
 REGLAS DE FORMATO Y ESTILO ESTRICTAS (OBLIGATORIAS):
 1. Devuelve SIEMPRE texto plano limpio. NUNCA uses sintaxis Markdown (sin negritas **, sin cursivas _, sin títulos #, sin backticks \`).
-2. NUNCA uses viñetas con símbolos (como •, *, -). Para listas, conclusiones o recomendaciones, usa EXCLUSIVAMENTE numeración secuencial limpia: "1. ", "2. ", "3. ".
+2. NUNCA uses viñetas con símbolos (como •, *, -) EXCEPTO cuando se indique expresamente en las reglas específicas de abajo. Para listas generales, conclusiones o recomendaciones, usa numeración secuencial limpia: "1. ", "2. ", "3. ".
 3. Cada punto de una lista debe ir en un renglón nuevo.
 4. No dejes líneas en blanco al inicio ni al final del texto. Deja un máximo de una sola línea en blanco entre párrafos o secciones.
 5. Si son conclusiones o recomendaciones, redacta al menos 4 puntos enumerados de forma independiente.
@@ -230,6 +245,7 @@ REGLAS DE FORMATO Y ESTILO ESTRICTAS (OBLIGATORIAS):
   ${socializationRule}
   ${socializationAgreementsRule}
   ${bimonthlyRule}
+  ${referralActionsRule}
   Vas a redactar o mejorar el siguiente campo de un documento: "${opts.fieldLabel}".
 
 Contexto del caso (datos ya registrados en el sistema; úsalos para dar coherencia, pero NO inventes datos, nombres, fechas ni hechos que no aparezcan aquí):
@@ -255,10 +271,18 @@ Responde ÚNICAMENTE con el texto final del campo, en español, en texto plano s
         model,
         contents: prompt,
       });
-      const text = (response.text || "").trim();
+      let text = (response.text || "").trim();
       if (!text) {
         lastError = new Error("empty-response");
         continue;
+      }
+      if (isReferralActions) {
+        text = text
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean)
+          .map((l) => (l.startsWith("-") ? l : `- ${l.replace(/^(\d+[\.\)]|[•\*\+])\s*/, "")}`))
+          .join("\n");
       }
       return { text };
     } catch (err: any) {

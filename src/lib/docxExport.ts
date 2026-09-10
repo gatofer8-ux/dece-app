@@ -2858,7 +2858,18 @@ export async function generateReferralDocx(opts: {
               new TableRow({
                 children: [
                   lbl("Acciones desarrolladas", 1),
-                  val(referral.actions_taken || "—", 5, false),
+                  val(
+                    referral.actions_taken
+                      ? referral.actions_taken
+                          .split("\n")
+                          .map((line) => line.trim())
+                          .filter(Boolean)
+                          .map((line) => (line.startsWith("-") ? line : `- ${line.replace(/^(\d+[\.\)]|[•\*\+])\s*/, "")}`))
+                          .join("\n")
+                      : "—",
+                    5,
+                    false
+                  ),
                 ],
               }),
               new TableRow({
