@@ -200,7 +200,24 @@ editarlos o eliminarlos desde la aplicación.
     que contiene toda la información de los estudiantes.
   - Restringe quién tiene acceso físico/de red al servidor.
 
-## 7. Extensiones futuras
+## 7. Asistente de Inteligencia Artificial (Groq y Gemini)
+
+El sistema cuenta con un asistente de redacción técnica especializado en documentos oficiales del DECE (fichas de observación, actas de corresponsabilidad, informes bimensuales de acompañamiento, juntas de curso, círculos restaurativos y planificación anual).
+
+### Arquitectura de doble proveedor con respaldo automático:
+1. **Proveedor principal (Groq):**
+   - Utiliza la API REST de Groq para respuestas ultra-rápidas con modelos de la familia Llama 70B.
+   - `GROQ_API_KEY`: clave de API gratuita de [Groq Console](https://console.groq.com/keys). Si no está configurada, se omite silenciosamente y se usa Gemini como respaldo directo.
+   - `GROQ_MODEL` (opcional): modelo prioritario (por defecto `llama-3.3-70b-versatile`). Dispone de una cadena interna de respaldo automático: `llama-3.3-70b-versatile` → `openai/gpt-oss-120b` → `llama-3.1-8b-instant`.
+2. **Proveedor de respaldo (Google Gemini):**
+   - Si `GROQ_API_KEY` no está definida o todos sus modelos agotan su cuota/disponibilidad, el sistema recurre automáticamente a Google Gemini sin interrupciones.
+   - `GEMINI_API_KEY`: clave gratuita de [Google AI Studio](https://aistudio.google.com/apikey). Admite múltiples claves separadas por coma para rotación automática.
+   - `GEMINI_MODEL` (opcional): modelo prioritario (por defecto `gemini-3.6-flash`). Cadena de respaldo: `gemini-3.6-flash` → `gemini-3.7-flash` → `gemini-3.5-flash-lite` → `gemini-3.1-flash-lite`.
+3. **Privacidad garantizada:**
+   - Todo prompt pasa obligatoriamente por un filtro de seudonimización (`pseudonymize()`) antes de salir hacia cualquier proveedor externo, eliminando nombres de estudiantes, representantes, cédulas, teléfonos y direcciones.
+   - Toda respuesta generada pasa por `sanitizeAiText()` para asegurar texto plano institucional sin etiquetas markdown.
+
+## 8. Extensiones futuras
 
 Este sistema cubre el flujo completo del Modelo de Gestión DECE (casos,
 bitácora, citas, derivaciones, promoción/prevención/convivencia, reportes,
@@ -225,7 +242,7 @@ naturales para siguientes iteraciones, según lo que priorice la institución:
   (PostgreSQL) — el modelo de datos ya está diseñado por institución, lo
   que facilita esa migración cuando sea necesaria.
 
-## 8. Estructura del proyecto
+## 9. Estructura del proyecto
 
 ```
 dece-app/
@@ -255,7 +272,7 @@ dece-app/
 └── .env.example
 ```
 
-## 9. Soporte técnico
+## 10. Soporte técnico
 
 Este software fue generado a la medida para tu institución. Si tu equipo de
 TI necesita orientación adicional para el despliegue, personalización de

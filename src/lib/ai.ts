@@ -3,32 +3,26 @@ import { pseudonymize } from "./aiPrivacy";
 import { REPRESENTATIVE_AWARENESS_NOTE } from "./interviewDefaults";
 
 // Asistente de redacción con IA para los documentos técnicos del DECE.
-// Usa la API gratuita de Gemini (Google AI Studio) — a diferencia de la API
-// de Anthropic, Gemini ofrece un nivel de uso sin costo (con límite de
-// solicitudes por día) que no requiere tarjeta de crédito, pensado para el
-// volumen normal de un departamento DECE.
+// Usa Groq (modelos Llama 70B, gratis) como proveedor de IA principal,
+// con Google Gemini como respaldo automático si Groq no está configurado o falla.
 //
 // Variables de entorno:
+//   GROQ_API_KEY — clave gratuita de https://console.groq.com/keys
+//   GROQ_MODEL (opcional) — modelo de Groq a intentar primero (por defecto llama-3.3-70b-versatile)
 //   GEMINI_API_KEY — clave gratuita de https://aistudio.google.com/apikey
-//   GEMINI_MODEL (opcional) — modelo a intentar primero; por defecto se usa
-//     una lista de modelos de respaldo (ver MODEL_FALLBACK_CHAIN) porque el
-//     modelo más nuevo de Gemini suele devolver 503 "high demand" en sus
-//     primeras semanas — probar el siguiente de la lista evita que el
-//     asistente quede inutilizable solo por eso.
+//   GEMINI_MODEL (opcional) — modelo de Gemini a intentar primero (por defecto gemini-3.6-flash)
 //
-// IMPORTANTE: las claves de API nuevas (creadas después de cierta fecha) no
-// pueden usar modelos de la generación 2.5 — Google devuelve 404 "no longer
-// available to new users". Por eso la lista de respaldo solo incluye
-// modelos de la generación 3.x.
-//
-// Si GEMINI_API_KEY no está configurada, draftText no falla: devuelve un
-// error legible para mostrar en la interfaz, sin romper el resto del
-// formulario donde se use.
+// Cadena de respaldo de Groq:
+//   Se prioriza llama-3.3-70b-versatile, con respaldo en openai/gpt-oss-120b y llama-3.1-8b-instant.
+// Cadena de respaldo de Gemini:
+//   Se prioriza gemini-3.6-flash, seguido de gemini-3.7-flash, gemini-3.5-flash-lite y gemini-3.1-flash-lite.
 
-// Se prioriza el modelo Flash completo (mejor calidad de redacción). Los
-// modelos "-lite" solo se usan como último recurso cuando los completos están
-// saturados o no disponibles para la clave. Para máxima calidad, configurar
-// GEMINI_MODEL con un modelo Pro (requiere facturación activa en la clave).
+export const GROQ_FALLBACK_CHAIN = [
+  "llama-3.3-70b-versatile",
+  "openai/gpt-oss-120b",
+  "llama-3.1-8b-instant",
+];
+
 const MODEL_FALLBACK_CHAIN = [
   "gemini-3.6-flash",
   "gemini-3.7-flash",
@@ -144,7 +138,209 @@ function getClient(): GoogleGenAI | null {
 }
 
 export function isAiConfigured(): boolean {
-  return !!process.env.GEMINI_API_KEY;
+  return !!(process.env.GROQ_API_KEY?.trim() || process.env.GEMINI_API_KEY?.trim());
+}
+
+/**
+ * Función central de orquestación de IA con respaldo automático multi-proveedor:
+ * 1. Intenta con Groq (modelos Llama 70B gratuitos) si GROQ_API_KEY está configurada,
+ *    recorriendo la cadena GROQ_FALLBACK_CHAIN ante errores de cuota o indisponibilidad.
+ * 2. Si Groq no está configurado o todos sus modelos fallan, pasa automáticamente
+ *    a Google Gemini (MODEL_FALLBACK_CHAIN).
+ * 3. Aplica pseudonymize() antes de salir a cualquier proveedor y sanitizeAiText() a la respuesta.
+ */
+export async function generateWithFallback(opts: {
+  prompt: string;
+  temperature?: number;
+  maxOutputTokens?: number;
+  systemInstruction?: string;
+}): Promise<{ text: string } | { error: string }> {
+  const groqApiKey = process.env.GROQ_API_KEY?.trim();
+  const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
+
+  if (!groqApiKey && !geminiApiKey) {
+    return { error: "La ayuda de IA todavía no está configurada en este sistema." };
+  }
+
+  // Choke-point de privacidad obligatorio: seudonimizar el prompt y la instrucción del sistema
+  // antes de enviarlo a cualquier proveedor externo (Groq o Google).
+  const safePrompt = pseudonymize(opts.prompt);
+  const safeSystemInstruction = opts.systemInstruction
+    ? pseudonymize(opts.systemInstruction)
+    : undefined;
+
+  let lastError: any = null;
+
+  // 1. Intentar Groq primero si GROQ_API_KEY está configurada
+  if (groqApiKey) {
+    const preferredGroq = process.env.GROQ_MODEL?.trim();
+    const groqModelsToTry = preferredGroq
+      ? [preferredGroq, ...GROQ_FALLBACK_CHAIN.filter((m) => m !== preferredGroq)]
+      : GROQ_FALLBACK_CHAIN;
+
+    for (const model of groqModelsToTry) {
+      try {
+        const messages: Array<{ role: "system" | "user"; content: string }> = [];
+        if (safeSystemInstruction) {
+          messages.push({ role: "system", content: safeSystemInstruction });
+        }
+        messages.push({ role: "user", content: safePrompt });
+
+        const body: Record<string, any> = {
+          model,
+          messages,
+        };
+        if (typeof opts.temperature === "number") {
+          body.temperature = opts.temperature;
+        }
+        if (typeof opts.maxOutputTokens === "number") {
+          body.max_tokens = opts.maxOutputTokens;
+        }
+
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${groqApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+
+        if (res.ok) {
+          const data = (await res.json()) as any;
+          const rawText = data?.choices?.[0]?.message?.content;
+          if (typeof rawText === "string" && rawText.trim()) {
+            console.log(`[ai] groq:${model}`);
+            return { text: sanitizeAiText(rawText) };
+          }
+          lastError = new Error("empty-response");
+          continue;
+        }
+
+        let errDesc = `HTTP ${res.status}`;
+        try {
+          const errData = (await res.json()) as any;
+          if (errData?.error?.message) {
+            errDesc = `${res.status} - ${errData.error.message}`;
+          }
+        } catch {
+          // ignore
+        }
+        lastError = new Error(errDesc);
+        console.warn(`[ai] groq:${model} no disponible (${errDesc}), probando el siguiente...`);
+
+        if (res.status === 401 || res.status === 403) {
+          // Clave de Groq inválida — no insistir con otros modelos y pasar directo a Gemini
+          break;
+        }
+      } catch (fetchErr: any) {
+        lastError = fetchErr;
+        console.warn(
+          `[ai] groq:${model} error: ${fetchErr?.message || fetchErr}, probando el siguiente...`
+        );
+      }
+    }
+  }
+
+  // 2. Si Groq no está configurado o todos sus modelos fallaron, usar Gemini
+  const ai = getClient();
+  if (ai) {
+    const preferredGemini = process.env.GEMINI_MODEL?.trim();
+    const geminiModelsToTry = preferredGemini
+      ? [preferredGemini, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== preferredGemini)]
+      : MODEL_FALLBACK_CHAIN;
+
+    for (const model of geminiModelsToTry) {
+      try {
+        const config: Record<string, any> = {};
+        if (typeof opts.temperature === "number") {
+          config.temperature = opts.temperature;
+        }
+        if (typeof opts.maxOutputTokens === "number") {
+          config.maxOutputTokens = opts.maxOutputTokens;
+        }
+        if (safeSystemInstruction) {
+          config.systemInstruction = safeSystemInstruction;
+        }
+        if (config.temperature !== undefined || config.maxOutputTokens !== undefined) {
+          config.topP = 0.95;
+        }
+
+        const response = await ai.models.generateContent({
+          model,
+          contents: safePrompt,
+          ...(Object.keys(config).length > 0 ? { config } : {}),
+        });
+
+        const rawText = response.text;
+        if (typeof rawText === "string" && rawText.trim()) {
+          console.log(`[ai] gemini:${model}`);
+          return { text: sanitizeAiText(rawText) };
+        }
+        lastError = new Error("empty-response");
+      } catch (err: any) {
+        lastError = err;
+        const message = String(err?.message || err || "");
+        const status =
+          err?.status ||
+          (message.match(/"code":\s*(\d+)/)?.[1]
+            ? Number(message.match(/"code":\s*(\d+)/)?.[1])
+            : undefined);
+        const overloaded =
+          status === 503 ||
+          message.toUpperCase().includes("UNAVAILABLE") ||
+          message.toLowerCase().includes("high demand");
+        const unavailableModel =
+          status === 404 ||
+          message.toUpperCase().includes("NOT_FOUND") ||
+          message.toLowerCase().includes("no longer available");
+        if (
+          overloaded ||
+          unavailableModel ||
+          message.includes("429") ||
+          message.toLowerCase().includes("quota") ||
+          message.toLowerCase().includes("resource_exhausted")
+        ) {
+          console.warn(
+            `[ai] Modelo Gemini ${model} no disponible (${status || "?"}), probando el siguiente...`
+          );
+          continue;
+        }
+        break;
+      }
+    }
+  }
+
+  // 3. Si todos los proveedores y modelos fallaron
+  console.error(
+    "[ai] Error al generar texto (todos los proveedores y modelos probados fallaron):",
+    lastError
+  );
+  const message = String(lastError?.message || lastError || "");
+  if (
+    message.includes("429") ||
+    message.toLowerCase().includes("quota") ||
+    message.toLowerCase().includes("resource_exhausted")
+  ) {
+    return {
+      error:
+        "Se alcanzó el límite de uso de la clave de IA. Si es por minuto, espera 1 minuto; si el límite diario del plan gratuito se agotó, se restablece al día siguiente. Para uso intensivo, activa la facturación de la clave de Gemini o configura varias claves separadas por comas.",
+    };
+  }
+  if (
+    message.toUpperCase().includes("UNAVAILABLE") ||
+    message.toLowerCase().includes("high demand") ||
+    message.includes("503")
+  ) {
+    return {
+      error:
+        "Los servidores de IA están saturados en este momento. Intenta de nuevo en unos minutos, o escribe el texto manualmente.",
+    };
+  }
+  return {
+    error:
+      "Ocurrió un error al conectar con el servicio de IA. Verifica que la clave esté bien configurada.",
+  };
 }
 
 export async function draftText(opts: {
@@ -152,10 +348,6 @@ export async function draftText(opts: {
   context: string;
   currentText: string;
 }): Promise<{ text: string } | { error: string }> {
-  const ai = getClient();
-  if (!ai) {
-    return { error: "La ayuda de IA todavía no está configurada en este sistema." };
-  }
 
     const isSocializationStrategies =
     opts.fieldLabel.toLowerCase().includes("estrategia") &&
@@ -365,82 +557,46 @@ ${
 
 Responde ÚNICAMENTE con el texto final del campo, en español, en texto plano sin markdown, sin encabezados, sin comillas, sin explicaciones adicionales ni notas fuera del texto del documento.`;
 
-  const preferredModel = process.env.GEMINI_MODEL;
-  const modelsToTry = preferredModel
-    ? [preferredModel, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== preferredModel)]
-    : MODEL_FALLBACK_CHAIN;
-
-  let lastError: any = null;
-  for (const model of modelsToTry) {
-    try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: { temperature: 0.65, topP: 0.95, maxOutputTokens: 4096 },
-      });
-      let text = (response.text || "").trim();
-      if (!text) {
-        lastError = new Error("empty-response");
-        continue;
-      }
-      if (isReferralActions) {
-        text = text
-          .split("\n")
-          .map((l) => l.trim())
-          .filter(Boolean)
-          .map((l) => (l.startsWith("-") ? l : `- ${l.replace(/^(\d+[\.\)]|[•\*\+])\s*/, "")}`))
-          .join("\n");
-      }
-      if (isReferralObservations) {
-        text = text
-          .split("\n")
-          .map((l) => l.trim())
-          .filter(Boolean)
-          .map((l) => (l.startsWith("•") ? l : `• ${l.replace(/^(\d+[\.\)]|[\*\-\+])\s*/, "")}`))
-          .join("\n");
-      }
-      if (isAccompanimentTechnical) {
-        // Eliminar de raíz cualquier posible encabezado o sección residual de "Conclusiones del seguimiento institucional"
-        text = text
-          .replace(/(?:\r?\n)+(?:(?:\d+[\.\)]|[•\*\-#])\s*)?(?:conclusiones(?:\s+del)?\s+seguimiento\s+institucional|seguimiento\s+institucional)[\s\S]*$/i, "")
-          .trim();
-      }
-      if (isInterviewCommitment) {
-        if (!text.includes("NOTA DE CONOCIMIENTO Y CORRESPONSABILIDAD") && !text.includes("plena toma de conocimiento")) {
-          text = `${text.trim()}\n\n${REPRESENTATIVE_AWARENESS_NOTE}`;
-        }
-      }
-      return { text };
-    } catch (err: any) {
-      lastError = err;
-      const message = String(err?.message || err || "");
-      const status = err?.status || (message.match(/"code":\s*(\d+)/)?.[1] ? Number(message.match(/"code":\s*(\d+)/)?.[1]) : undefined);
-      const overloaded = status === 503 || message.toUpperCase().includes("UNAVAILABLE") || message.toLowerCase().includes("high demand");
-      const unavailableModel =
-        status === 404 ||
-        message.toUpperCase().includes("NOT_FOUND") ||
-        message.toLowerCase().includes("no longer available");
-      if (overloaded || unavailableModel || message.includes("429") || message.toLowerCase().includes("quota") || message.toLowerCase().includes("resource_exhausted")) {
-        // Este modelo está saturado o ya no disponible para esta clave —
-        // probar el siguiente de la lista en vez de fallar de una vez.
-        console.warn(`[ai] Modelo ${model} no disponible (${status || "?"}), probando el siguiente...`);
-        continue;
-      }
-      // Cualquier otro error (clave inválida, cuota agotada, etc.) no mejora
-      // probando otro modelo — cortar aquí.
-      break;
+  const res = await generateWithFallback({
+    prompt,
+    temperature: 0.65,
+    maxOutputTokens: 4096,
+  });
+  if ("error" in res) {
+    return res;
+  }
+  let text = res.text.trim();
+  if (!text) {
+    return { error: "No se pudo generar el texto solicitado." };
+  }
+  if (isReferralActions) {
+    text = text
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((l) => (l.startsWith("-") ? l : `- ${l.replace(/^(\d+[\.\)]|[•\*\+])\s*/, "")}`))
+      .join("\n");
+  }
+  if (isReferralObservations) {
+    text = text
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((l) => (l.startsWith("•") ? l : `• ${l.replace(/^(\d+[\.\)]|[\*\-\+])\s*/, "")}`))
+      .join("\n");
+  }
+  if (isAccompanimentTechnical) {
+    // Eliminar de raíz cualquier posible encabezado o sección residual de "Conclusiones del seguimiento institucional"
+    text = text
+      .replace(/(?:\r?\n)+(?:(?:\d+[\.\)]|[•\*\-#])\s*)?(?:conclusiones(?:\s+del)?\s+seguimiento\s+institucional|seguimiento\s+institucional)[\s\S]*$/i, "")
+      .trim();
+  }
+  if (isInterviewCommitment) {
+    if (!text.includes("NOTA DE CONOCIMIENTO Y CORRESPONSABILIDAD") && !text.includes("plena toma de conocimiento")) {
+      text = `${text.trim()}\n\n${REPRESENTATIVE_AWARENESS_NOTE}`;
     }
   }
-
-  console.error("[ai] Error al generar borrador (todos los modelos probados fallaron):", lastError);
-  const message = String(lastError?.message || lastError || "");
-  if (message.includes("429") || message.toLowerCase().includes("quota") || message.toLowerCase().includes("resource_exhausted")) {
-    return { error: "Se alcanzó el límite de uso de la clave de IA. Si es por minuto, espera 1 minuto; si el límite diario del plan gratuito se agotó, se restablece al día siguiente. Para uso intensivo, activa la facturación de la clave de Gemini o configura varias claves separadas por comas." };
-  }
-  if (message.toUpperCase().includes("UNAVAILABLE") || message.toLowerCase().includes("high demand")) {
-    return { error: "Los servidores de Gemini están saturados en este momento. Intenta de nuevo en unos minutos, o escribe el texto manualmente." };
-  }
-  return { error: "Ocurrió un error al conectar con el servicio de IA. Verifica que la clave esté bien configurada." };
+  return { text };
 }
 
 /**
@@ -509,11 +665,6 @@ Situación detectada: ${opts.description}`;
 export async function draftBimonthlyMatrixDraft(opts: {
   context: string;
 }): Promise<{ suggestions: Record<string, string> } | { error: string }> {
-  const ai = getClient();
-  if (!ai) {
-    return { error: "La ayuda de IA todavía no está configurada en este sistema." };
-  }
-
   const prompt = `Eres un profesional especialista del Departamento de Consejería Estudiantil (DECE) del Ministerio de Educación de Ecuador (MINEDUC).
 Estás redactando el "Informe Bimensual de Seguimiento al Plan de Acompañamiento Institucional" para un caso de violencia sexual.
 Contexto del caso institucional:
@@ -587,26 +738,16 @@ REGLAS ESTRICTAS:
   "proc-8": "texto..."
 }`;
 
-  const preferredModel = process.env.GEMINI_MODEL;
-  const modelsToTry = preferredModel
-    ? [preferredModel, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== preferredModel)]
-    : MODEL_FALLBACK_CHAIN;
-
-  for (const model of modelsToTry) {
+  const res = await generateWithFallback({ prompt });
+  if ("error" in res) {
+    return { error: res.error };
+  }
+  const jsonMatch = res.text.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
     try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-      });
-      const text = (response.text || "").trim();
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        return { suggestions: parsed };
-      }
-    } catch (err: any) {
-      console.warn("[ai bimonthly matrix] Falló modelo " + model + ":", err?.message || err);
-    }
+      const parsed = JSON.parse(jsonMatch[0]);
+      return { suggestions: parsed };
+    } catch {}
   }
 
   return { error: "No se pudieron generar las sugerencias automáticas de la matriz bimensual." };
@@ -639,11 +780,6 @@ export async function draftActionPlanItem(opts: {
   responsible: string;
   observations: string;
 } | { error: string }> {
-  const ai = getClient();
-  if (!ai) {
-    return { error: "La ayuda de IA todavía no está configurada en este sistema." };
-  }
-
   const prompt = `Eres un especialista técnico del Departamento de Consejería Estudiantil (DECE) del Ministerio de Educación de Ecuador.
 Tu tarea es redactar y estructurar con precisión técnica y total viabilidad operativa una fila del PLAN DE ACCIÓN ANUAL DECE (POA), asegurando cumplimiento estricto con los ESTÁNDARES DE CALIDAD DECE y adecuándolo fielmente a las condiciones y recursos reales de la institución.
 
@@ -679,33 +815,23 @@ Responde ÚNICAMENTE con un objeto JSON válido (sin formato markdown adicional 
   "observations": "INFORME TÉCNICO DEL CUMPLIMIENTO AL ESTÁNDAR"
 }`;
 
-  const preferredModel = process.env.GEMINI_MODEL;
-  const modelsToTry = preferredModel
-    ? [preferredModel, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== preferredModel)]
-    : MODEL_FALLBACK_CHAIN;
-
-  for (const model of modelsToTry) {
+  const res = await generateWithFallback({ prompt });
+  if ("error" in res) {
+    return { error: res.error };
+  }
+  const jsonMatch = res.text.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
     try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-      });
-      const text = (response.text || "").trim();
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        return {
-          activities: String(parsed.activities || ""),
-          target_population: String(parsed.target_population || ""),
-          execution_term: String(parsed.execution_term || ""),
-          supplies_inputs: String(parsed.supplies_inputs || ""),
-          responsible: String(parsed.responsible || ""),
-          observations: String(parsed.observations || "INFORME TÉCNICO DEL CUMPLIMIENTO AL ESTÁNDAR"),
-        };
-      }
-    } catch (err: any) {
-      console.warn(`[ai action plan item] Falló modelo ${model}:`, err?.message || err);
-    }
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        activities: String(parsed.activities || ""),
+        target_population: String(parsed.target_population || ""),
+        execution_term: String(parsed.execution_term || ""),
+        supplies_inputs: String(parsed.supplies_inputs || ""),
+        responsible: String(parsed.responsible || ""),
+        observations: String(parsed.observations || "INFORME TÉCNICO DEL CUMPLIMIENTO AL ESTÁNDAR"),
+      };
+    } catch {}
   }
 
   return { error: "No se pudo generar la propuesta de actividades para este estándar." };
@@ -724,11 +850,6 @@ export async function draftActionPlanGlobal(opts: {
 }): Promise<{
   evaluation_notes: string;
 } | { error: string }> {
-  const ai = getClient();
-  if (!ai) {
-    return { error: "La ayuda de IA todavía no está configurada en este sistema." };
-  }
-
   const prompt = `Eres la Coordinación del Departamento de Consejería Estudiantil (DECE) en Ecuador.
 Debes redactar la sección técnica oficial de "EVALUACIÓN Y AJUSTES" del Plan de Acción Anual DECE para el año lectivo ${opts.schoolYear}.
 
@@ -746,24 +867,13 @@ Estructura obligatoria según formato oficial MINEDUC:
 
 Responde únicamente con el texto formal técnico estructurado con viñetas claras y saltos de línea físicos.`;
 
-  const preferredModel = process.env.GEMINI_MODEL;
-  const modelsToTry = preferredModel
-    ? [preferredModel, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== preferredModel)]
-    : MODEL_FALLBACK_CHAIN;
-
-  for (const model of modelsToTry) {
-    try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-      });
-      const text = (response.text || "").trim();
-      if (text) {
-        return { evaluation_notes: text };
-      }
-    } catch (err: any) {
-      console.warn(`[ai action plan global] Falló modelo ${model}:`, err?.message || err);
-    }
+  const res = await generateWithFallback({ prompt });
+  if ("error" in res) {
+    return { error: res.error };
+  }
+  const text = res.text.trim();
+  if (text) {
+    return { evaluation_notes: text };
   }
 
   return { error: "No se pudo generar la evaluación global del plan." };
@@ -776,7 +886,6 @@ Responde únicamente con el texto formal técnico estructurado con viñetas clar
 export async function generateChatAiResponse(opts: {
   userMessage: string;
 }): Promise<string> {
-  const ai = getClient();
   const systemInstruction = `Eres el "Asistente Virtual DECE", un especialista experto en el Modelo de Gestión de los Departamentos de Consejería Estudiantil (DECE) del Ministerio de Educación de Ecuador (MINEDUC).
 Tu rol es orientar a psicólogos educativos, trabajadores sociales, docentes y directivos escolares sobre:
 1. Protocolos de actuación frente a situaciones de violencia detectadas o cometidas en el sistema educativo.
@@ -788,27 +897,15 @@ Tu rol es orientar a psicólogos educativos, trabajadores sociales, docentes y d
 
 Responde siempre en español, con tono empático, sumamente profesional, estructurado (con viñetas o pasos claros) y alineado a la normativa ecuatoriana (LOEI, Código de la Niñez y Adolescencia, Acuerdos Ministeriales).`;
 
-  if (ai) {
-    const primaryModel = process.env.GEMINI_MODEL || MODEL_FALLBACK_CHAIN[0];
-    const modelsToTry = [primaryModel, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== primaryModel)];
-
-    for (const model of modelsToTry) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents: opts.userMessage,
-          config: {
-            systemInstruction,
-            temperature: 0.6,
-            maxOutputTokens: 8192,
-          },
-        });
-        if (response.text) {
-          return response.text.trim();
-        }
-      } catch (err: any) {
-        console.warn(`[ai chat] Falló modelo ${model}:`, err?.message || err);
-      }
+  if (isAiConfigured()) {
+    const res = await generateWithFallback({
+      prompt: opts.userMessage,
+      systemInstruction,
+      temperature: 0.6,
+      maxOutputTokens: 8192,
+    });
+    if ("text" in res && res.text.trim()) {
+      return res.text.trim();
     }
   }
 
@@ -883,11 +980,6 @@ export async function draftObservationComment(opts: {
   targetQuestionGuidance?: string;
   userDraft?: string;
 }): Promise<{ text: string } | { error: string }> {
-  const ai = getClient();
-  if (!ai) {
-    return { error: "El servicio de Inteligencia Artificial no está configurado." };
-  }
-
   const prompt = `Eres un/a profesional del Departamento de Consejería Estudiantil (DECE) del Ministerio de Educación de Ecuador.
 Estás completando la "FICHA DE OBSERVACIÓN OFICIAL" de un/a estudiante atendido/a en la institución educativa.
 
@@ -912,24 +1004,13 @@ DIRECTRICES TÉCNICAS DE REDACCIÓN DECE:
 3. Mantén un tono formal de reporte de observación psicológica-socioeducativa ecuatoriana.
 4. Responde ÚNICAMENTE con el texto final del comentario, sin saludos, sin explicaciones ni comillas envolventes.`;
 
-  const preferredModel = process.env.GEMINI_MODEL;
-  const modelsToTry = preferredModel
-    ? [preferredModel, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== preferredModel)]
-    : MODEL_FALLBACK_CHAIN;
-
-  for (const model of modelsToTry) {
-    try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-      });
-      const text = (response.text || "").trim();
-      if (text) {
-        return { text };
-      }
-    } catch (err: any) {
-      console.warn(`[ai observation comment] Falló modelo ${model}:`, err?.message || err);
-    }
+  const res = await generateWithFallback({ prompt });
+  if ("error" in res) {
+    return { error: res.error };
+  }
+  const text = res.text.trim();
+  if (text) {
+    return { text };
   }
 
   return { error: "No se pudo generar la redacción de la observación." };
@@ -956,11 +1037,6 @@ export async function draftObservationGlobalAnalysis(opts: {
   external_departments: string[];
   external_other: string;
 } | { error: string }> {
-  const ai = getClient();
-  if (!ai) {
-    return { error: "El servicio de Inteligencia Artificial no está configurado." };
-  }
-
   const prompt = `Eres la Coordinación del Departamento de Consejería Estudiantil (DECE) en Ecuador.
 Debes realizar la síntesis técnica oficial de las secciones de ATENCIÓN REQUERIDA y DERIVACIONES de la Ficha de Observación.
 
@@ -986,37 +1062,27 @@ Debes responder ÚNICAMENTE con un objeto JSON válido con esta estructura exact
   "external_other": ""
 }`;
 
-  const preferredModel = process.env.GEMINI_MODEL;
-  const modelsToTry = preferredModel
-    ? [preferredModel, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== preferredModel)]
-    : MODEL_FALLBACK_CHAIN;
-
-  for (const model of modelsToTry) {
+  const res = await generateWithFallback({ prompt });
+  if ("error" in res) {
+    return { error: res.error };
+  }
+  const match = res.text.match(/\{[\s\S]*\}/);
+  if (match) {
     try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-      });
-      const text = (response.text || "").trim();
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) {
-        const parsed = JSON.parse(match[0]);
-        return {
-          requires_dece: parsed.requires_dece === "NO" ? "NO" : "SI",
-          requires_dece_detail: String(parsed.requires_dece_detail || ""),
-          requires_other: parsed.requires_other === "SI" ? "SI" : "NO",
-          requires_other_detail: String(parsed.requires_other_detail || ""),
-          internal_referral_suggested: Boolean(parsed.internal_referral_suggested),
-          internal_departments: Array.isArray(parsed.internal_departments) ? parsed.internal_departments : [],
-          internal_other: String(parsed.internal_other || ""),
-          external_referral_suggested: Boolean(parsed.external_referral_suggested),
-          external_departments: Array.isArray(parsed.external_departments) ? parsed.external_departments : [],
-          external_other: String(parsed.external_other || ""),
-        };
-      }
-    } catch (err: any) {
-      console.warn(`[ai observation global] Falló modelo ${model}:`, err?.message || err);
-    }
+      const parsed = JSON.parse(match[0]);
+      return {
+        requires_dece: parsed.requires_dece === "NO" ? "NO" : "SI",
+        requires_dece_detail: String(parsed.requires_dece_detail || ""),
+        requires_other: parsed.requires_other === "SI" ? "SI" : "NO",
+        requires_other_detail: String(parsed.requires_other_detail || ""),
+        internal_referral_suggested: Boolean(parsed.internal_referral_suggested),
+        internal_departments: Array.isArray(parsed.internal_departments) ? parsed.internal_departments : [],
+        internal_other: String(parsed.internal_other || ""),
+        external_referral_suggested: Boolean(parsed.external_referral_suggested),
+        external_departments: Array.isArray(parsed.external_departments) ? parsed.external_departments : [],
+        external_other: String(parsed.external_other || ""),
+      };
+    } catch {}
   }
 
   return { error: "No se pudo generar el análisis de atención y derivaciones." };
@@ -1041,17 +1107,14 @@ export async function draftCorresponsibilityDifficulty(opts: {
     actionsSummary?: string;
   };
 }): Promise<{ text?: string; error?: string }> {
-  const ai = getClient();
-  if (!ai) {
-    const catalogInfo = CONFLICT_TYPES_CATALOG[opts.conflictType] || CONFLICT_TYPES_CATALOG.OTRO;
+  const catalogInfo = CONFLICT_TYPES_CATALOG[opts.conflictType] || CONFLICT_TYPES_CATALOG.OTRO;
+  if (!isAiConfigured()) {
     return {
       text: opts.detectedNotes
         ? `Se evidencia en el/la estudiante ${opts.studentName}, que cursa el ${opts.studentGrade}, la siguiente situación relevante: ${opts.detectedNotes}. Se identifica la necesidad de articular compromisos formales con el representante legal.`
         : `En el marco del seguimiento integral al estudiante ${opts.studentName} (${opts.studentGrade}), se detecta una situación clasificada bajo ${catalogInfo.label}: ${catalogInfo.shortDescription}. Lo cual requiere intervención coordinada y compromisos formales.`,
     };
   }
-
-  const catalogInfo = CONFLICT_TYPES_CATALOG[opts.conflictType] || CONFLICT_TYPES_CATALOG.OTRO;
 
   const prompt = `Actúa como un profesional senior del Departamento de Consejería Estudiantil (DECE) de Ecuador.
 Tu tarea es redactar la sección "Dificultad detectada" de un Acta Oficial de Corresponsabilidad con los Representantes Legales.
@@ -1073,22 +1136,9 @@ CRITERIOS DE REDACCIÓN DECE:
 
 Devuelve ÚNICAMENTE el texto redactado, sin introducciones ni títulos markdown.`;
 
-  const preferredModel = process.env.GEMINI_MODEL;
-  const modelsToTry = preferredModel
-    ? [preferredModel, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== preferredModel)]
-    : MODEL_FALLBACK_CHAIN;
-
-  for (const model of modelsToTry) {
-    try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-      });
-      const text = (response.text || "").trim();
-      if (text) return { text };
-    } catch (err: any) {
-      console.warn(`[ai corresponsibility difficulty] Falló modelo ${model}:`, err?.message || err);
-    }
+  const res = await generateWithFallback({ prompt });
+  if ("text" in res && res.text.trim()) {
+    return { text: res.text.trim() };
   }
 
   return { error: "No se pudo generar la redacción de la dificultad detectada." };
@@ -1103,10 +1153,8 @@ export async function draftCorresponsibilityLegalFramework(opts: {
   difficultySummary: string;
   studentName?: string;
 }): Promise<{ text?: string; error?: string }> {
-  const ai = getClient();
   const catalogInfo = CONFLICT_TYPES_CATALOG[opts.conflictType] || CONFLICT_TYPES_CATALOG.OTRO;
-
-  if (!ai) {
+  if (!isAiConfigured()) {
     return { text: catalogInfo.defaultLegalFramework };
   }
 
@@ -1153,22 +1201,9 @@ Redacta un texto fluido y contundente, comenzando formalmente con:
 
 Devuelve ÚNICAMENTE el texto de la fundamentación legal, sin preámbulos.`;
 
-  const preferredModel = process.env.GEMINI_MODEL;
-  const modelsToTry = preferredModel
-    ? [preferredModel, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== preferredModel)]
-    : MODEL_FALLBACK_CHAIN;
-
-  for (const model of modelsToTry) {
-    try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-      });
-      const text = (response.text || "").trim();
-      if (text) return { text };
-    } catch (err: any) {
-      console.warn(`[ai corresponsibility legal] Falló modelo ${model}:`, err?.message || err);
-    }
+  const res = await generateWithFallback({ prompt });
+  if ("text" in res && res.text.trim()) {
+    return { text: res.text.trim() };
   }
 
   return { text: catalogInfo.defaultLegalFramework };
@@ -1187,10 +1222,8 @@ export async function draftCorresponsibilityCommitments(opts: {
   studentCommitments?: string;
   error?: string;
 }> {
-  const ai = getClient();
   const catalogInfo = CONFLICT_TYPES_CATALOG[opts.conflictType] || CONFLICT_TYPES_CATALOG.OTRO;
-
-  if (!ai) {
+  if (!isAiConfigured()) {
     return {
       representativeCommitments: catalogInfo.defaultRepresentativeCommitments,
       deceCommitments: catalogInfo.defaultDeceCommitments,
@@ -1221,29 +1254,18 @@ RESPONDE EXCLUSIVAMENTE EN FORMATO JSON VÁLIDO CON ESTA ESTRUCTURA EXACTA:
   "studentCommitments": "1. ..."
 }`;
 
-  const preferredModel = process.env.GEMINI_MODEL;
-  const modelsToTry = preferredModel
-    ? [preferredModel, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== preferredModel)]
-    : MODEL_FALLBACK_CHAIN;
-
-  for (const model of modelsToTry) {
-    try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-      });
-      const text = (response.text || "").trim();
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) {
+  const res = await generateWithFallback({ prompt });
+  if ("text" in res) {
+    const match = res.text.match(/\{[\s\S]*\}/);
+    if (match) {
+      try {
         const parsed = JSON.parse(match[0]);
         return {
           representativeCommitments: String(parsed.representativeCommitments || catalogInfo.defaultRepresentativeCommitments),
           deceCommitments: String(parsed.deceCommitments || catalogInfo.defaultDeceCommitments),
           studentCommitments: String(parsed.studentCommitments || ""),
         };
-      }
-    } catch (err: any) {
-      console.warn(`[ai corresponsibility commitments] Falló modelo ${model}:`, err?.message || err);
+      } catch {}
     }
   }
 
@@ -1274,11 +1296,6 @@ export async function draftCourseBoardCaseRecommendations(opts: {
   climate: string;
   protocols: string;
 } | { error: string }> {
-  const ai = getClient();
-  if (!ai) {
-    return { error: "El servicio de Inteligencia Artificial no está configurado." };
-  }
-
   const prompt = `Eres un/a profesional del Departamento de Consejería Estudiantil (DECE) del Ministerio de Educación de Ecuador.
 Estás elaborando la sección de "ASESORAMIENTO Y RECOMENDACIONES (A la Junta de Docentes de Grado o Curso)" para el estudiante:
 - Estudiante: ${opts.studentName}
@@ -1308,31 +1325,21 @@ REGLAS DE RESPUESTA:
   "protocols": "• ..."
 }`;
 
-  const preferredModel = process.env.GEMINI_MODEL;
-  const modelsToTry = preferredModel
-    ? [preferredModel, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== preferredModel)]
-    : MODEL_FALLBACK_CHAIN;
-
-  for (const model of modelsToTry) {
+  const res = await generateWithFallback({ prompt });
+  if ("error" in res) {
+    return { error: res.error };
+  }
+  const match = res.text.match(/\{[\s\S]*\}/);
+  if (match) {
     try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-      });
-      const text = (response.text || "").trim();
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) {
-        const parsed = JSON.parse(match[0]);
-        return {
-          coordination: String(parsed.coordination || ""),
-          academic: String(parsed.academic || ""),
-          climate: String(parsed.climate || ""),
-          protocols: String(parsed.protocols || ""),
-        };
-      }
-    } catch (err: any) {
-      console.warn(`[ai junta case recs] Falló modelo ${model}:`, err?.message || err);
-    }
+      const parsed = JSON.parse(match[0]);
+      return {
+        coordination: String(parsed.coordination || ""),
+        academic: String(parsed.academic || ""),
+        climate: String(parsed.climate || ""),
+        protocols: String(parsed.protocols || ""),
+      };
+    } catch {}
   }
 
   return { error: "No se pudieron generar las recomendaciones por IA." };
@@ -1352,11 +1359,6 @@ export async function draftCourseBoardConclusions(opts: {
   conclusiones: string;
   recomendaciones: string;
 } | { error: string }> {
-  const ai = getClient();
-  if (!ai) {
-    return { error: "El servicio de Inteligencia Artificial no está configurado." };
-  }
-
   const prompt = `Eres un profesional especialista del DECE (Ministerio de Educación de Ecuador).
 Estás redactando las CONCLUSIONES y RECOMENDACIONES del "Informe Técnico de Juntas de Curso" para:
 - Curso: ${opts.course} ${opts.parallel}
@@ -1389,29 +1391,19 @@ Responde ÚNICAMENTE con un objeto JSON válido:
   "recomendaciones": "- ...\\n- ...\\n- ...\\n- ..."
 }`;
 
-  const preferredModel = process.env.GEMINI_MODEL;
-  const modelsToTry = preferredModel
-    ? [preferredModel, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== preferredModel)]
-    : MODEL_FALLBACK_CHAIN;
-
-  for (const model of modelsToTry) {
+  const res = await generateWithFallback({ prompt });
+  if ("error" in res) {
+    return { error: res.error };
+  }
+  const match = res.text.match(/\{[\s\S]*\}/);
+  if (match) {
     try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-      });
-      const text = (response.text || "").trim();
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) {
-        const parsed = JSON.parse(match[0]);
-        return {
-          conclusiones: String(parsed.conclusiones || ""),
-          recomendaciones: String(parsed.recomendaciones || ""),
-        };
-      }
-    } catch (err: any) {
-      console.warn(`[ai junta conclusions] Falló modelo ${model}:`, err?.message || err);
-    }
+      const parsed = JSON.parse(match[0]);
+      return {
+        conclusiones: String(parsed.conclusiones || ""),
+        recomendaciones: String(parsed.recomendaciones || ""),
+      };
+    } catch {}
   }
 
   return { error: "No se pudieron generar las conclusiones y recomendaciones por IA." };
@@ -1428,9 +1420,6 @@ export async function draftAnnualSituationalDiagnosis(opts: {
   professionalsCount: number;
   reportType: string;
 }): Promise<{ text: string } | { error: string }> {
-  const ai = getClient();
-  if (!ai) return { error: "La ayuda de IA todavía no está configurada." };
-
   const prompt = `Eres un asesor técnico experto en el Modelo de Gestión de los Departamentos de Consejería Estudiantil (DECE) del Ministerio de Educación del Ecuador (Acuerdo Nro. MINEDUC-MINEDUC-2023-00010-A y Reglamento LOEI).
 Redacta el "Diagnóstico situacional de la institución educativa" para el Informe Anual de Fin de Gestión del DECE.
 
@@ -1446,19 +1435,12 @@ INSTRUCCIONES:
 - Enfatiza el rol preventivo, de acompañamiento psicosocial integral, articulación con docentes y restitución de derechos (sin usar jamás la expresión "casos especiales" ni terminología clínica).
 - Redacta en tercera persona formal. Devuelve ÚNICAMENTE el texto redactado, sin encabezados ni markdown adicional.`;
 
-  const preferredModel = process.env.GEMINI_MODEL;
-  const modelsToTry = preferredModel
-    ? [preferredModel, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== preferredModel)]
-    : MODEL_FALLBACK_CHAIN;
-
-  for (const model of modelsToTry) {
-    try {
-      const response = await ai.models.generateContent({ model, contents: prompt });
-      const text = (response.text || "").trim();
-      if (text) return { text };
-    } catch (err: any) {
-      console.warn(`[ai annual diag] Falló modelo ${model}:`, err?.message || err);
-    }
+  const res = await generateWithFallback({ prompt });
+  if ("text" in res && res.text.trim()) {
+    return { text: res.text.trim() };
+  }
+  if ("error" in res) {
+    return { error: res.error };
   }
 
   return { error: "No se pudo generar el diagnóstico situacional con IA." };
@@ -1470,9 +1452,6 @@ INSTRUCCIONES:
 export async function draftAnnualComparativeAnalysis(opts: {
   typologiesData: Array<{ typology: string; prev: number; curr: number }>;
 }): Promise<Record<string, string> | { error: string }> {
-  const ai = getClient();
-  if (!ai) return { error: "La ayuda de IA no está configurada." };
-
   const listStr = opts.typologiesData
     .map((t) => `${t.typology}: Anterior=${t.prev}, Actual=${t.curr}`)
     .join("\n");
@@ -1491,22 +1470,15 @@ Responde ÚNICAMENTE con un JSON válido mapeando cada tipología exacta con su 
   ...
 }`;
 
-  const preferredModel = process.env.GEMINI_MODEL;
-  const modelsToTry = preferredModel
-    ? [preferredModel, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== preferredModel)]
-    : MODEL_FALLBACK_CHAIN;
-
-  for (const model of modelsToTry) {
+  const res = await generateWithFallback({ prompt });
+  if ("error" in res) {
+    return { error: res.error };
+  }
+  const match = res.text.match(/\{[\s\S]*\}/);
+  if (match) {
     try {
-      const response = await ai.models.generateContent({ model, contents: prompt });
-      const text = (response.text || "").trim();
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) {
-        return JSON.parse(match[0]);
-      }
-    } catch (err: any) {
-      console.warn(`[ai annual comp] Falló modelo ${model}:`, err?.message || err);
-    }
+      return JSON.parse(match[0]);
+    } catch {}
   }
 
   return { error: "No se pudo generar el análisis comparativo con IA." };
@@ -1533,9 +1505,6 @@ export async function draftAnnualConclusionsAndRecommendations(opts: {
     }
   | { error: string }
 > {
-  const ai = getClient();
-  if (!ai) return { error: "La ayuda de IA todavía no está configurada." };
-
   const prompt = `Eres un consultor experto del Ministerio de Educación de Ecuador en el Modelo de Gestión DECE (Acuerdo Nro. MINEDUC-MINEDUC-2023-00010-A).
 Redacta las CONCLUSIONES (desglosadas en los 4 ejes obligatorios) y RECOMENDACIONES (institucionales y distritales) para el Informe Anual de Fin de Gestión.
 
@@ -1568,30 +1537,23 @@ Responde ÚNICAMENTE con un JSON válido:
   "recommendationsDistrict": "1. ...\n2. ...\n3. ..."
 }`;
 
-  const preferredModel = process.env.GEMINI_MODEL;
-  const modelsToTry = preferredModel
-    ? [preferredModel, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== preferredModel)]
-    : MODEL_FALLBACK_CHAIN;
-
-  for (const model of modelsToTry) {
+  const res = await generateWithFallback({ prompt });
+  if ("error" in res) {
+    return { error: res.error };
+  }
+  const match = res.text.match(/\{[\s\S]*\}/);
+  if (match) {
     try {
-      const response = await ai.models.generateContent({ model, contents: prompt });
-      const text = (response.text || "").trim();
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) {
-        const parsed = JSON.parse(match[0]);
-        return {
-          conclusionsCounseling: String(parsed.conclusionsCounseling || ""),
-          conclusionsPrevention: String(parsed.conclusionsPrevention || ""),
-          conclusionsPsychosocial: String(parsed.conclusionsPsychosocial || ""),
-          conclusionsInclusion: String(parsed.conclusionsInclusion || ""),
-          recommendationsInstitutional: String(parsed.recommendationsInstitutional || ""),
-          recommendationsDistrict: String(parsed.recommendationsDistrict || ""),
-        };
-      }
-    } catch (err: any) {
-      console.warn(`[ai annual conc] Falló modelo ${model}:`, err?.message || err);
-    }
+      const parsed = JSON.parse(match[0]);
+      return {
+        conclusionsCounseling: String(parsed.conclusionsCounseling || ""),
+        conclusionsPrevention: String(parsed.conclusionsPrevention || ""),
+        conclusionsPsychosocial: String(parsed.conclusionsPsychosocial || ""),
+        conclusionsInclusion: String(parsed.conclusionsInclusion || ""),
+        recommendationsInstitutional: String(parsed.recommendationsInstitutional || ""),
+        recommendationsDistrict: String(parsed.recommendationsDistrict || ""),
+      };
+    } catch {}
   }
 
   return { error: "No se pudieron generar las conclusiones y recomendaciones anuales con IA." };
@@ -1606,9 +1568,6 @@ export async function draftAnnualAchievementsAndKnots(opts: {
   totalAttentions: number;
   totalCases: number;
 }): Promise<{ achievements: string; criticalKnots: string } | { error: string }> {
-  const ai = getClient();
-  if (!ai) return { error: "La ayuda de IA no está configurada." };
-
   const prompt = `Eres especialista en el DECE de Ecuador.
 Formula mínimo 3 "Logros alcanzados" y mínimo 3 "Nudos críticos" realistas para el Informe de Fin de Gestión de la institución ${opts.institutionName} (${opts.schoolYearText}), donde se realizaron ${opts.totalAttentions} atenciones y se abordaron ${opts.totalCases} casos.
 Cumple estrictamente con el Modelo de Gestión DECE (no tratamiento clínico, sin "casos especiales").
@@ -1619,26 +1578,19 @@ Responde ÚNICAMENTE con un JSON:
   "criticalKnots": "1. ...\n2. ...\n3. ..."
 }`;
 
-  const preferredModel = process.env.GEMINI_MODEL;
-  const modelsToTry = preferredModel
-    ? [preferredModel, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== preferredModel)]
-    : MODEL_FALLBACK_CHAIN;
-
-  for (const model of modelsToTry) {
+  const res = await generateWithFallback({ prompt });
+  if ("error" in res) {
+    return { error: res.error };
+  }
+  const match = res.text.match(/\{[\s\S]*\}/);
+  if (match) {
     try {
-      const response = await ai.models.generateContent({ model, contents: prompt });
-      const text = (response.text || "").trim();
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) {
-        const parsed = JSON.parse(match[0]);
-        return {
-          achievements: String(parsed.achievements || ""),
-          criticalKnots: String(parsed.criticalKnots || ""),
-        };
-      }
-    } catch (err: any) {
-      console.warn(`[ai annual knots] Falló modelo ${model}:`, err?.message || err);
-    }
+      const parsed = JSON.parse(match[0]);
+      return {
+        achievements: String(parsed.achievements || ""),
+        criticalKnots: String(parsed.criticalKnots || ""),
+      };
+    } catch {}
   }
 
   return { error: "No se pudieron generar los logros y nudos críticos con IA." };
@@ -1672,11 +1624,6 @@ export async function generateRestorativeCircleQuestions(opts: {
     }
   | { error: string }
 > {
-  const ai = getClient();
-  if (!ai) {
-    return { error: "La ayuda de IA todavía no está configurada en este sistema." };
-  }
-
   const modality = (opts.modality || "").toLowerCase().trim();
   const modalityInstruction =
     modality === "individual"
@@ -1729,11 +1676,6 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin markdown ni texto adicional
   "q_actions": ["¿...?", "¿...?"]
 }`;
 
-  const preferredModel = process.env.GEMINI_MODEL;
-  const modelsToTry = preferredModel
-    ? [preferredModel, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== preferredModel)]
-    : MODEL_FALLBACK_CHAIN;
-
   const clean = (arr: unknown): string[] =>
     Array.isArray(arr)
       ? arr
@@ -1742,46 +1684,33 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin markdown ni texto adicional
           .slice(0, 12)
       : [];
 
-  for (const model of modelsToTry) {
+  const res = await generateWithFallback({
+    prompt,
+    temperature: 0.8,
+    maxOutputTokens: 4096,
+  });
+  if ("error" in res) {
+    return { error: res.error };
+  }
+  const match = res.text.match(/\{[\s\S]*\}/);
+  if (match) {
     try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: { temperature: 0.8, topP: 0.95, maxOutputTokens: 4096 },
-      });
-      const text = (response.text || "").trim();
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) {
-        const parsed = JSON.parse(match[0]);
-        const questions = {
-          q_icebreaker: clean(parsed.q_icebreaker),
-          q_intro: clean(parsed.q_intro),
-          q_develop: clean(parsed.q_develop),
-          q_actions: clean(parsed.q_actions),
-        };
-        if (
-          questions.q_icebreaker.length ||
-          questions.q_intro.length ||
-          questions.q_develop.length ||
-          questions.q_actions.length
-        ) {
-          return { questions };
-        }
-      }
-    } catch (err: any) {
-      const message = String(err?.message || err || "");
+      const parsed = JSON.parse(match[0]);
+      const questions = {
+        q_icebreaker: clean(parsed.q_icebreaker),
+        q_intro: clean(parsed.q_intro),
+        q_develop: clean(parsed.q_develop),
+        q_actions: clean(parsed.q_actions),
+      };
       if (
-        message.includes("429") ||
-        message.toLowerCase().includes("quota") ||
-        message.toLowerCase().includes("resource_exhausted")
+        questions.q_icebreaker.length ||
+        questions.q_intro.length ||
+        questions.q_develop.length ||
+        questions.q_actions.length
       ) {
-        return {
-          error:
-            "Se alcanzó el límite de uso de la clave de IA. Si es por minuto, espera 1 minuto; si el límite diario del plan gratuito se agotó, se restablece al día siguiente. Para uso intensivo, activa la facturación de la clave de Gemini o configura varias claves separadas por comas.",
-        };
+        return { questions };
       }
-      console.warn(`[ai circulo restaurativo] Falló modelo ${model}:`, message);
-    }
+    } catch {}
   }
 
   return { error: "No se pudieron generar las preguntas del círculo restaurativo." };
