@@ -123,7 +123,51 @@ export default async function ImprimirFichaCirculoPage({ params }: { params: { i
         <Section n="5" title="DECLARACIÓN DE CIERRE" text={f.declaracion_cierre} />
         <Section n="6" title="INFORME DEL CÍRCULO REALIZADO" text={f.informe_circulo} />
         <Section n="7" title="CONCLUSIÓN DE LA INFORMACIÓN RECOLECTADA" text={f.conclusion} bullets />
+
+        <section className="mt-8 break-inside-avoid">
+          <h2 className="font-bold text-[12.5pt] mb-2 uppercase">FIRMA DE RESPONSABILIDAD</h2>
+          <table className="w-full border-collapse border border-black">
+            <tbody>
+              <tr>
+                <td className="border border-black bg-[#D9D9D9] font-bold px-3 py-1.5 text-[11pt] w-1/2">
+                  ELABORADO POR:
+                </td>
+                <td className="border border-black bg-[#D9D9D9] font-bold px-3 py-1.5 text-[11pt] w-1/2 text-center">
+                  FIRMA
+                </td>
+              </tr>
+              <tr>
+                <td className="border border-black p-3 text-[11pt] align-top w-1/2">
+                  <p className="mb-1.5">
+                    <span className="font-bold">Nombre: </span>
+                    <span>{f.facilitator_name || "—"}</span>
+                  </p>
+                  <p className="mb-1.5">
+                    <span className="font-bold">Cargo: </span>
+                    <span>Profesional DECE / Facilitador(a)</span>
+                  </p>
+                  {f.center_name && (
+                    <p className="mb-1.5 text-[10pt] text-slate-700">
+                      <span className="font-bold text-black">Institución: </span>
+                      <span>{f.center_name}</span>
+                    </p>
+                  )}
+                  <p className="text-[10pt] text-slate-700">
+                    <span className="font-bold text-black">Fecha: </span>
+                    <span>{fmt(f.circle_date)}</span>
+                  </p>
+                </td>
+                <td className="border border-black p-3 text-center align-bottom w-1/2" style={{ height: "130px" }}>
+                  <div className="w-64 mx-auto border-t border-black pt-1 text-[10pt] font-semibold">
+                    Firma de Responsabilidad
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
       </div>
     </div>
   );
 }
+

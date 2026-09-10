@@ -146,6 +146,102 @@ export async function generateRestorativeCircleFichaDocx(
     boxTable((f as unknown as Record<string, string | null>)[stage.key]),
   ]);
 
+  const sigColW = Math.round(USABLE * 0.5);
+  const sigColRightW = USABLE - sigColW;
+
+  const sigTable = new Table({
+    width: { size: USABLE, type: WidthType.DXA },
+    layout: TableLayoutType.FIXED,
+    columnWidths: [sigColW, sigColRightW],
+    borders: ALL_BORDERS,
+    rows: [
+      new TableRow({
+        cantSplit: true,
+        children: [
+          new TableCell({
+            width: { size: sigColW, type: WidthType.DXA },
+            shading: { type: ShadingType.CLEAR, fill: LABEL_FILL },
+            margins: { top: 90, bottom: 90, left: 120, right: 120 },
+            children: [
+              new Paragraph({
+                children: [run("ELABORADO POR:", { bold: true })],
+              }),
+            ],
+          }),
+          new TableCell({
+            width: { size: sigColRightW, type: WidthType.DXA },
+            shading: { type: ShadingType.CLEAR, fill: LABEL_FILL },
+            margins: { top: 90, bottom: 90, left: 120, right: 120 },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [run("FIRMA", { bold: true })],
+              }),
+            ],
+          }),
+        ],
+      }),
+      new TableRow({
+        cantSplit: true,
+        children: [
+          new TableCell({
+            width: { size: sigColW, type: WidthType.DXA },
+            margins: { top: 120, bottom: 120, left: 140, right: 140 },
+            children: [
+              new Paragraph({
+                spacing: { after: 80 },
+                children: [
+                  run("Nombre: ", { bold: true }),
+                  run(f.facilitator_name || "—"),
+                ],
+              }),
+              new Paragraph({
+                spacing: { after: 80 },
+                children: [
+                  run("Cargo: ", { bold: true }),
+                  run("Profesional DECE / Facilitador(a)"),
+                ],
+              }),
+              ...(f.center_name
+                ? [
+                    new Paragraph({
+                      spacing: { after: 80 },
+                      children: [
+                        run("Institución: ", { bold: true }),
+                        run(f.center_name),
+                      ],
+                    }),
+                  ]
+                : []),
+              new Paragraph({
+                children: [
+                  run("Fecha: ", { bold: true }),
+                  run(fmtDate(f.circle_date)),
+                ],
+              }),
+            ],
+          }),
+          new TableCell({
+            width: { size: sigColRightW, type: WidthType.DXA },
+            margins: { top: 120, bottom: 120, left: 140, right: 140 },
+            children: [
+              new Paragraph({
+                spacing: { before: 1400 },
+                alignment: AlignmentType.CENTER,
+                children: [run("________________________________________")],
+              }),
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 60 },
+                children: [run("Firma de Responsabilidad", { bold: true, size: 20 })],
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+
   const children = [
     new Paragraph({
       alignment: AlignmentType.CENTER,
@@ -178,6 +274,12 @@ export async function generateRestorativeCircleFichaDocx(
 
     sectionHeading("7", "CONCLUSIÓN DE LA INFORMACIÓN RECOLECTADA"),
     boxTable(f.conclusion, { bullets: true }),
+
+    new Paragraph({
+      spacing: { before: 360, after: 120 },
+      children: [run("FIRMA DE RESPONSABILIDAD", { bold: true, size: 26 })],
+    }),
+    sigTable,
   ];
 
   const doc = new Document({
