@@ -2598,7 +2598,7 @@ export async function generateReferralDocx(opts: {
                   text,
                   bold: true,
                   color: COLOR_TEXT_BLACK,
-                  size: 20,
+                  size: 18,
                   font: "Calibri",
                 }),
               ],
@@ -2624,7 +2624,7 @@ export async function generateReferralDocx(opts: {
     color?: string;
   }): TableCell {
     const runs: TextRun[] = [];
-    const size = opts.fontSize ?? 20;
+    const size = opts.fontSize ?? 18;
     const color = opts.color ?? COLOR_TEXT_BLACK;
 
     if (opts.boldPrefix) {
@@ -2706,7 +2706,7 @@ export async function generateReferralDocx(opts: {
     content: string | null | undefined;
     fontSize?: number;
   }): TableCell {
-    const size = opts.fontSize ?? 20;
+    const size = opts.fontSize ?? 18;
     const raw = opts.content && opts.content.trim() ? opts.content.trim() : "—";
     const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
     const paragraphs: Paragraph[] = [];
@@ -2765,13 +2765,59 @@ export async function generateReferralDocx(opts: {
             new TextRun({
               text: isChecked ? "X" : "",
               bold: true,
-              size: 20,
+              size: 18,
               font: "Calibri",
               color: COLOR_TEXT_BLACK,
             }),
           ],
         }),
       ],
+    });
+  }
+
+  // Celda de firma uniforme para las 3 columnas: título, espacio en blanco para
+  // firmar, línea, nombre, cargo/rol, documento y "Fecha:". Alineada arriba para
+  // que las 3 queden a la misma altura aunque tengan distinto texto.
+  function signatureCell(
+    startCol: number,
+    colSpan: number,
+    title: string,
+    name: string,
+    role: string,
+    doc: string | null
+  ): TableCell {
+    const line = (t: string, opts: { bold?: boolean; size?: number; color?: string; before?: number } = {}) =>
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { line: 200, before: opts.before ?? 0, after: 0 },
+        children: [
+          new TextRun({
+            text: t,
+            bold: opts.bold ?? false,
+            size: opts.size ?? 15,
+            font: "Calibri",
+            color: opts.color ?? COLOR_TEXT_BLACK,
+          }),
+        ],
+      });
+
+    const children: Paragraph[] = [
+      line(title, { bold: true, size: 16 }),
+      // espacio para firmar a mano
+      new Paragraph({ text: "", spacing: { before: 300, after: 0, line: 200 } }),
+      line("____________________________", { color: "64748B", size: 16 }),
+      line(name || "…", { bold: true, size: 17 }),
+      line(role || "", { size: 14 }),
+    ];
+    if (doc) children.push(line(doc, { size: 14 }));
+    children.push(line("Fecha: …............................", { size: 14 }));
+
+    return new TableCell({
+      columnSpan: colSpan,
+      width: { size: spanWidth(startCol, colSpan), type: WidthType.DXA },
+      margins: { top: 20, bottom: 20, left: 60, right: 60 },
+      verticalAlign: VerticalAlign.TOP,
+      children,
     });
   }
 
@@ -2887,8 +2933,8 @@ export async function generateReferralDocx(opts: {
             new Paragraph({
               spacing: { line: 188, before: 0, after: 0 },
               children: [
-                new TextRun({ text: " Ficha No.: ", bold: true, size: 20, font: "Calibri", color: "0070C0" }),
-                new TextRun({ text: fichaNo, bold: true, size: 20, font: "Calibri", color: "0070C0" }),
+                new TextRun({ text: " Ficha No.: ", bold: true, size: 18, font: "Calibri", color: "0070C0" }),
+                new TextRun({ text: fichaNo, bold: true, size: 18, font: "Calibri", color: "0070C0" }),
               ],
             }),
           ],
@@ -2909,7 +2955,7 @@ export async function generateReferralDocx(opts: {
             new Paragraph({
               alignment: AlignmentType.CENTER,
               spacing: { line: 188, before: 0, after: 0 },
-              children: [new TextRun({ text: "INTERNA A LA INSTITUCIÓN EDUCATIVA", bold: true, size: 20, font: "Calibri", color: COLOR_TEXT_BLACK })],
+              children: [new TextRun({ text: "INTERNA A LA INSTITUCIÓN EDUCATIVA", bold: true, size: 18, font: "Calibri", color: COLOR_TEXT_BLACK })],
             }),
           ],
         }),
@@ -2922,7 +2968,7 @@ export async function generateReferralDocx(opts: {
             new Paragraph({
               alignment: AlignmentType.CENTER,
               spacing: { line: 188, before: 0, after: 0 },
-              children: [new TextRun({ text: "INTERNA AL MINISTERIO DE EDUCACIÓN", bold: true, size: 20, font: "Calibri", color: COLOR_TEXT_BLACK })],
+              children: [new TextRun({ text: "INTERNA AL MINISTERIO DE EDUCACIÓN", bold: true, size: 18, font: "Calibri", color: COLOR_TEXT_BLACK })],
             }),
           ],
         }),
@@ -3147,71 +3193,14 @@ export async function generateReferralDocx(opts: {
       ],
     }),
 
-    // 7. FIRMAS
+    // 7. FIRMAS — un solo bloque, que Word no parte entre páginas (cantSplit),
+    //    con las 3 columnas alineadas arriba y espacio real para firmar.
     new TableRow({
+      cantSplit: true,
       children: [
-        richCell({ startCol: 0, colSpan: 5, boldText: "FICHA ELABORADA POR:", align: AlignmentType.CENTER }),
-        richCell({ startCol: 5, colSpan: 5, boldText: "RECIBIDO POR", align: AlignmentType.CENTER }),
-        richCell({ startCol: 10, colSpan: 4, boldText: "AUTORIDAD INSTITUCIONAL", align: AlignmentType.CENTER }),
-      ],
-    }),
-    new TableRow({
-      children: [
-        new TableCell({
-          columnSpan: 5,
-          width: { size: spanWidth(0, 5), type: WidthType.DXA },
-          margins: { top: 12, bottom: 12, left: 60, right: 60 },
-          children: [
-            
-            new Paragraph({
-              alignment: AlignmentType.CENTER,
-              spacing: { line: 188, before: 0, after: 0 },
-              children: [
-                new TextRun({ text: "____________________________________\n", color: "64748B", size: 16 }),
-                new TextRun({ text: `${deceName}\n`, bold: true, size: 20, font: "Calibri" }),
-                new TextRun({ text: `${deceRole}\n`, size: 16, font: "Calibri" }),
-                ...(deceDoc ? [new TextRun({ text: `${deceDoc}\n`, size: 16, font: "Calibri" })] : []),
-                new TextRun({ text: "Fecha: …..............................", size: 16, font: "Calibri" }),
-              ],
-            }),
-          ],
-        }),
-        new TableCell({
-          columnSpan: 5,
-          width: { size: spanWidth(5, 5), type: WidthType.DXA },
-          margins: { top: 12, bottom: 12, left: 60, right: 60 },
-          children: [
-            
-            new Paragraph({
-              alignment: AlignmentType.CENTER,
-              spacing: { line: 188, before: 0, after: 0 },
-              children: [
-                new TextRun({ text: "..............................................................\n", color: "64748B", size: 16 }),
-                new TextRun({ text: `${receivedName}\n`, bold: true, size: 20, font: "Calibri" }),
-                new TextRun({ text: "Representante legal\n", size: 16, font: "Calibri" }),
-                new TextRun({ text: "Fecha: …..............................", size: 16, font: "Calibri" }),
-              ],
-            }),
-          ],
-        }),
-        new TableCell({
-          columnSpan: 4,
-          width: { size: spanWidth(10, 4), type: WidthType.DXA },
-          margins: { top: 12, bottom: 12, left: 60, right: 60 },
-          children: [
-            
-            new Paragraph({
-              alignment: AlignmentType.CENTER,
-              spacing: { line: 188, before: 0, after: 0 },
-              children: [
-                new TextRun({ text: "____________________________________\n", color: "64748B", size: 16 }),
-                new TextRun({ text: `${authorityName}\n`, bold: true, size: 20, font: "Calibri" }),
-                new TextRun({ text: `${authorityRole}\n`, size: 16, font: "Calibri" }),
-                new TextRun({ text: "Fecha: …..............................", size: 16, font: "Calibri" }),
-              ],
-            }),
-          ],
-        }),
+        signatureCell(0, 5, "FICHA ELABORADA POR:", deceName, deceRole, deceDoc),
+        signatureCell(5, 5, "RECIBIDO POR:", receivedName, "Representante legal", null),
+        signatureCell(10, 4, "AUTORIDAD INSTITUCIONAL:", authorityName, authorityRole, null),
       ],
     }),
 
