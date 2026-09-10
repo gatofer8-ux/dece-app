@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { PageHeader } from "@/components/ui";
 import { ARCHETYPE_MAP, TAPAS_FAMILIES, type TapasFamily } from "@/lib/tapas/archetypes";
 import { TAPAS_INTERPRETATION, type TapasResult } from "@/lib/tapas/tapasScoring";
+import { getDeckKeySet } from "@/lib/tapas/cardDeck";
 import type { TapasSessionRow, TapasApplicationRow } from "@/lib/types";
 import TapasAreasHelper from "./TapasAreasHelper";
 
@@ -22,6 +23,8 @@ export default async function TapasResultPage({ params }: { params: { id: string
 
   const r = JSON.parse(app.result_json) as TapasResult;
   const maxFam = Math.max(1, ...r.familias.map((f) => f.count));
+  const deckKeys = getDeckKeySet(institutionId);
+  const cardUrl = (k: string) => (deckKeys.has(k) ? `/api/tapas/deck-admin/${k}` : null);
 
   return (
     <div className="space-y-6">
@@ -52,10 +55,17 @@ export default async function TapasResultPage({ params }: { params: { id: string
                 {g.archetypes.map((k) => {
                   const a = ARCHETYPE_MAP[k];
                   if (!a) return null;
-                  return (
+                  const url = cardUrl(k);
+                  return url ? (
+                    <span key={k} className="w-16 text-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt={a.name} className="w-full aspect-[62/88] object-contain rounded border border-slate-200" />
+                      <span className="block text-[9px] text-slate-500 leading-tight truncate">{a.name}</span>
+                    </span>
+                  ) : (
                     <span
                       key={k}
-                      className="text-[11px] px-2 py-0.5 rounded-full border"
+                      className="text-[11px] px-2 py-0.5 rounded-full border h-fit"
                       style={{ borderColor: TAPAS_FAMILIES[a.familia].color, color: TAPAS_FAMILIES[a.familia].color }}
                     >
                       {a.emoji} {a.name}
