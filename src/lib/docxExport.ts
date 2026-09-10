@@ -25,6 +25,7 @@ import {
 } from "docx";
 import path from "path";
 import fs from "fs";
+import { smartAlign } from "./wordJustify";
 import type {
   CaseFileRow,
   StudentRow,
@@ -68,7 +69,7 @@ function textToParagraphs(text: string, size = 20): Paragraph[] {
   return text.split("\n").map(
     (line) =>
       new Paragraph({
-        alignment: AlignmentType.JUSTIFIED,
+        alignment: smartAlign(line),
         children: [new TextRun({ text: line, size })],
         spacing: { after: 120 },
       })
@@ -350,7 +351,7 @@ activeYear?: SchoolYearRow | null;
               spacing: { before: 80, after: 40 },
             }),
             new Paragraph({
-              alignment: AlignmentType.JUSTIFIED,
+              alignment: smartAlign(String((report.scope_text) ?? "")),
               children: [new TextRun({ text: report.scope_text, size: 20 })],
               spacing: { after: 80 },
             }),
@@ -362,7 +363,7 @@ activeYear?: SchoolYearRow | null;
             spacing: { before: 180, after: 100 },
           }),
           new Paragraph({
-            alignment: AlignmentType.JUSTIFIED,
+            alignment: smartAlign(String((report.scope_text || `Del Departamento de Consejería Estudiantil hacia la autoridad institucional de la ${institution?.name || "Unidad Educativa"}.`) ?? "")),
             children: [
               new TextRun({
                 text: report.scope_text || `Del Departamento de Consejería Estudiantil hacia la autoridad institucional de la ${institution?.name || "Unidad Educativa"}.`,
@@ -378,7 +379,7 @@ activeYear?: SchoolYearRow | null;
             spacing: { before: 180, after: 100 },
           }),
           new Paragraph({
-            alignment: AlignmentType.JUSTIFIED,
+            alignment: smartAlign(String((report.objective_text || `Informar sobre la situación psicosocial y medidas de acompañamiento en favor de el/la estudiante ${student.full_name}, garantizando el interés superior del niño y restitución integral de derechos.`) ?? "")),
             children: [
               new TextRun({
                 text: report.objective_text || `Informar sobre la situación psicosocial y medidas de acompañamiento en favor de el/la estudiante ${student.full_name}, garantizando el interés superior del niño y restitución integral de derechos.`,
@@ -490,7 +491,7 @@ activeYear?: SchoolYearRow | null;
                   spacing: { before: 60, after: 40 },
                 }),
                 new Paragraph({
-                  alignment: AlignmentType.JUSTIFIED,
+                  alignment: smartAlign(String((report.eje_deteccion) ?? "")),
                   children: [new TextRun({ text: report.eje_deteccion, size: 20 })],
                   spacing: { after: 80 },
                 }),
@@ -2202,7 +2203,7 @@ export async function generateObservationSheetDocx(opts: {
             width: { size: 5265, type: WidthType.DXA },
             margins: cellMargins,
             children: q.comment
-              ? q.comment.split("\n").map((line) => new Paragraph({ alignment: AlignmentType.JUSTIFIED, children: [new TextRun({ text: line, size: 17, font: "Arial" })] }))
+              ? q.comment.split("\n").map((line) => new Paragraph({ alignment: smartAlign(line), children: [new TextRun({ text: line, size: 17, font: "Arial" })] }))
               : [new Paragraph({ text: "" })],
           }),
         ],
@@ -2286,7 +2287,7 @@ export async function generateObservationSheetDocx(opts: {
           width: { size: 5265, type: WidthType.DXA },
           margins: cellMargins,
           children: official.care_types.requires_dece.detail
-            ? official.care_types.requires_dece.detail.split("\n").map((line) => new Paragraph({ alignment: AlignmentType.JUSTIFIED, children: [new TextRun({ text: line, size: 17, font: "Arial" })] }))
+            ? official.care_types.requires_dece.detail.split("\n").map((line) => new Paragraph({ alignment: smartAlign(line), children: [new TextRun({ text: line, size: 17, font: "Arial" })] }))
             : [new Paragraph({ text: "" })],
         }),
       ],
@@ -2320,7 +2321,7 @@ export async function generateObservationSheetDocx(opts: {
           width: { size: 5265, type: WidthType.DXA },
           margins: cellMargins,
           children: official.care_types.requires_other.detail
-            ? official.care_types.requires_other.detail.split("\n").map((line) => new Paragraph({ alignment: AlignmentType.JUSTIFIED, children: [new TextRun({ text: line, size: 17, font: "Arial" })] }))
+            ? official.care_types.requires_other.detail.split("\n").map((line) => new Paragraph({ alignment: smartAlign(line), children: [new TextRun({ text: line, size: 17, font: "Arial" })] }))
             : [new Paragraph({ text: "" })],
         }),
       ],
@@ -4177,7 +4178,7 @@ export async function generateCarePlanDocx(opts: {
   children.push(new Paragraph({ spacing: { after: 30 } }));
   children.push(
     new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
+      alignment: smartAlign(String((plan.diagnosis_summary || "Sin registrar.") ?? "")),
       children: [new TextRun({ text: plan.diagnosis_summary || "Sin registrar.", font: FONT_NAME, size: FONT_SIZE_SM })],
       spacing: { after: 80 },
     })

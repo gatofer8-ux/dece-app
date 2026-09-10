@@ -14,6 +14,7 @@ import {
   ShadingType,
   TabStopType,
 } from "docx";
+import { smartAlign } from "./wordJustify";
 import path from "path";
 import fs from "fs";
 import type { RestorativeCircleConsentRow } from "./types";

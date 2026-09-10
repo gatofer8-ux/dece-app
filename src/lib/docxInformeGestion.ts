@@ -13,6 +13,7 @@ import {
   Footer,
   ImageRun,
 } from "docx";
+import { smartAlign } from "./wordJustify";
 import path from "path";
 import fs from "fs";
 import {
@@ -342,7 +343,7 @@ export async function generateAnnualManagementReportDocx(data: {
     ...report.antecedentes_legal.split("\n\n").map(
       (p) =>
         new Paragraph({
-          alignment: AlignmentType.JUSTIFIED,
+          alignment: smartAlign(String((p) ?? "")),
           spacing: { after: 80 },
           children: [new TextRun({ text: p, size: 17 })],
         })
@@ -352,7 +353,7 @@ export async function generateAnnualManagementReportDocx(data: {
       children: [new TextRun({ text: "Diagnóstico situacional de la institución educativa.", bold: true, size: 18 })],
     }),
     new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
+      alignment: smartAlign(String((report.situational_diagnosis || "—") ?? "")),
       spacing: { after: 100 },
       children: [new TextRun({ text: report.situational_diagnosis || "—", size: 17 })],
     }),
@@ -462,7 +463,7 @@ export async function generateAnnualManagementReportDocx(data: {
       children: [new TextRun({ text: "ALCANCE", bold: true, size: 20, color: NAVY })],
     }),
     new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
+      alignment: smartAlign(String((report.alcance) ?? "")),
       spacing: { after: 100 },
       children: [new TextRun({ text: report.alcance, size: 17 })],
     })
@@ -475,7 +476,7 @@ export async function generateAnnualManagementReportDocx(data: {
       children: [new TextRun({ text: "OBJETIVOS", bold: true, size: 20, color: NAVY })],
     }),
     new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
+      alignment: smartAlign(String((report.objetivos) ?? "")),
       spacing: { after: 100 },
       children: [new TextRun({ text: report.objetivos, size: 17 })],
     })
@@ -724,7 +725,7 @@ export async function generateAnnualManagementReportDocx(data: {
       children: [new TextRun({ text: `4.2 EJE DE ATENCIÓN PSICOSOCIAL AÑO LECTIVO ${report.school_year_text}`, bold: true, size: 18 })],
     }),
     new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
+      alignment: smartAlign(String((report.psychosocial_note || "") ?? "")),
       spacing: { after: 100 },
       children: [new TextRun({ text: report.psychosocial_note || "", italics: true, size: 15, color: "334155" })],
     })
@@ -818,7 +819,7 @@ export async function generateAnnualManagementReportDocx(data: {
       children: [new TextRun({ text: "4.4 PROCESOS PENDIENTES", bold: true, size: 18 })],
     }),
     new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
+      alignment: smartAlign(String((report.pending_processes || "Sin procesos pendientes.") ?? "")),
       spacing: { after: 100 },
       children: [new TextRun({ text: report.pending_processes || "Sin procesos pendientes.", size: 17 })],
     })
@@ -835,7 +836,7 @@ export async function generateAnnualManagementReportDocx(data: {
       children: [new TextRun({ text: "Logros alcanzados:", bold: true, size: 17 })],
     }),
     new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
+      alignment: smartAlign(String((report.achievements || "—") ?? "")),
       spacing: { after: 60 },
       children: [new TextRun({ text: report.achievements || "—", size: 17 })],
     }),
@@ -844,7 +845,7 @@ export async function generateAnnualManagementReportDocx(data: {
       children: [new TextRun({ text: "Nudos críticos (MÍNIMO 3):", bold: true, size: 17 })],
     }),
     new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
+      alignment: smartAlign(String((report.critical_knots || "—") ?? "")),
       spacing: { after: 100 },
       children: [new TextRun({ text: report.critical_knots || "—", size: 17 })],
     })
@@ -861,7 +862,7 @@ export async function generateAnnualManagementReportDocx(data: {
       children: [new TextRun({ text: "Eje de Consejería:", bold: true, size: 17 })],
     }),
     new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
+      alignment: smartAlign(String((report.conclusions_counseling || "—") ?? "")),
       spacing: { after: 60 },
       children: [new TextRun({ text: report.conclusions_counseling || "—", size: 17 })],
     }),
@@ -870,7 +871,7 @@ export async function generateAnnualManagementReportDocx(data: {
       children: [new TextRun({ text: "Eje de Promoción y Prevención:", bold: true, size: 17 })],
     }),
     new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
+      alignment: smartAlign(String((report.conclusions_prevention || "—") ?? "")),
       spacing: { after: 60 },
       children: [new TextRun({ text: report.conclusions_prevention || "—", size: 17 })],
     }),
@@ -879,7 +880,7 @@ export async function generateAnnualManagementReportDocx(data: {
       children: [new TextRun({ text: "Eje de Atención Psicosocial:", bold: true, size: 17 })],
     }),
     new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
+      alignment: smartAlign(String((report.conclusions_psychosocial || "—") ?? "")),
       spacing: { after: 60 },
       children: [new TextRun({ text: report.conclusions_psychosocial || "—", size: 17 })],
     }),
@@ -888,7 +889,7 @@ export async function generateAnnualManagementReportDocx(data: {
       children: [new TextRun({ text: "Eje de Inclusión Socioeducativa:", bold: true, size: 17 })],
     }),
     new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
+      alignment: smartAlign(String((report.conclusions_inclusion || "—") ?? "")),
       spacing: { after: 100 },
       children: [new TextRun({ text: report.conclusions_inclusion || "—", size: 17 })],
     })
@@ -911,7 +912,7 @@ export async function generateAnnualManagementReportDocx(data: {
       ],
     }),
     new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
+      alignment: smartAlign(String((report.recommendations_institutional || "—") ?? "")),
       spacing: { after: 80 },
       children: [new TextRun({ text: report.recommendations_institutional || "—", size: 17 })],
     }),
@@ -926,7 +927,7 @@ export async function generateAnnualManagementReportDocx(data: {
       ],
     }),
     new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
+      alignment: smartAlign(String((report.recommendations_district || "—") ?? "")),
       spacing: { after: 100 },
       children: [new TextRun({ text: report.recommendations_district || "—", size: 17 })],
     })

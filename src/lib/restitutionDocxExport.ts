@@ -13,6 +13,7 @@ import {
   BorderStyle,
   WidthType,
 } from "docx";
+import { smartAlign } from "./wordJustify";
 import path from "path";
 import fs from "fs";
 import type {
@@ -404,7 +405,7 @@ export async function generateRestitutionPlanDocx(data: {
           children: (plan.risk_factors || "No registrados.").split("\n").map(
             (p) =>
               new Paragraph({
-                alignment: AlignmentType.JUSTIFIED,
+                alignment: smartAlign(String((p || " ") ?? "")),
                 children: [new TextRun({ text: p || " ", font: FONT_NAME, size: FONT_SIZE })],
                 spacing: { after: 40 },
               })
@@ -507,7 +508,7 @@ export async function generateRestitutionPlanDocx(data: {
             ...((plan.report_narrative || "").split("\n").map(
               (p) =>
                 new Paragraph({
-                  alignment: AlignmentType.JUSTIFIED,
+                  alignment: smartAlign(String((p || " ") ?? "")),
                   children: [new TextRun({ text: p || " ", font: FONT_NAME, size: FONT_SIZE })],
                   spacing: { after: 40 },
                 })
@@ -655,7 +656,7 @@ export async function generateRestitutionPlanDocx(data: {
           margins: cellMargins,
           children: [
             new Paragraph({
-              alignment: AlignmentType.JUSTIFIED,
+              alignment: smartAlign(String(("Aspecto normativo. – ") ?? "")),
               children: [
                 new TextRun({ text: "Aspecto normativo. – ", bold: true, font: FONT_NAME, size: FONT_SIZE }),
                 new TextRun({ text: NORMATIVE_TEXT, font: FONT_NAME, size: FONT_SIZE }),
@@ -675,7 +676,7 @@ export async function generateRestitutionPlanDocx(data: {
           margins: cellMargins,
           children: [
             new Paragraph({
-              alignment: AlignmentType.JUSTIFIED,
+              alignment: smartAlign(String(("Objetivo general. – ") ?? "")),
               children: [
                 new TextRun({ text: "Objetivo general. – ", bold: true, font: FONT_NAME, size: FONT_SIZE }),
                 new TextRun({ text: OBJECTIVE_GENERAL_TEXT, font: FONT_NAME, size: FONT_SIZE }),
@@ -695,7 +696,7 @@ export async function generateRestitutionPlanDocx(data: {
                 })
             ),
             new Paragraph({
-              alignment: AlignmentType.JUSTIFIED,
+              alignment: smartAlign(String(("Alcance. – ") ?? "")),
               children: [
                 new TextRun({ text: "Alcance. – ", bold: true, font: FONT_NAME, size: FONT_SIZE }),
                 new TextRun({

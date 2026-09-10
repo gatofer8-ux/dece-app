@@ -19,6 +19,7 @@ import {
 } from "docx";
 import path from "path";
 import fs from "fs";
+import { smartAlign } from "./wordJustify";
 import type {
   CaseFileRow,
   StudentRow,
@@ -56,12 +57,16 @@ function getMembreteBuffer(): Buffer | null {
   return null;
 }
 
-function textToParagraphs(text: string | null | undefined, size = 20, align = AlignmentType.JUSTIFIED): Paragraph[] {
+function textToParagraphs(
+  text: string | null | undefined,
+  size = 20,
+  align?: (typeof AlignmentType)[keyof typeof AlignmentType]
+): Paragraph[] {
   if (!text) return [new Paragraph({ text: "" })];
   return text.split("\n").map(
     (line) =>
       new Paragraph({
-        alignment: align,
+        alignment: align ?? smartAlign(line),
         children: [new TextRun({ text: line, size, font: "Calibri" })],
         spacing: { after: 100, line: 260 },
       })
