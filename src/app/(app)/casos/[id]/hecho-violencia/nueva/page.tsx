@@ -4,6 +4,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow, ReferralRow } from "@/lib/types";
 import { formatStudentCourseFull } from "@/lib/studentCourse";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import ViolenceReportForm from "./ViolenceReportForm";
 
 export default async function NuevoInformeHechoViolenciaPage({ params }: { params: { id: string } }) {
@@ -14,11 +15,13 @@ export default async function NuevoInformeHechoViolenciaPage({ params }: { param
     .get(params.id, institutionId) as CaseFileRow | undefined;
   if (!caseFile) notFound();
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
 
-  // Buscar rector/a de la institución
-  const authority = db
+  // Rector/a: primero el perfil de la institución, luego el usuario con rol AUTORIDAD.
+  const authorityUser = db
     .prepare("SELECT name FROM users WHERE institution_id = ? AND role = 'AUTORIDAD' LIMIT 1")
     .get(institutionId) as { name: string } | undefined;
+  const rectorName = defaults?.authority.fullName || authorityUser?.name || "";
 
   // Determinar rol del profesional: Si es ADMIN es Coordinador/a DECE
   const userDb = db.prepare("SELECT role, job_title FROM users WHERE id = ?").get(session.user.id) as { role?: string; job_title?: string } | undefined;
@@ -46,9 +49,9 @@ export default async function NuevoInformeHechoViolenciaPage({ params }: { param
         defaultRepresentativeRelationship={student.lives_with || "Representante legal"}
         defaultRepresentativeAddress={student.representative_address || student.address || ""}
         defaultRepresentativePhone={student.rep_phone || ""}
-        defaultProfessionalName={session.user.name || ""}
+        defaultProfessionalName={defaults?.deceProfessional.fullName || session.user.name || ""}
         defaultProfessionalRole={defaultProfessionalRole}
-        defaultRectoraName={authority?.name || "Msc. Diana Fernanda Manzano Villacís"}
+        defaultRectoraName={rectorName || "Máxima Autoridad Institucional"}
         defaultInformantName={(referral as any)?.applicant_name || referral?.elaborated_by_name || ""}
         defaultInformantIdNumber={(referral as any)?.applicant_id_number || ""}
         defaultInformantRole={(referral as any)?.applicant_role || (referral ? "Docente tutor/a" : "")}

@@ -236,7 +236,7 @@ export default function SituationalReportForm({
           </div>
           <div className="border border-slate-200 rounded-lg p-3">
             <p className="text-xs font-medium mb-2">3. Aprobado por</p>
-            <input name="approver_name" defaultValue="Msc. Diana Fernanda Manzano Villacís" placeholder="Nombre" className="input mb-2" />
+            <input name="approver_name" defaultValue="" placeholder="Nombre" className="input mb-2" />
             <input name="approver_role" defaultValue={(report as any)?.approver_role || ""} placeholder="Cargo" className="input" />
           </div>
         </div>

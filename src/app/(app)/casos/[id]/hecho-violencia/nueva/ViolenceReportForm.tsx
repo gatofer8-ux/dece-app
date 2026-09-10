@@ -33,7 +33,7 @@ export default function ViolenceReportForm({
   defaultRepresentativePhone = "",
   defaultProfessionalName,
   defaultProfessionalRole = "ANALISTA DECE",
-  defaultRectoraName = "Msc. Diana Fernanda Manzano Villacís",
+  defaultRectoraName = "",
   defaultInformantName = "",
   defaultInformantIdNumber = "",
   defaultInformantRole = "",

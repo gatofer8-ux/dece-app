@@ -380,7 +380,7 @@ export default function BimonthlyReportForm({
             <input
               type="text"
               name="reviewed_by_name"
-              defaultValue={report?.reviewed_by_name || "Mg. Diana Manzano"}
+              defaultValue={report?.reviewed_by_name || "Autoridad educativa"}
               className="input text-xs font-medium"
               placeholder="Nombres y título de la autoridad"
             />

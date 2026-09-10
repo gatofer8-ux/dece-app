@@ -952,7 +952,7 @@ export default function RestitutionPlanForm({
             <p className="text-xs font-bold text-slate-700">Revisado por: Autoridad Institucional (Rector/a)</p>
             <input
               name="reviewed_authority_name"
-              defaultValue={initialData?.reviewed_authority_name || (institution as any)?.rector_name || "Mg. Diana Fernanda Manzano Villacís"}
+              defaultValue={initialData?.reviewed_authority_name || (institution as any)?.rector_name || ""}
               placeholder="Nombre de la Rectora / Director"
               className="input text-xs font-medium"
               required
