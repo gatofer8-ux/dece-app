@@ -326,17 +326,18 @@ export async function generateAnnualManagementReportDocx(data: {
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: borderAllBlack,
       rows: datosGenRows,
-    }),
-    new Paragraph({ spacing: { after: 120 } })
+    })
   );
 
   // 2. ANTECEDENTES
   bodyChildren.push(
     new Paragraph({
+      keepNext: true,
       spacing: { before: 140, after: 60 },
       children: [new TextRun({ text: "ANTECEDENTES", bold: true, size: 20, color: NAVY })],
     }),
     new Paragraph({
+      keepNext: true,
       spacing: { before: 60, after: 40 },
       children: [new TextRun({ text: "Base Legal", bold: true, size: 18 })],
     }),
@@ -349,6 +350,7 @@ export async function generateAnnualManagementReportDocx(data: {
         })
     ),
     new Paragraph({
+      keepNext: true,
       spacing: { before: 80, after: 40 },
       children: [new TextRun({ text: "Diagnóstico situacional de la institución educativa.", bold: true, size: 18 })],
     }),
@@ -358,6 +360,7 @@ export async function generateAnnualManagementReportDocx(data: {
       children: [new TextRun({ text: report.situational_diagnosis || "—", size: 17 })],
     }),
     new Paragraph({
+      keepNext: true,
       spacing: { before: 80, after: 40 },
       children: [new TextRun({ text: "Distributivo del DECE", bold: true, size: 18 })],
     })
@@ -452,13 +455,13 @@ export async function generateAnnualManagementReportDocx(data: {
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: borderAllBlack,
       rows: distRows,
-    }),
-    new Paragraph({ spacing: { after: 120 } })
+    })
   );
 
   // 3. ALCANCE
   bodyChildren.push(
     new Paragraph({
+      keepNext: true,
       spacing: { before: 100, after: 40 },
       children: [new TextRun({ text: "ALCANCE", bold: true, size: 20, color: NAVY })],
     }),
@@ -472,6 +475,7 @@ export async function generateAnnualManagementReportDocx(data: {
   // 4. OBJETIVOS
   bodyChildren.push(
     new Paragraph({
+      keepNext: true,
       spacing: { before: 80, after: 40 },
       children: [new TextRun({ text: "OBJETIVOS", bold: true, size: 20, color: NAVY })],
     }),
@@ -485,14 +489,17 @@ export async function generateAnnualManagementReportDocx(data: {
   // 5. DESARROLLO O ANÁLISIS
   bodyChildren.push(
     new Paragraph({
+      keepNext: true,
       spacing: { before: 120, after: 60 },
       children: [new TextRun({ text: "DESARROLLO O ANÁLISIS", bold: true, size: 20, color: NAVY })],
     }),
     new Paragraph({
+      keepNext: true,
       spacing: { before: 60, after: 40 },
       children: [new TextRun({ text: "4.1 EJE DE CONSEJERÍA AEC 1, AEC 2, AEC 3.", bold: true, size: 18 })],
     }),
     new Paragraph({
+      keepNext: true,
       children: [
         new TextRun({
           text: "Casos atendidos por el /la profesional del DECE a la comunidad educativa.\nFuente: registros de atención y/o llamadas telefónicas",
@@ -511,7 +518,7 @@ export async function generateAnnualManagementReportDocx(data: {
     new TableCell({
       width: { size: 40, type: WidthType.PERCENTAGE },
       shading: { fill: GRAY_HEADER },
-      children: [new Paragraph({ children: [new TextRun({ text: "Datos estadísticos", bold: true, size: 15 })] })],
+      children: [new Paragraph({ children: [new TextRun({ text: "Casos atendidos por el /la profesional del DECE a la comunidad educativa", bold: true, size: 15 })] })],
     }),
   ];
 
@@ -529,7 +536,7 @@ export async function generateAnnualManagementReportDocx(data: {
     new TableCell({
       width: { size: colWidthPct, type: WidthType.PERCENTAGE },
       shading: { fill: GRAY_HEADER },
-      children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "TOTAL", bold: true, size: 15, color: NAVY })] })],
+      children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "TOTAL", bold: true, size: 15 })] })],
     })
   );
 
@@ -546,7 +553,7 @@ export async function generateAnnualManagementReportDocx(data: {
       const val = cStat.values_by_professional?.[pn] || 0;
       rowCells.push(
         new TableCell({
-          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(val), size: 15 })] })],
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(val), size: 14 })] })],
         })
       );
     });
@@ -566,13 +573,13 @@ export async function generateAnnualManagementReportDocx(data: {
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: borderAllBlack,
       rows: t1Rows,
-    }),
-    new Paragraph({ spacing: { after: 100 } })
+    })
   );
 
   // Tabla 2: Tipología de Casos
   bodyChildren.push(
     new Paragraph({
+      keepNext: true,
       spacing: { before: 80, after: 40 },
       children: [
         new TextRun({
@@ -643,13 +650,13 @@ export async function generateAnnualManagementReportDocx(data: {
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: borderAllBlack,
       rows: t2Rows,
-    }),
-    new Paragraph({ spacing: { after: 120 } })
+    })
   );
 
   // Tabla 3: Análisis comparativo 2 años lectivos
   bodyChildren.push(
     new Paragraph({
+      keepNext: true,
       spacing: { before: 80, after: 40 },
       children: [
         new TextRun({
@@ -714,13 +721,13 @@ export async function generateAnnualManagementReportDocx(data: {
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: borderAllBlack,
       rows: t3Rows,
-    }),
-    new Paragraph({ spacing: { after: 120 } })
+    })
   );
 
   // 4.2 EJE DE ATENCIÓN PSICOSOCIAL
   bodyChildren.push(
     new Paragraph({
+      keepNext: true,
       spacing: { before: 100, after: 40 },
       children: [new TextRun({ text: `4.2 EJE DE ATENCIÓN PSICOSOCIAL AÑO LECTIVO ${report.school_year_text}`, bold: true, size: 18 })],
     }),
@@ -734,6 +741,7 @@ export async function generateAnnualManagementReportDocx(data: {
   // 4.3 EJE PROMOCIÓN Y PREVENCIÓN
   bodyChildren.push(
     new Paragraph({
+      keepNext: true,
       spacing: { before: 80, after: 40 },
       children: [new TextRun({ text: "4.3 EJE PROMOCIÓN Y PREVENCIÓN", bold: true, size: 18 })],
     })
@@ -808,13 +816,13 @@ export async function generateAnnualManagementReportDocx(data: {
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: borderAllBlack,
       rows: prevRows,
-    }),
-    new Paragraph({ spacing: { after: 120 } })
+    })
   );
 
   // 4.4 PROCESOS PENDIENTES
   bodyChildren.push(
     new Paragraph({
+      keepNext: true,
       spacing: { before: 80, after: 40 },
       children: [new TextRun({ text: "4.4 PROCESOS PENDIENTES", bold: true, size: 18 })],
     }),
@@ -828,10 +836,12 @@ export async function generateAnnualManagementReportDocx(data: {
   // 4.5 LOGROS ALCANZADOS Y NUDOS CRÍTICOS
   bodyChildren.push(
     new Paragraph({
+      keepNext: true,
       spacing: { before: 80, after: 40 },
       children: [new TextRun({ text: "4.5 LOGROS ALCANZADOS Y NUDOS CRÍTICOS (MÍNIMO 3)", bold: true, size: 18 })],
     }),
     new Paragraph({
+      keepNext: true,
       spacing: { before: 40, after: 20 },
       children: [new TextRun({ text: "Logros alcanzados:", bold: true, size: 17 })],
     }),
@@ -841,6 +851,7 @@ export async function generateAnnualManagementReportDocx(data: {
       children: [new TextRun({ text: report.achievements || "—", size: 17 })],
     }),
     new Paragraph({
+      keepNext: true,
       spacing: { before: 40, after: 20 },
       children: [new TextRun({ text: "Nudos críticos (MÍNIMO 3):", bold: true, size: 17 })],
     }),
@@ -854,10 +865,12 @@ export async function generateAnnualManagementReportDocx(data: {
   // CONCLUSIONES
   bodyChildren.push(
     new Paragraph({
+      keepNext: true,
       spacing: { before: 120, after: 40 },
       children: [new TextRun({ text: "CONCLUSIONES", bold: true, size: 20, color: NAVY })],
     }),
     new Paragraph({
+      keepNext: true,
       spacing: { before: 40, after: 20 },
       children: [new TextRun({ text: "Eje de Consejería:", bold: true, size: 17 })],
     }),
@@ -867,6 +880,7 @@ export async function generateAnnualManagementReportDocx(data: {
       children: [new TextRun({ text: report.conclusions_counseling || "—", size: 17 })],
     }),
     new Paragraph({
+      keepNext: true,
       spacing: { before: 40, after: 20 },
       children: [new TextRun({ text: "Eje de Promoción y Prevención:", bold: true, size: 17 })],
     }),
@@ -876,6 +890,7 @@ export async function generateAnnualManagementReportDocx(data: {
       children: [new TextRun({ text: report.conclusions_prevention || "—", size: 17 })],
     }),
     new Paragraph({
+      keepNext: true,
       spacing: { before: 40, after: 20 },
       children: [new TextRun({ text: "Eje de Atención Psicosocial:", bold: true, size: 17 })],
     }),
@@ -885,6 +900,7 @@ export async function generateAnnualManagementReportDocx(data: {
       children: [new TextRun({ text: report.conclusions_psychosocial || "—", size: 17 })],
     }),
     new Paragraph({
+      keepNext: true,
       spacing: { before: 40, after: 20 },
       children: [new TextRun({ text: "Eje de Inclusión Socioeducativa:", bold: true, size: 17 })],
     }),
@@ -898,10 +914,12 @@ export async function generateAnnualManagementReportDocx(data: {
   // RECOMENDACIONES
   bodyChildren.push(
     new Paragraph({
+      keepNext: true,
       spacing: { before: 120, after: 40 },
       children: [new TextRun({ text: "RECOMENDACIONES", bold: true, size: 20, color: NAVY })],
     }),
     new Paragraph({
+      keepNext: true,
       spacing: { before: 40, after: 20 },
       children: [
         new TextRun({
@@ -917,6 +935,7 @@ export async function generateAnnualManagementReportDocx(data: {
       children: [new TextRun({ text: report.recommendations_institutional || "—", size: 17 })],
     }),
     new Paragraph({
+      keepNext: true,
       spacing: { before: 40, after: 20 },
       children: [
         new TextRun({
@@ -936,10 +955,12 @@ export async function generateAnnualManagementReportDocx(data: {
   // ANEXOS
   bodyChildren.push(
     new Paragraph({
+      keepNext: true,
       spacing: { before: 100, after: 40 },
       children: [new TextRun({ text: "ANEXOS", bold: true, size: 20, color: NAVY })],
     }),
     new Paragraph({
+      spacing: { after: 80 },
       children: [
         new TextRun({
           text: "REGISTRO FOTOGRÁFICO DE CADA PROYECTO EJECUTADO DEL PLAN DE ACCIÓN Y ACTIVIDADES RELEVANTES EXTERNAS AL PLAN DE ACCIÓN (4.3 EJE PROMOCIÓN Y PREVENCIÓN).\nNota: Todo lo indicado en el presente informe debe estar sustentado en los archivos físicos o digitales que reposa en cada DECE.",
@@ -947,8 +968,7 @@ export async function generateAnnualManagementReportDocx(data: {
           size: 15,
         }),
       ],
-    }),
-    new Paragraph({ spacing: { after: 120 } })
+    })
   );
 
   // FIRMAS DE LEGALIZACIÓN
@@ -1077,7 +1097,7 @@ export async function generateAnnualManagementReportDocx(data: {
       borders: borderAllBlack,
       rows: desRows,
     }),
-    new Paragraph({ spacing: { after: 120 } }),
+    new Paragraph({ spacing: { after: 80 } }),
     new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: borderAllBlack,
@@ -1085,16 +1105,34 @@ export async function generateAnnualManagementReportDocx(data: {
     })
   );
 
+  const FONT_NAME = "Arial";
   const doc = new Document({
     creator: "DECE App",
     title: `Informe de Gestión DECE - ${report.report_code}`,
     description: "Informe de Fin de Gestión del DECE conforme a normativa MINEDUC",
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: FONT_NAME,
+            size: 20,
+            color: "000000",
+          },
+          paragraph: {
+            spacing: {
+              line: 260,
+              after: 80,
+            },
+          },
+        },
+      },
+    },
     sections: [
       {
         properties: {
           page: {
             size: { width: 11906, height: 16838 }, // A4
-            margin: { top: 1200, bottom: 1200, left: 1400, right: 1400 },
+            margin: { top: 1134, bottom: 1134, left: 1417, right: 1417 },
           },
         },
         headers: {

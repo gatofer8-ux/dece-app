@@ -76,6 +76,28 @@ export default async function PrintAnnualReportPage({
 
   return (
     <div className="bg-slate-100 min-h-screen py-6 print:bg-white print:py-0 text-black">
+      {/* CSS para impresión profesional A4 */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        @page {
+          size: A4 portrait;
+          margin: 1.5cm 1.5cm;
+        }
+        @media print {
+          html, body {
+            background: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `,
+        }}
+      />
+
       {/* Barra de Acciones Superior (Oculta al Imprimir) */}
       <div className="max-w-4xl mx-auto mb-6 px-4 flex flex-col sm:flex-row items-center justify-between gap-3 print:hidden">
         <Link
@@ -103,7 +125,7 @@ export default async function PrintAnnualReportPage({
       </div>
 
       {/* Contenedor del Documento Oficial (Plantilla Exacta) */}
-      <div className="max-w-4xl mx-auto bg-white p-6 sm:p-10 shadow-lg print:shadow-none print:p-0 print:max-w-none text-black font-sans leading-normal">
+      <div className="max-w-4xl mx-auto bg-white p-6 sm:p-10 shadow-lg print:shadow-none print:p-0 print:max-w-none text-black font-['Arial',sans-serif] leading-normal">
         <table className="w-full">
           {/* Encabezado Repetitivo para Impresión Multi-página */}
           <thead className="table-header-group">
