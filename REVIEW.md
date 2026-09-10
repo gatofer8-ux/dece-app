@@ -226,6 +226,36 @@ documentación (`SECURITY.md`, `CONTRIBUTING.md`, este archivo).
    duplicado en `db.ts` (§3.1) — contra una instancia real.
 8. Cifrado en reposo (§3.3).
 
+## 7. Interfaz y experiencia de usuario
+
+**[hecho] — primera tanda**
+- Fuente Inter (`next/font`) en vez de la del sistema.
+- `src/components/Toast.tsx`: notificaciones flotantes + `useToast()`.
+- `src/lib/statusColors.ts`: color + icono consistente por prioridad, estado y
+  tipo de riesgo; aplicado en la lista de casos.
+- `EmptyState` con icono, `StatCard` con franja de color, `Skeleton`,
+  foco visible consistente, `loading.tsx` con la clase `.skeleton`.
+- Eliminados nombres de persona reales que estaban hardcodeados como valores
+  por defecto en 5 formularios.
+
+**Pendiente**
+- Adoptar `useToast()` en las server actions (hoy solo `DeleteButton`).
+- Formularios oficiales por pasos/pestañas (son muy largos).
+- Dashboard con mini-gráficos (sparklines).
+- Menú agrupado por secciones; buscador global más visible.
+- Modo oscuro; revisión de uso en móvil; auditoría de accesibilidad.
+- Terminar de cablear la precarga (`getCaseDocumentDefaults`) en los ~30
+  formularios restantes.
+
+## 8. Privacidad de la IA — configuración
+
+`AI_HEIGHTENED_MODE` en `src/lib/aiPrivacy.ts`:
+- `"seudonimizado"` (actual): los casos delicados envían el relato
+  seudonimizado, igual que el resto.
+- `"estricto"`: los casos delicados no envían nada del relato.
+
+---
+
 **Más adelante**
 11. CSP con nonce vía middleware (§1.5).
 12. Dividir los archivos-Dios (§4.5).
