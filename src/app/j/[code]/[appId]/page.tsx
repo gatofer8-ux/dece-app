@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getTapasSessionByCode, isTapasSessionOpen } from "@/lib/tapas/tapasSessions";
+import { getDeckCards } from "@/lib/tapas/cardDeck";
 import type { TapasApplicationRow } from "@/lib/types";
 import TapasGame from "./TapasGame";
 
@@ -43,6 +44,12 @@ export default function TapasGamePage({ params }: { params: { code: string; appI
     groups = [];
   }
 
+  const deckCards = getDeckCards(s.institution_id);
+  const deck: Record<string, string> = {};
+  for (const key of Object.keys(deckCards)) {
+    deck[key] = `/api/tapas/deck/${params.code}/${key}`;
+  }
+
   return (
     <TapasGame
       code={params.code}
@@ -52,6 +59,7 @@ export default function TapasGamePage({ params }: { params: { code: string; appI
       initialGroups={groups}
       initialReflection={app.reflection || ""}
       initialLetter={app.future_letter || ""}
+      deck={deck}
     />
   );
 }

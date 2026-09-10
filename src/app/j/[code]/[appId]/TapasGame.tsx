@@ -22,7 +22,7 @@ interface Group {
   archetypes: string[];
 }
 
-function ArchetypeCard({ k, small }: { k: string; small?: boolean }) {
+function ArchetypeCard({ k, small, img }: { k: string; small?: boolean; img?: string }) {
   const a = ARCHETYPE_MAP[k];
   if (!a) return null;
   const fam = TAPAS_FAMILIES[a.familia];
@@ -31,12 +31,17 @@ function ArchetypeCard({ k, small }: { k: string; small?: boolean }) {
       className={`rounded-xl border-2 bg-white overflow-hidden ${small ? "" : "shadow-sm"}`}
       style={{ borderColor: fam.color }}
     >
-      <div
-        className={`flex items-center justify-center ${small ? "text-2xl py-2" : "text-5xl py-6"}`}
-        style={{ backgroundColor: `${fam.color}18` }}
-      >
-        {a.emoji}
-      </div>
+      {img ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={img} alt={a.name} className="w-full aspect-[62/88] object-contain bg-white" />
+      ) : (
+        <div
+          className={`flex items-center justify-center ${small ? "text-2xl py-2" : "text-5xl py-6"}`}
+          style={{ backgroundColor: `${fam.color}18` }}
+        >
+          {a.emoji}
+        </div>
+      )}
       <div className={`px-2.5 ${small ? "py-1.5" : "py-3"}`}>
         <p className={`font-bold text-slate-900 ${small ? "text-[11px] leading-tight" : "text-sm"}`}>{a.name}</p>
         {!small && <p className="text-xs text-slate-500 mt-1 leading-snug">{a.meaning}</p>}
@@ -53,6 +58,7 @@ export default function TapasGame({
   initialGroups,
   initialReflection,
   initialLetter,
+  deck,
 }: {
   code: string;
   appId: string;
@@ -61,8 +67,12 @@ export default function TapasGame({
   initialGroups: Group[];
   initialReflection: string;
   initialLetter: string;
+  deck: Record<string, string>;
 }) {
   const router = useRouter();
+  const Card = ({ k, small }: { k: string; small?: boolean }) => (
+    <ArchetypeCard k={k} small={small} img={deck[k]} />
+  );
   const storeKey = `tapas:${appId}`;
   const [phase, setPhase] = useState<Phase>("clasificar");
   const [cardIndex, setCardIndex] = useState(0);
@@ -275,7 +285,7 @@ export default function TapasGame({
           {phase === "clasificar" && (
             <div>
               <p className="text-sm text-slate-600 mb-3">¿Te identificas con esta forma de ser o de hacer las cosas?</p>
-              <ArchetypeCard k={ARCHETYPES[cardIndex].key} />
+              <Card k={ARCHETYPES[cardIndex].key} />
               <div className="grid grid-cols-3 gap-2 mt-4">
                 {TAPAS_CHOICES.map((opt) => (
                   <button
@@ -334,7 +344,7 @@ export default function TapasGame({
               <div className="grid grid-cols-2 gap-2">
                 {dudas.map((k) => (
                   <button key={k} type="button" onClick={() => setClassification((c) => ({ ...c, [k]: "SI" }))} className="text-left">
-                    <ArchetypeCard k={k} small />
+                    <Card k={k} small />
                   </button>
                 ))}
               </div>
@@ -431,7 +441,7 @@ export default function TapasGame({
                   return (
                     <button key={k} type="button" onClick={() => toggleInActiveGroup(k)} className="relative text-left">
                       <div className={inActive ? "ring-2 ring-emerald-500 rounded-xl" : g ? "opacity-50" : ""}>
-                        <ArchetypeCard k={k} small />
+                        <Card k={k} small />
                       </div>
                       {g && (
                         <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-slate-700 text-white text-[10px] font-bold flex items-center justify-center">
