@@ -29,6 +29,7 @@ export default function BimonthlyReportForm({
   institutionName,
   amieCode,
   schoolYearText,
+  defaultReportNumber = "",
   defaultResponsibleName,
   defaultAuthorityName,
   report,
@@ -39,6 +40,7 @@ export default function BimonthlyReportForm({
   institutionName: string;
   amieCode: string;
   schoolYearText: string;
+  defaultReportNumber?: string;
   defaultResponsibleName: string;
   defaultAuthorityName?: string;
   report?: BimonthlyReportRow;
@@ -133,7 +135,20 @@ export default function BimonthlyReportForm({
           <span className="text-xs text-slate-400">Estudiante: <strong>{studentName}</strong></span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div>
+            <label className="label text-xs font-semibold">N° de Informe *</label>
+            <input
+              type="text"
+              name="report_number"
+              defaultValue={report?.report_number || defaultReportNumber}
+              readOnly
+              className="input text-xs font-mono font-bold bg-slate-100 text-slate-800 border-slate-300 cursor-not-allowed select-all"
+              title="Generado automáticamente según la codificación oficial DECE"
+            />
+            <p className="text-[10px] text-slate-500 mt-0.5">Consecutivo oficial inmutable</p>
+          </div>
+
           <div>
             <label className="label text-xs">Año lectivo *</label>
             <input

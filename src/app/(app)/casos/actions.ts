@@ -17,6 +17,7 @@ import { z } from "zod";
 import { str, int, getAllStr } from "@/lib/formData";
 import { requireOwnedCase, requireOwnedStudent } from "@/lib/scopedDb";
 import { autoMarkChecklistItems } from "@/lib/checklistAutoMark";
+import { assignNextReportNumber } from "@/lib/reportNumbering";
 import {
   saveAttachmentFile,
   deleteAttachmentFile,
@@ -1070,6 +1071,21 @@ export async function createViolenceReport(
     const violenceTypes = JSON.stringify(getAllStr(formData, "violence_types"));
     const violenceModalities = JSON.stringify(getAllStr(formData, "violence_modalities"));
 
+    const activeYear = db
+      .prepare("SELECT name FROM school_years WHERE institution_id = ? AND is_active = 1")
+      .get(institutionId) as { name: string } | undefined;
+
+    const assigned = assignNextReportNumber({
+      institutionId,
+      userId: session.user.id,
+      userName: session.user.name,
+      schoolYearText: activeYear?.name,
+      reportType: "VIOLENCIA",
+      recordId: id,
+      caseFileId: caseId,
+    });
+    const reportNumber = assigned.reportNumber;
+
     db.prepare(
       `INSERT INTO violence_reports
         (id, case_file_id, institution_id, report_number, report_date, dece_professional_name,
@@ -1088,7 +1104,7 @@ export async function createViolenceReport(
       id,
       case_file_id: caseId,
       institution_id: institutionId,
-      report_number: str(formData, "report_number"),
+      report_number: reportNumber,
       report_date: str(formData, "report_date") || new Date().toISOString().slice(0, 10),
       dece_professional_name: str(formData, "dece_professional_name") || session.user.name || null,
       representative_relationship: str(formData, "representative_relationship"),
@@ -1272,6 +1288,21 @@ export async function createSituationalReport(
 
     const methodology = JSON.stringify(getAllStr(formData, "methodology"));
 
+    const activeYear = db
+      .prepare("SELECT name FROM school_years WHERE institution_id = ? AND is_active = 1")
+      .get(institutionId) as { name: string } | undefined;
+
+    const assigned = assignNextReportNumber({
+      institutionId,
+      userId: session.user.id,
+      userName: session.user.name,
+      schoolYearText: activeYear?.name,
+      reportType: "SITUACIONAL",
+      recordId: id,
+      caseFileId: caseId,
+    });
+    const reportNumber = assigned.reportNumber;
+
     db.prepare(
       `INSERT INTO situational_reports
         (id, case_file_id, institution_id, report_number, report_date,
@@ -1294,7 +1325,7 @@ export async function createSituationalReport(
       id,
       case_file_id: caseId,
       institution_id: institutionId,
-      report_number: str(formData, "report_number"),
+      report_number: reportNumber,
       report_date: str(formData, "report_date") || new Date().toISOString().slice(0, 10),
       responsible_name: str(formData, "responsible_name") || session.user.name || null,
       responsible_role: str(formData, "responsible_role"),
@@ -1514,7 +1545,7 @@ export async function updateSituationalReport(
 
     db.prepare(
       `UPDATE situational_reports SET
-         report_number = @report_number, report_date = @report_date,
+         report_number = COALESCE(report_number, @report_number), report_date = @report_date,
          responsible_name = @responsible_name, responsible_role = @responsible_role, responsible_phone = @responsible_phone, responsible_email = @responsible_email,
          addressed_to_name = @addressed_to_name, addressed_to_role = @addressed_to_role, addressed_to_phone = @addressed_to_phone, addressed_to_email = @addressed_to_email,
          situation_type = @situation_type, tema = @tema, tutor_name = @tutor_name, scope_text = @scope_text, objective_text = @objective_text,
@@ -1592,15 +1623,26 @@ export async function createBimonthlyReport(
   const approvedByName = str(formData, "approved_by_name") || null;
   const approvedByRole = str(formData, "approved_by_role") || "Profesional de apoyo DECE Distrital";
 
+  const assigned = assignNextReportNumber({
+    institutionId,
+    userId: session.user.id,
+    userName: session.user.name,
+    schoolYearText: schoolYearText,
+    reportType: "BIMENSUAL",
+    recordId: id,
+    caseFileId: caseId,
+  });
+  const reportNumber = assigned.reportNumber;
+
   try {
     db.prepare(
       `INSERT INTO bimonthly_reports (
-        id, case_file_id, institution_id, school_year_text, period_months,
+        id, case_file_id, institution_id, report_number, school_year_text, period_months,
         institution_name, amie_code, victim_initials, processes_data,
         elaborated_by_name, elaborated_by_role, reviewed_by_name, reviewed_by_role,
         approved_by_name, approved_by_role, created_by
       ) VALUES (
-        @id, @case_file_id, @institution_id, @school_year_text, @period_months,
+        @id, @case_file_id, @institution_id, @report_number, @school_year_text, @period_months,
         @institution_name, @amie_code, @victim_initials, @processes_data,
         @elaborated_by_name, @elaborated_by_role, @reviewed_by_name, @reviewed_by_role,
         @approved_by_name, @approved_by_role, @created_by
@@ -1609,7 +1651,8 @@ export async function createBimonthlyReport(
       id,
       case_file_id: caseId,
       institution_id: institutionId,
-      school_year_text: schoolYearText,
+      report_number: reportNumber,
+      schoolYearText: schoolYearText,
       period_months: periodMonths,
       institution_name: institutionName,
       amie_code: amieCode,
@@ -2311,7 +2354,17 @@ export async function createCaseClosureReport(caseId: string, _prev: ActionState
 
   const schoolYearText = str(formData, "school_year_text") || activeYear?.name || "2024 - 2025";
   const reportDate = str(formData, "report_date") || new Date().toISOString().split("T")[0];
-  const reportNumber = str(formData, "report_number") || `IT-DECE-${Date.now().toString().slice(-4)}`;
+
+  const assigned = assignNextReportNumber({
+    institutionId,
+    userId: session.user.id,
+    userName: session.user.name,
+    schoolYearText: schoolYearText,
+    reportType: "CIERRE",
+    recordId: reportId,
+    caseFileId: caseId,
+  });
+  const reportNumber = assigned.reportNumber;
   const closureType = (str(formData, "closure_type") || "FINALIZACION_ANO_LECTIVO") as any;
 
   const deceName = str(formData, "dece_name") || session.user.name || "Profesional DECE";
@@ -2540,7 +2593,7 @@ export async function updateCaseClosureReport(reportId: string, caseId: string, 
       `UPDATE case_closure_reports SET
         school_year_text = @school_year_text,
         report_date = @report_date,
-        report_number = @report_number,
+        report_number = COALESCE(report_number, @report_number),
         closure_type = @closure_type,
         dece_name = @dece_name,
         dece_role = @dece_role,
@@ -2880,7 +2933,7 @@ export async function updateViolenceReport(
 
     db.prepare(
       `UPDATE violence_reports SET
-        report_number = @report_number,
+        report_number = COALESCE(report_number, @report_number),
         report_date = @report_date,
         dece_professional_name = @dece_professional_name,
         representative_relationship = @representative_relationship,

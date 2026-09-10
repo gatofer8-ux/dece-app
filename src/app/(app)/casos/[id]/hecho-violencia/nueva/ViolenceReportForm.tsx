@@ -28,6 +28,7 @@ export default function ViolenceReportForm({
   caseId,
   studentName,
   studentCourseFormatted = "",
+  defaultReportNumber = "",
   defaultRepresentativeName = "",
   defaultRepresentativeRelationship = "Representante legal",
   defaultRepresentativeAddress = "",
@@ -42,6 +43,7 @@ export default function ViolenceReportForm({
   caseId: string;
   studentName: string;
   studentCourseFormatted?: string;
+  defaultReportNumber?: string;
   defaultRepresentativeName?: string;
   defaultRepresentativeRelationship?: string;
   defaultRepresentativeAddress?: string;
@@ -70,8 +72,21 @@ export default function ViolenceReportForm({
           1. Datos generales de identificación del estudiante
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-2">
-          <input value={studentName} disabled className="input bg-slate-50 font-medium" />
-          <input name="report_number" placeholder="N° de informe (ej. 001)" className="input" />
+          <div>
+            <label className="label text-xs">Estudiante</label>
+            <input value={studentName} disabled className="input bg-slate-50 font-medium" />
+          </div>
+          <div>
+            <label className="label text-xs">N° de informe (Automático)</label>
+            <input
+              name="report_number"
+              defaultValue={defaultReportNumber}
+              readOnly
+              className="input bg-slate-100 font-mono font-bold text-slate-800 border-slate-300 cursor-not-allowed select-all text-xs"
+              title="Generado automáticamente según la codificación oficial DECE"
+            />
+            <p className="text-[10px] text-slate-400 mt-0.5">Consecutivo oficial inmutable</p>
+          </div>
           <div>
             <label className="label text-xs">Fecha del informe</label>
             <input type="date" name="report_date" defaultValue={new Date().toISOString().slice(0, 10)} className="input" />

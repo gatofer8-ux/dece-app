@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow, InstitutionRow, SchoolYearRow } from "@/lib/types";
 import { getStudentInitials } from "@/lib/bimonthlyReport";
 import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
+import { previewNextReportNumber } from "@/lib/reportNumbering";
 import BimonthlyReportForm from "./BimonthlyReportForm";
 
 export default async function NuevoInformeBimensualPage({ params }: { params: { id: string } }) {
@@ -22,6 +23,13 @@ export default async function NuevoInformeBimensualPage({ params }: { params: { 
     .prepare("SELECT * FROM school_years WHERE institution_id = ? AND is_active = 1")
     .get(institutionId) as SchoolYearRow | undefined;
 
+  const schoolYearText = activeYear?.name || "2025-2026";
+  const preview = previewNextReportNumber({
+    institutionId,
+    schoolYearText,
+    userId: session.user.id,
+  });
+
   const initials = getStudentInitials(student.full_name);
 
   return (
@@ -36,7 +44,8 @@ export default async function NuevoInformeBimensualPage({ params }: { params: { 
         victimInitials={initials}
         institutionName={institution?.name || "Unidad Educativa Santa Rosa"}
         amieCode={institution?.amie_code || "18H00313"}
-        schoolYearText={activeYear?.name || "2025-2026"}
+        schoolYearText={schoolYearText}
+        defaultReportNumber={preview.reportNumber}
         defaultResponsibleName={defaults?.deceProfessional.fullName || session.user.name || ""}
       />
     </div>

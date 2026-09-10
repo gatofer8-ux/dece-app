@@ -135,6 +135,10 @@ export async function updateOwnInstitutionDetails(_prevState: ActionState, formD
        rector_role = @rector_role,
        dece_coordinator_title = @dece_coordinator_title,
        dece_coordinator_name = @dece_coordinator_name,
+       mineduc_code = @mineduc_code,
+       zone_code = @zone_code,
+       district_code = @district_code,
+       dece_code = @dece_code,
        seal_image = COALESCE(@seal_image, seal_image),
        updated_at = datetime('now')
      WHERE id = @id`
@@ -153,6 +157,10 @@ export async function updateOwnInstitutionDetails(_prevState: ActionState, formD
     rector_role: str(formData, "rector_role") || "RECTOR(A) DE LA UNIDAD EDUCATIVA",
     dece_coordinator_title: str(formData, "dece_coordinator_title"),
     dece_coordinator_name: str(formData, "dece_coordinator_name"),
+    mineduc_code: str(formData, "mineduc_code") || "Mineduc",
+    zone_code: str(formData, "zone_code"),
+    district_code: str(formData, "district_code"),
+    dece_code: str(formData, "dece_code") || "DECE",
     seal_image: sealDataUri,
   });
 

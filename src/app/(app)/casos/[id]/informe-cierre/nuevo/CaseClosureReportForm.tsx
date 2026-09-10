@@ -249,10 +249,12 @@ export default function CaseClosureReportForm({
               type="text"
               name="report_number"
               defaultValue={report?.report_number || defaultReportNumber}
+              readOnly
               required
-              className="input text-xs font-mono uppercase"
-              placeholder="IT-DECE-UE-2024-2025-01"
+              className="input text-xs font-mono font-bold bg-slate-100 text-slate-800 border-slate-300 cursor-not-allowed select-all"
+              title="Generado automáticamente según la codificación oficial DECE"
             />
+            <p className="text-[10px] text-slate-500 mt-0.5">Consecutivo oficial inmutable</p>
           </div>
 
           <div>

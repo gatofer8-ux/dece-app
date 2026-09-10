@@ -24,6 +24,7 @@ export async function updateOwnProfile(_prev: ProfileState, formData: FormData):
        title_prefix = @title_prefix,
        job_title = @job_title,
        document_id = @document_id,
+       professional_code = @professional_code,
        phone = @phone,
        phone_ext = @phone_ext,
        updated_at = datetime('now')
@@ -34,6 +35,7 @@ export async function updateOwnProfile(_prev: ProfileState, formData: FormData):
     title_prefix: str(formData, "title_prefix"),
     job_title: str(formData, "job_title"),
     document_id: str(formData, "document_id"),
+    professional_code: str(formData, "professional_code"),
     phone: str(formData, "phone"),
     phone_ext: str(formData, "phone_ext"),
   });

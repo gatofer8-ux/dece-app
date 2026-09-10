@@ -41,6 +41,7 @@ export default function SituationalReportForm({
   defaultCoordinatorName,
   defaultAuthorityName,
   defaultAuthorityRole,
+  defaultReportNumber = "",
 }: {
   caseId: string;
   studentName: string;
@@ -51,6 +52,7 @@ export default function SituationalReportForm({
   defaultCoordinatorName?: string;
   defaultAuthorityName?: string;
   defaultAuthorityRole?: string;
+  defaultReportNumber?: string;
   report?: SituationalReportRow;
 }) {
   const actionFn = report ? updateSituationalReport.bind(null, report.id, caseId) : createSituationalReport.bind(null, caseId);
@@ -67,11 +69,24 @@ export default function SituationalReportForm({
       <div>
         <h3 className="text-xs font-semibold text-slate-500 uppercase mb-2">Datos generales</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <input value={studentName} disabled className="input bg-slate-50" />
-          <input type="text" name="report_number" placeholder="No. de Informe" className="input" defaultValue={(report as any)?.report_number || ""} />
           <div>
-            <label className="label text-xs">Fecha del informe</label>
-            <input type="date" name="report_date" className="input" defaultValue={(report as any)?.report_date || ""} />
+            <label className="label text-xs font-semibold">Estudiante</label>
+            <input value={studentName} disabled className="input bg-slate-50 font-medium" />
+          </div>
+          <div>
+            <label className="label text-xs font-semibold">Número de informe (Automático)</label>
+            <input
+              type="text"
+              name="report_number"
+              value={(report as any)?.report_number || defaultReportNumber || ""}
+              readOnly
+              className="input bg-slate-100 text-slate-800 font-mono font-bold cursor-not-allowed border-slate-300 select-all"
+            />
+            <p className="text-[10px] text-slate-400 mt-0.5">Consecutivo oficial inmutable</p>
+          </div>
+          <div>
+            <label className="label text-xs font-semibold">Fecha del informe</label>
+            <input type="date" name="report_date" className="input" defaultValue={(report as any)?.report_date || new Date().toISOString().slice(0, 10)} />
           </div>
         </div>
 

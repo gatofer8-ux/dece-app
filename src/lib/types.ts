@@ -150,6 +150,10 @@ export interface InstitutionRow {
   dece_coordinator_title?: string | null;
   dece_coordinator_name?: string | null;
   institution_phone?: string | null;
+  mineduc_code?: string | null;
+  zone_code?: string | null;
+  district_code?: string | null;
+  dece_code?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   geofence_radius_meters?: number | null;
@@ -173,6 +177,7 @@ export interface UserRow {
   document_id?: string | null;
   title_prefix?: string | null;
   phone_ext?: string | null;
+  professional_code?: string | null;
   coverage_courses?: string | null;
   job_title?: string | null;
   created_at: string;
@@ -914,6 +919,7 @@ export interface BimonthlyReportRow {
   id: string;
   case_file_id: string;
   institution_id: string;
+  report_number?: string | null;
   school_year_id: string | null;
   school_year_text: string;
   period_months: string;
@@ -930,6 +936,27 @@ export interface BimonthlyReportRow {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface DeceReportSequenceRow {
+  institution_id: string;
+  school_year_code: string;
+  last_number: number;
+  updated_at: string;
+}
+
+export interface DeceIssuedReportRow {
+  id: string;
+  institution_id: string;
+  school_year_code: string;
+  sequence_number: number;
+  report_number: string;
+  report_type: string;
+  record_id: string | null;
+  case_file_id: string | null;
+  student_id: string | null;
+  professional_id: string | null;
+  created_at: string;
 }
 
 export type ClosureType =
