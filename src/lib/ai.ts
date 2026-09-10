@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { pseudonymize } from "./aiPrivacy";
+import { REPRESENTATIVE_AWARENESS_NOTE } from "./interviewDefaults";
 
 // Asistente de redacción con IA para los documentos técnicos del DECE.
 // Usa la API gratuita de Gemini (Google AI Studio) — a diferencia de la API
@@ -186,7 +187,38 @@ export async function draftText(opts: {
       "Presenta la respuesta ÚNICAMENTE como una lista numerada (1., 2., 3., 4., etc.), con un acuerdo por línea, en texto plano.\n"
     : "";
 
-  const isBimonthly = opts.fieldLabel.toLowerCase().includes("bimensual") || (opts.fieldLabel.toLowerCase().includes("acompañamiento") && !isSocializationStrategies);
+  const isAccompanimentTechnical =
+    opts.fieldLabel.toLowerCase().includes("informe técnico de acompañamiento") ||
+    opts.fieldLabel.toLowerCase().includes("informe tecnico de acompañamiento") ||
+    opts.fieldLabel.toLowerCase().includes("acciones inmediatas de acompañamiento") ||
+    (opts.fieldLabel.toLowerCase().includes("acompañamiento") &&
+      (opts.fieldLabel.toLowerCase().includes("víctimas de violencia") || opts.fieldLabel.toLowerCase().includes("victimas de violencia")));
+
+  const isBimonthly =
+    !isAccompanimentTechnical &&
+    !isSocializationStrategies &&
+    (opts.fieldLabel.toLowerCase().includes("bimensual") ||
+      (opts.fieldLabel.toLowerCase().includes("acompañamiento") &&
+        !opts.fieldLabel.toLowerCase().includes("técnico") &&
+        !opts.fieldLabel.toLowerCase().includes("tecnico")));
+
+  const accompanimentTechnicalRule = isAccompanimentTechnical
+    ? "\nREGLAS OBLIGATORIAS PARA EL INFORME TÉCNICO DE ACOMPAÑAMIENTO:\n" +
+      "1. IDENTIFICACIÓN Y NIVEL EDUCATIVO DEL ESTUDIANTE: Cuando redactes la situación familiar o el rendimiento académico, identifica al estudiante con su nombre completo y edad. Si pertenece a Bachillerato, DEBES indicar explícitamente que es estudiante de Bachillerato y señalar con exactitud su especialidad o figura profesional según el contexto (por ejemplo: 'estudiante de 3.° de Bachillerato Técnico en Informática', 'estudiante de 2.° de Bachillerato en Ciencias', o 'estudiante de Bachillerato General Unificado').\n" +
+      "2. ACCIONES CON FECHAS OBLIGATORIAS: En el campo de 'Acciones de acompañamiento', presenta un resumen de las intervenciones del DECE donde DEBES INCLUIR OBLIGATORIAMENTE LAS FECHAS EXACTAS de cada acción (entrevistas, convocatorias, seguimientos, derivaciones) tal como constan en el historial del contexto (por ejemplo: 'El [Fecha] se realizó...', o formato viñeta '• [Fecha]: Acción...'). NUNCA omitas las fechas si están disponibles en el contexto.\n" +
+      "3. PROHIBICIÓN ESTRICTA DE CONCLUSIONES INSTITUCIONALES: NO incluyas bajo ninguna circunstancia apartados, encabezados ni párrafos de 'Conclusiones del seguimiento institucional', 'Conclusiones institucionales', ni clasificaciones burocráticas de actores externos (fiscalía, juzgado, etc.). Redacta única y exclusivamente el contenido técnico correspondiente al campo solicitado, sin secciones adicionales de conclusiones.\n"
+    : "";
+
+  const isInterviewCommitment =
+    opts.fieldLabel.toLowerCase().includes("compromiso") &&
+    (opts.fieldLabel.toLowerCase().includes("entrevista") || opts.fieldLabel.toLowerCase().includes("asumidos"));
+
+  const interviewCommitmentRule = isInterviewCommitment
+    ? "\nREGLA OBLIGATORIA PARA COMPROMISOS EN ENTREVISTA SEMIESTRUCTURADA:\n" +
+      "1. Enumera entre 2 y 4 compromisos formativos, claros, realistas y medibles para la madre, padre y/o representante legal, el DECE y el/la estudiante.\n" +
+      "2. Al final de la redacción de los compromisos, anexa OBLIGATORIAMENTE la siguiente nota formal de toma de conocimiento y corresponsabilidad del representante:\n\n" +
+      REPRESENTATIVE_AWARENESS_NOTE + "\n"
+    : "";
   const bimonthlyRule = isBimonthly
     ? "\nREGLA OBLIGATORIA PARA INFORME BIMENSUAL (Violencia Sexual):\n" +
       "La redacción en el campo '¿Quiénes ejecutarán?' DEBE estar desglosada y estructurada obligatoriamente por ENTIDADES Y ACTORES pertinentes (entidades de protección, personal de salud, DECE, docente tutor, autoridades educativas, representante legal y estudiante):\n" +
@@ -271,6 +303,8 @@ REGLAS DE FORMATO Y ESTILO ESTRICTAS (OBLIGATORIAS):
   ${socializationRule}
   ${socializationAgreementsRule}
   ${bimonthlyRule}
+  ${accompanimentTechnicalRule}
+  ${interviewCommitmentRule}
   ${referralActionsRule}
   ${currentSituationRule}
   ${referralObservationsRule}
@@ -319,6 +353,17 @@ Responde ÚNICAMENTE con el texto final del campo, en español, en texto plano s
           .filter(Boolean)
           .map((l) => (l.startsWith("•") ? l : `• ${l.replace(/^(\d+[\.\)]|[\*\-\+])\s*/, "")}`))
           .join("\n");
+      }
+      if (isAccompanimentTechnical) {
+        // Eliminar de raíz cualquier posible encabezado o sección residual de "Conclusiones del seguimiento institucional"
+        text = text
+          .replace(/(?:\r?\n)+(?:(?:\d+[\.\)]|[•\*\-#])\s*)?(?:conclusiones(?:\s+del)?\s+seguimiento\s+institucional|seguimiento\s+institucional)[\s\S]*$/i, "")
+          .trim();
+      }
+      if (isInterviewCommitment) {
+        if (!text.includes("NOTA DE CONOCIMIENTO Y CORRESPONSABILIDAD") && !text.includes("plena toma de conocimiento")) {
+          text = `${text.trim()}\n\n${REPRESENTATIVE_AWARENESS_NOTE}`;
+        }
       }
       return { text };
     } catch (err: any) {

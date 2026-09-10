@@ -203,9 +203,9 @@ export const parsePsychosocialReferral = (raw: string | null | undefined) =>
 
 export const ACCOMPANIMENT_AI_LABELS = {
   family_situation:
-    "Situación familiar del NNA en el informe técnico de acompañamiento a víctimas de violencia (con quién vive, configuración y dinámica familiar, factores protectores/de riesgo, tono clínico, 3ra persona, sin juicios)",
+    "Situación familiar del estudiante en el Informe Técnico de Acompañamiento a víctimas de violencia (mencionar al estudiante con sus datos de identificación, curso y si pertenece a Bachillerato con su especialidad; detallar con quién vive, configuración y dinámica familiar, factores protectores y de riesgo, redacción clínica y objetiva en 3ra persona, sin juicios de valor)",
   academic_performance:
-    "Rendimiento académico del NNA en el informe técnico de acompañamiento a víctimas de violencia (breve, si hubo dificultades o cambios dentro y fuera del aula, si requirió DAI o adaptaciones)",
+    "Rendimiento académico del estudiante en el Informe Técnico de Acompañamiento a víctimas de violencia (mencionar al estudiante con su nivel educativo, si pertenece a Bachillerato y su especialidad; describir su desempeño escolar, dificultades o cambios observados en aula, si requirió adaptaciones o DAI, sin juicios de valor)",
   accompaniment_actions:
-    "Acciones de acompañamiento del informe técnico frente a violencia (resumen breve de acciones inmediatas: entrevistas con familia y docentes, seguimiento académico, derivaciones a salud y atención psicológica, talleres preventivos, articulación interinstitucional y fechas)",
+    "Acciones inmediatas de acompañamiento en el Informe Técnico de Acompañamiento a víctimas de violencia (resumen cronológico de acciones ejecutadas por el DECE indicando OBLIGATORIAMENTE LAS FECHAS de cada acción, entrevista a representantes, diálogo docente, seguimiento de aula, derivaciones y talleres; sin apartados de conclusiones del seguimiento institucional)",
 } as const;
