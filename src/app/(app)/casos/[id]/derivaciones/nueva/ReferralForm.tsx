@@ -119,25 +119,12 @@ export default function ReferralForm({
         />
       </div>
 
+      {/* "MOTIVO DE REFERENCIA" en el formato oficial es solo un encabezado de
+          sección: no se llena un texto libre, se desglosa en Historia de la
+          situación actual, Acciones desarrolladas, Tipo de atención y
+          Observaciones. Por eso aquí no hay campo "Motivo". */}
       <div>
-        <div className="flex items-center justify-between">
-          <label className="label text-xs">Motivo de la derivación *</label>
-          <div className="flex items-center gap-2">
-            <VoiceDictationButton targetId="referral-reason" />
-            <AIAssistButton targetId="referral-reason" caseId={caseId} fieldLabel="Motivo de la derivación" />
-          </div>
-        </div>
-        <textarea
-          id="referral-reason"
-          name="reason"
-          required
-          defaultValue={initialData?.reason || ""}
-          rows={2}
-          className="textarea"
-        />
-      </div>
-
-      <div>
+        <h3 className="text-xs font-semibold text-slate-500 uppercase mb-2">Motivo de referencia</h3>
         <div className="flex items-center justify-between">
           <label className="label text-xs">Historia de la situación actual</label>
           <div className="flex items-center gap-2">
@@ -145,12 +132,13 @@ export default function ReferralForm({
             <AIAssistButton targetId="referral-background" caseId={caseId} fieldLabel="Historia de la situación actual en la ficha de derivación" />
           </div>
         </div>
-        <p className="text-xs text-slate-400 mb-1">Síntesis de la situación del/la estudiante, el entorno educativo y familiar desde el ámbito de la atención psicosocial.</p>
+        <p className="text-xs text-slate-400 mb-1">Síntesis de la situación del/la estudiante, el entorno educativo y familiar desde el ámbito de la atención psicosocial (resumen clínico conciso de 4 a 6 oraciones, en 3ra persona).</p>
         <textarea
           id="referral-background"
-          name="background_summary"
-          defaultValue={initialData?.background_summary || ""}
-          rows={3}
+          name="current_situation_history"
+          defaultValue={initialData?.current_situation_history || initialData?.background_summary || ""}
+          placeholder="Resumen clínico y psicosocial conciso (4 a 6 oraciones en tercera persona) describiendo el motivo de seguimiento, conducta o sintomatología observada, dinámica familiar y factores identificados."
+          rows={4}
           className="textarea"
         />
       </div>
@@ -163,12 +151,13 @@ export default function ReferralForm({
             <AIAssistButton targetId="referral-actions" caseId={caseId} fieldLabel="Acciones desarrolladas en el ámbito de la atención psicosocial (ficha de derivación)" />
           </div>
         </div>
-        <p className="text-xs text-slate-400 mb-1">En el ámbito de la atención psicosocial.</p>
+        <p className="text-xs text-slate-400 mb-1">En el ámbito de la atención psicosocial (lista breve con guiones, máx. 8-10 palabras por línea).</p>
         <textarea
           id="referral-actions"
           name="actions_taken"
           defaultValue={initialData?.actions_taken || ""}
-          rows={2}
+          placeholder="- Diálogo con la madre de familia&#10;- Acta de consentimiento informado&#10;- Intervención con el estudiante&#10;- Agendamiento de cita"
+          rows={3}
           className="textarea"
         />
       </div>
@@ -191,11 +180,13 @@ export default function ReferralForm({
             <AIAssistButton targetId="referral-observations" caseId={caseId} fieldLabel="Observaciones de la ficha de derivación" />
           </div>
         </div>
+        <p className="text-xs text-slate-400 mb-1">Pautas e indicaciones directas (lista con viñetas •, 2 a 5 líneas breves; incluye cita si existe).</p>
         <textarea
           id="referral-observations"
           name="observations"
           defaultValue={initialData?.observations || ""}
-          rows={2}
+          placeholder="• Brindar atención psicológica al estudiante.&#10;• Favor enviar certificado de asistencia.&#10;• N° cita: 91665562; Fecha: 22/10/2024; Hora: 10h00"
+          rows={3}
           className="textarea"
         />
       </div>

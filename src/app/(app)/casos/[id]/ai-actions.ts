@@ -200,6 +200,19 @@ function buildCaseContext(caseId: string, institutionId: string): string {
     logger.warn("ai-context", "sección de contexto del caso omitida por error", e);
   }
 
+  // 10. Citas registradas en el caso (para derivación y seguimiento)
+  try {
+    const appt = db
+      .prepare("SELECT id, title, date, start_time, location FROM appointments WHERE case_file_id = ? ORDER BY date DESC, start_time DESC LIMIT 1")
+      .get(caseId) as { id: string; title: string; date: string; start_time: string; location?: string } | undefined;
+    if (appt) {
+      lines.push(`\n--- CITA REGISTRADA DEL CASO ---`);
+      lines.push(`CITA_DETALLE: N° cita: ${appt.id.replace(/-/g, "").slice(0, 8)}; Fecha: ${appt.date}; Hora: ${appt.start_time}${appt.location ? `; Lugar: ${appt.location}` : ""}`);
+    }
+  } catch (e) {
+    logger.warn("ai-context", "sección de citas del caso omitida por error", e);
+  }
+
   return pseudonymize(lines.join("\n"), entities);
 }
 
@@ -228,7 +241,29 @@ export async function generateAiDraft(
   const context = buildCaseContext(caseId, institutionId);
   const result = await draftText({ fieldLabel, context, currentText: currentText || "" });
   if ("error" in result) return { error: result.error };
-  return { text: result.text, heightenedConfidentiality: isHeightenedRiskType(caseFile?.risk_type) };
+
+  let text = result.text;
+  const isReferralObservations =
+    fieldLabel.toLowerCase().includes("observaciones") &&
+    (fieldLabel.toLowerCase().includes("derivaci") || fieldLabel.toLowerCase().includes("ficha"));
+
+  if (isReferralObservations && text) {
+    try {
+      const appt = db
+        .prepare("SELECT id, date, start_time FROM appointments WHERE case_file_id = ? ORDER BY date DESC, start_time DESC LIMIT 1")
+        .get(caseId) as { id: string; date: string; start_time: string } | undefined;
+      if (appt) {
+        const apptLine = `• N° cita: ${appt.id.replace(/-/g, "").slice(0, 8)}; Fecha: ${appt.date}; Hora: ${appt.start_time}`;
+        if (!text.includes("N° cita") && !text.includes("cita:")) {
+          text = `${text.trim()}\n${apptLine}`;
+        }
+      }
+    } catch (e) {
+      logger.warn("ai-draft", "error al consultar cita para observaciones", e);
+    }
+  }
+
+  return { text, heightenedConfidentiality: isHeightenedRiskType(caseFile?.risk_type) };
 }
 
 export async function generateBimonthlyMatrixSuggestions(

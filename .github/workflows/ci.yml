@@ -13,7 +13,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # better-sqlite3 >= 13 y pdfjs-dist / pdf-to-png-converter exigen Node >= 22.
+          # Con Node 20 el binario nativo de better-sqlite3 no carga y los tests
+          # que tocan la base de datos revientan ("Worker exited unexpectedly").
+          node-version: 22
           cache: npm
 
       - name: Instalar dependencias

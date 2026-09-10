@@ -143,6 +143,12 @@ export interface InstitutionRow {
   zona: string | null;
   address: string | null;
   seal_image: string | null;
+  rector_title?: string | null;
+  rector_name?: string | null;
+  rector_role?: string | null;
+  dece_coordinator_title?: string | null;
+  dece_coordinator_name?: string | null;
+  institution_phone?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   geofence_radius_meters?: number | null;
@@ -163,6 +169,9 @@ export interface UserRow {
   role: Role;
   active: number;
   phone: string | null;
+  document_id?: string | null;
+  title_prefix?: string | null;
+  phone_ext?: string | null;
   coverage_courses?: string | null;
   job_title?: string | null;
   created_at: string;
@@ -415,6 +424,7 @@ export interface ReferralRow {
   follow_up_date: string | null;
   destination_detail: string | null;
   background_summary: string | null;
+  current_situation_history: string | null;
   actions_taken: string | null;
   care_type_required: string | null;
   observations: string | null;
