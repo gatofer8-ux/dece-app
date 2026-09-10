@@ -127,7 +127,7 @@ export async function generateRestitutionPlanDocx(data: {
     insideHorizontal: cellBorder,
     insideVertical: cellBorder,
   };
-  const cellMargins = { top: 50, bottom: 50, left: 90, right: 90 };
+  const cellMargins = { top: 40, bottom: 40, left: 80, right: 80 };
 
   const headerImg = getImageBuffer("plan_acomp_header.png");
   const footerImg = getImageBuffer("plan_acomp_footer.png");
@@ -957,6 +957,14 @@ export async function generateRestitutionPlanDocx(data: {
   );
 
   const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          run: { font: FONT_NAME, size: FONT_SIZE },
+          paragraph: { spacing: { line: 260, after: 80 } },
+        },
+      },
+    },
     sections: [
       {
         properties: {

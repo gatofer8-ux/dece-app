@@ -218,7 +218,7 @@ export default async function ImprimirPlanRestitucionPage({
       {/* Hoja A4 con membrete oficial */}
       <div
         id="printable-content"
-        className="max-w-[210mm] mx-auto bg-white shadow-xl print:shadow-none min-h-[297mm] text-[11px] leading-tight font-sans relative print-sheet flex flex-col justify-between"
+        className="max-w-[210mm] mx-auto bg-white shadow-xl print:shadow-none text-[11px] leading-tight font-sans relative print-sheet flex flex-col justify-between"
         style={{ fontFamily: "Calibri, Arial, sans-serif" }}
       >
         {/* Cabecera visible en pantalla (de borde a borde) */}
