@@ -190,9 +190,10 @@ export default async function CasoDetallePage({
   } catch {
     /* tabla aún no migrada */
   }
-  const isViolenceCase = ["VIOLENCIA_INTRAFAMILIAR", "VIOLENCIA_ESCOLAR_BULLYING", "VIOLENCIA_SEXUAL", "VULNERACION_DERECHOS"].includes(
-    caseFile.risk_type
-  );
+  // El informe técnico de acompañamiento es sobre todo para casos de violencia,
+  // pero se muestra en todos los casos: durante el seguimiento puede detectarse
+  // violencia en un caso registrado con otro tipo de riesgo.
+  const isViolenceCase = true;
   const socializationActs = db
     .prepare("SELECT * FROM socialization_acts WHERE case_file_id = ? ORDER BY act_date DESC, created_at DESC")
     .all(caseFile.id) as SocializationActRow[];
