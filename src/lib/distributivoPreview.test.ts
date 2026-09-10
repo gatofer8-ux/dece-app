@@ -16,9 +16,10 @@ describe("Distributivo preview and student recalculation", () => {
     const insertStudent = db.prepare(
       "INSERT INTO students (id, institution_id, full_name, course, parallel, jornada, active) VALUES (?, ?, ?, ?, ?, ?, 1)"
     );
-    insertStudent.run("s1", instId, "Estudiante 1", "Octavo EGB", "A", "Matutina");
-    insertStudent.run("s2", instId, "Estudiante 2", "Octavo EGB", "B", "Matutina");
-    insertStudent.run("s3", instId, "Estudiante 3", "Noveno EGB", "A", "Matutina");
+    const prefix = `s-${Date.now()}-`;
+    insertStudent.run(prefix + "1", instId, "Estudiante 1", "Octavo EGB", "A", "Matutina");
+    insertStudent.run(prefix + "2", instId, "Estudiante 2", "Octavo EGB", "B", "Matutina");
+    insertStudent.run(prefix + "3", instId, "Estudiante 3", "Noveno EGB", "A", "Matutina");
 
     const coursesInfo = getInstitutionCoursesWithCounts(instId);
     expect(coursesInfo.totalStudents).toBe(3);
