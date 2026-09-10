@@ -259,7 +259,7 @@ export default function TapasGame({
 
   return (
     <div className="min-h-screen bg-slate-50 py-6 px-4">
-      <div className="max-w-lg mx-auto">
+      <div className="max-w-xl mx-auto">
         <div className="mb-3">
           <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
             <span>{studentName}</span>
@@ -434,7 +434,7 @@ export default function TapasGame({
               <p className="text-xs font-semibold text-slate-500 mb-1.5">
                 Toca una tarjeta para ponerla en el grupo {groups.findIndex((g) => g.id === activeGroup) + 1}
               </p>
-              <div className="grid grid-cols-3 gap-1.5 max-h-[50vh] overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[55vh] overflow-y-auto pr-1">
                 {identified.map((k) => {
                   const g = groupOf(k);
                   const inActive = groups.find((x) => x.id === activeGroup)?.archetypes.includes(k);
