@@ -2539,22 +2539,27 @@ export async function generateReferralDocx(opts: {
 }): Promise<Buffer> {
   const { referral, caseFile: _caseFile, student, institution } = opts;
 
+  const COLOR_BLUE_HEADER = "D9E2F3";
+  const COLOR_ORANGE_HEADER = "FBE5D6";
+  const COLOR_BORDER = "8EAADB";
+  const COLOR_TEXT_BLACK = "000000";
+
   const tableBorders = {
-    top: { style: BorderStyle.SINGLE, size: 4, color: "2F5496" },
-    bottom: { style: BorderStyle.SINGLE, size: 4, color: "2F5496" },
-    left: { style: BorderStyle.SINGLE, size: 4, color: "2F5496" },
-    right: { style: BorderStyle.SINGLE, size: 4, color: "2F5496" },
-    insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: "2F5496" },
-    insideVertical: { style: BorderStyle.SINGLE, size: 4, color: "2F5496" },
+    top: { style: BorderStyle.SINGLE, size: 4, color: COLOR_BORDER },
+    bottom: { style: BorderStyle.SINGLE, size: 4, color: COLOR_BORDER },
+    left: { style: BorderStyle.SINGLE, size: 4, color: COLOR_BORDER },
+    right: { style: BorderStyle.SINGLE, size: 4, color: COLOR_BORDER },
+    insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: COLOR_BORDER },
+    insideVertical: { style: BorderStyle.SINGLE, size: 4, color: COLOR_BORDER },
   };
 
-  function headerBar(text: string, colSpan = 6, bgColor = "2F5496", textColor = "FFFFFF"): TableRow {
+  function headerBar(text: string, colSpan = 6, bgColor = COLOR_BLUE_HEADER, textColor = COLOR_TEXT_BLACK): TableRow {
     return new TableRow({
       children: [
         new TableCell({
           columnSpan: colSpan,
           shading: { fill: bgColor },
-          margins: { top: 60, bottom: 60, left: 100, right: 100 },
+          margins: { top: 40, bottom: 40, left: 80, right: 80 },
           children: [
             new Paragraph({
               alignment: AlignmentType.CENTER,
@@ -2563,7 +2568,7 @@ export async function generateReferralDocx(opts: {
                   text,
                   bold: true,
                   color: textColor,
-                  size: 17,
+                  size: 20, // 10pt
                   font: "Calibri",
                 }),
               ],
@@ -2574,20 +2579,20 @@ export async function generateReferralDocx(opts: {
     });
   }
 
-  function lbl(text: string, colSpan = 1, align: (typeof AlignmentType)[keyof typeof AlignmentType] = AlignmentType.LEFT): TableCell {
+  function subHeaderCell(text: string, colSpan = 3, bgColor = COLOR_BLUE_HEADER): TableCell {
     return new TableCell({
       columnSpan: colSpan,
-      shading: { fill: "F0F4F8" },
-      margins: { top: 50, bottom: 50, left: 80, right: 80 },
+      shading: { fill: bgColor },
+      margins: { top: 40, bottom: 40, left: 80, right: 80 },
       children: [
         new Paragraph({
-          alignment: align,
+          alignment: AlignmentType.CENTER,
           children: [
             new TextRun({
               text,
               bold: true,
-              color: "1E293B",
-              size: 15,
+              color: COLOR_TEXT_BLACK,
+              size: 20, // 10pt
               font: "Calibri",
             }),
           ],
@@ -2596,12 +2601,33 @@ export async function generateReferralDocx(opts: {
     });
   }
 
-  function val(text: string | null | undefined, colSpan = 1, align: (typeof AlignmentType)[keyof typeof AlignmentType] = AlignmentType.LEFT): TableCell {
+  function lbl(text: string, colSpan = 1, align: (typeof AlignmentType)[keyof typeof AlignmentType] = AlignmentType.LEFT): TableCell {
+    return new TableCell({
+      columnSpan: colSpan,
+      margins: { top: 40, bottom: 40, left: 80, right: 80 },
+      children: [
+        new Paragraph({
+          alignment: align,
+          children: [
+            new TextRun({
+              text,
+              bold: true,
+              color: COLOR_TEXT_BLACK,
+              size: 20, // 10pt
+              font: "Calibri",
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+
+  function val(text: string | null | undefined, colSpan = 1, bold = true, align: (typeof AlignmentType)[keyof typeof AlignmentType] = AlignmentType.LEFT): TableCell {
     const content = text && text.trim() ? text.trim() : "—";
     const lines = content.split("\n");
     return new TableCell({
       columnSpan: colSpan,
-      margins: { top: 50, bottom: 50, left: 80, right: 80 },
+      margins: { top: 40, bottom: 40, left: 80, right: 80 },
       children: lines.map(
         (line) =>
           new Paragraph({
@@ -2610,9 +2636,10 @@ export async function generateReferralDocx(opts: {
             children: [
               new TextRun({
                 text: line,
-                size: 15,
+                bold: bold,
+                size: 20, // 10pt
                 font: "Calibri",
-                color: "0F172A",
+                color: COLOR_TEXT_BLACK,
               }),
             ],
           })
@@ -2681,28 +2708,16 @@ export async function generateReferralDocx(opts: {
         headers: { default: createOfficialLandscapeHeader() },
         footers: { default: createOfficialLandscapeFooter() },
         children: [
-          // Título principal
-          new Paragraph({
-            alignment: AlignmentType.CENTER,
-            spacing: { before: 80, after: 140 },
-            children: [
-              new TextRun({
-                text: "FICHA DE DERIVACIÓN",
-                bold: true,
-                size: 24,
-                font: "Calibri",
-                color: "1E3A8A",
-              }),
-            ],
-          }),
-
           // Tabla principal de 6 columnas
           new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
             borders: tableBorders,
             rows: [
+              // Título
+              headerBar("FICHA DE DERIVACIÓN", 6, COLOR_BLUE_HEADER),
+
               // 1. DATOS INSTITUCIONALES
-              headerBar("DATOS INSTITUCIONALES"),
+              headerBar("DATOS INSTITUCIONALES", 6, COLOR_BLUE_HEADER),
               new TableRow({
                 children: [
                   lbl("Nombre de la institución educativa", 2),
@@ -2727,11 +2742,11 @@ export async function generateReferralDocx(opts: {
               }),
 
               // 2. INTERNA
-              headerBar("INTERNA — MARQUE CON UNA X"),
+              headerBar("INTERNA — MARQUE CON UNA X", 6, COLOR_BLUE_HEADER),
               new TableRow({
                 children: [
-                  lbl("Interna a la institución educativa", 3, AlignmentType.CENTER),
-                  lbl("Interna al Ministerio de Educación", 3, AlignmentType.CENTER),
+                  subHeaderCell("INTERNA A LA INSTITUCIÓN EDUCATIVA", 3, COLOR_BLUE_HEADER),
+                  subHeaderCell("INTERNA AL MINISTERIO DE EDUCACIÓN", 3, COLOR_BLUE_HEADER),
                 ],
               }),
               new TableRow({
@@ -2750,8 +2765,8 @@ export async function generateReferralDocx(opts: {
               }),
 
               // 3. EXTERNA
-              headerBar("EXTERNA — MARQUE CON UNA X"),
-              headerBar("Externa al Ministerio de Educación", 6, "E2E8F0", "1E293B"),
+              headerBar("EXTERNA — MARQUE CON UNA X", 6, COLOR_BLUE_HEADER),
+              headerBar("EXTERNA AL MINISTERIO DE EDUCACIÓN", 6, COLOR_BLUE_HEADER),
               new TableRow({
                 children: [
                   new TableCell({
@@ -2782,7 +2797,7 @@ export async function generateReferralDocx(opts: {
               }),
 
               // 4. DATOS PERSONALES DEL ESTUDIANTE
-              headerBar("DATOS PERSONALES DEL/LA ESTUDIANTE QUE SE DERIVA"),
+              headerBar("DATOS PERSONALES DEL O LA ESTUDIANTE QUE SE DERIVA", 6, COLOR_ORANGE_HEADER),
               new TableRow({
                 children: [
                   lbl("Apellidos y nombres completos", 1),
@@ -2833,29 +2848,29 @@ export async function generateReferralDocx(opts: {
               }),
 
               // 5. MOTIVO DE REFERENCIA (Sin consentimiento informado)
-              headerBar("MOTIVO DE REFERENCIA"),
+              headerBar("MOTIVO DE REFERENCIA", 6, COLOR_ORANGE_HEADER),
               new TableRow({
                 children: [
                   lbl("Historia de la situación actual", 1),
-                  val(referral.background_summary || referral.reason || "—", 5),
+                  val(referral.background_summary || referral.reason || "—", 5, false),
                 ],
               }),
               new TableRow({
                 children: [
                   lbl("Acciones desarrolladas", 1),
-                  val(referral.actions_taken || "—", 5),
+                  val(referral.actions_taken || "—", 5, false),
                 ],
               }),
               new TableRow({
                 children: [
                   lbl("Tipo de atención que se requiere", 1),
-                  val(referral.care_type_required || "—", 5),
+                  val(referral.care_type_required || "—", 5, false),
                 ],
               }),
               new TableRow({
                 children: [
                   lbl("Observaciones", 1),
-                  val(referral.observations || "—", 5),
+                  val(referral.observations || "—", 5, false),
                 ],
               }),
             ],
@@ -2884,34 +2899,31 @@ export async function generateReferralDocx(opts: {
                 children: [
                   new TableCell({
                     columnSpan: 1,
-                    shading: { fill: "2F5496" },
-                    margins: { top: 50, bottom: 50, left: 60, right: 60 },
+                    margins: { top: 40, bottom: 40, left: 60, right: 60 },
                     children: [
                       new Paragraph({
                         alignment: AlignmentType.CENTER,
-                        children: [new TextRun({ text: "FICHA ELABORADA POR", bold: true, color: "FFFFFF", size: 16, font: "Calibri" })],
+                        children: [new TextRun({ text: "FICHA ELABORADA POR:", bold: true, color: COLOR_TEXT_BLACK, size: 20, font: "Calibri" })],
                       }),
                     ],
                   }),
                   new TableCell({
                     columnSpan: 1,
-                    shading: { fill: "2F5496" },
-                    margins: { top: 50, bottom: 50, left: 60, right: 60 },
+                    margins: { top: 40, bottom: 40, left: 60, right: 60 },
                     children: [
                       new Paragraph({
                         alignment: AlignmentType.CENTER,
-                        children: [new TextRun({ text: "RECIBIDO POR", bold: true, color: "FFFFFF", size: 16, font: "Calibri" })],
+                        children: [new TextRun({ text: "RECIBIDO POR", bold: true, color: COLOR_TEXT_BLACK, size: 20, font: "Calibri" })],
                       }),
                     ],
                   }),
                   new TableCell({
                     columnSpan: 1,
-                    shading: { fill: "2F5496" },
-                    margins: { top: 50, bottom: 50, left: 60, right: 60 },
+                    margins: { top: 40, bottom: 40, left: 60, right: 60 },
                     children: [
                       new Paragraph({
                         alignment: AlignmentType.CENTER,
-                        children: [new TextRun({ text: "AUTORIDAD INSTITUCIONAL", bold: true, color: "FFFFFF", size: 16, font: "Calibri" })],
+                        children: [new TextRun({ text: "AUTORIDAD INSTITUCIONAL", bold: true, color: COLOR_TEXT_BLACK, size: 20, font: "Calibri" })],
                       }),
                     ],
                   }),

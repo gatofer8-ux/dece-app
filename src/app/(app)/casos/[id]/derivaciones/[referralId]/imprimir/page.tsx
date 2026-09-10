@@ -46,9 +46,10 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
   const institution = db.prepare("SELECT * FROM institutions WHERE id = ?").get(institutionId) as InstitutionRow;
 
   const sel = referral.destination_detail;
-  const cell = "border border-[#2F5496]/60 px-1.5 py-1 align-top";
-  const labelCell = `${cell} font-semibold bg-[#F0F4F8] text-slate-800`;
-  const barCell = "border border-[#2F5496] bg-[#2F5496] text-white uppercase font-bold text-center px-1.5 py-1 tracking-wide";
+  const cell = "border border-[#8EAADB] px-1.5 py-1 align-top text-black";
+  const labelCell = `${cell} font-bold text-black`;
+  const barBlue = "border border-[#8EAADB] bg-[#D9E2F3] text-black font-bold text-center px-1.5 py-1 uppercase tracking-wide";
+  const barOrange = "border border-[#8EAADB] bg-[#FBE5D6] text-black font-bold text-center px-1.5 py-1 uppercase tracking-wide";
 
   return (
     <div className="w-[27.7cm] max-w-full mx-auto bg-white">
@@ -82,7 +83,7 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
           <PrintButton hideWordButton={true} className="p-0 bg-transparent border-none" />
         </div>
       </div>
-      <div id="printable-content" className="p-6 print:p-0 text-[9px] leading-tight">
+      <div id="printable-content" className="p-6 print:p-0 text-[9px] leading-tight text-black">
         <DocumentHeader
           title="Ficha de Derivación"
           subtitle="Departamento de Consejería Estudiantil — DECE"
@@ -91,10 +92,13 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
           compact
         />
 
-        <table className="w-full border-collapse mt-2">
+        <table className="w-full border-collapse mt-2 border border-[#8EAADB]">
           <tbody>
             <tr>
-              <td colSpan={6} className={barCell}>Datos institucionales</td>
+              <td colSpan={6} className={barBlue}>FICHA DE DERIVACIÓN</td>
+            </tr>
+            <tr>
+              <td colSpan={6} className={barBlue}>Datos institucionales</td>
             </tr>
             <tr>
               <td className={labelCell} colSpan={2}>Nombre de la institución educativa</td>
@@ -114,11 +118,11 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
             </tr>
 
             <tr>
-              <td colSpan={6} className={barCell}>Interna — marque con una X</td>
+              <td colSpan={6} className={barBlue}>Interna — marque con una X</td>
             </tr>
             <tr>
-              <td className={`${labelCell} text-center`} colSpan={3}>Interna a la institución educativa</td>
-              <td className={`${labelCell} text-center`} colSpan={3}>Interna al Ministerio de Educación</td>
+              <td className={barBlue} colSpan={3}>Interna a la institución educativa</td>
+              <td className={barBlue} colSpan={3}>Interna al Ministerio de Educación</td>
             </tr>
             <tr>
               <td className={cell} colSpan={3}>
@@ -130,10 +134,10 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
             </tr>
 
             <tr>
-              <td colSpan={6} className={barCell}>Externa — marque con una X</td>
+              <td colSpan={6} className={barBlue}>Externa — marque con una X</td>
             </tr>
             <tr>
-              <td colSpan={6} className={`${barCell} bg-slate-100 text-slate-800`}>Externa al Ministerio de Educación</td>
+              <td colSpan={6} className={barBlue}>Externa al Ministerio de Educación</td>
             </tr>
             <tr>
               <td className={cell} colSpan={3}>
@@ -163,7 +167,7 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
             </tr>
 
             <tr>
-              <td colSpan={6} className={barCell}>Datos personales del/la estudiante que se deriva</td>
+              <td colSpan={6} className={barOrange}>Datos personales del o la estudiante que se deriva</td>
             </tr>
             <tr>
               <td className={labelCell} colSpan={1}>Apellidos y nombres completos</td>
@@ -203,52 +207,52 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
             </tr>
 
             <tr>
-              <td colSpan={6} className={barCell}>Motivo de referencia</td>
+              <td colSpan={6} className={barOrange}>Motivo de referencia</td>
             </tr>
             <tr>
               <td className={labelCell} colSpan={1}>Historia de la situación actual</td>
-              <td className={cell} colSpan={5}><p className="whitespace-pre-wrap">{referral.background_summary || "—"}</p></td>
+              <td className={cell} colSpan={5}><p className="whitespace-pre-wrap font-normal">{referral.background_summary || referral.reason || "—"}</p></td>
             </tr>
             <tr>
               <td className={labelCell} colSpan={1}>Acciones desarrolladas</td>
-              <td className={cell} colSpan={5}><p className="whitespace-pre-wrap">{referral.actions_taken || "—"}</p></td>
+              <td className={cell} colSpan={5}><p className="whitespace-pre-wrap font-normal">{referral.actions_taken || "—"}</p></td>
             </tr>
             <tr>
               <td className={labelCell} colSpan={1}>Tipo de atención que se requiere</td>
-              <td className={cell} colSpan={5}><p className="whitespace-pre-wrap">{referral.care_type_required || "—"}</p></td>
+              <td className={cell} colSpan={5}><p className="whitespace-pre-wrap font-normal">{referral.care_type_required || "—"}</p></td>
             </tr>
             <tr>
               <td className={labelCell} colSpan={1}>Observaciones</td>
-              <td className={cell} colSpan={5}><p className="whitespace-pre-wrap">{referral.observations || "—"}</p></td>
+              <td className={cell} colSpan={5}><p className="whitespace-pre-wrap font-normal">{referral.observations || "—"}</p></td>
             </tr>
           </tbody>
         </table>
 
-        <p className="text-[8px] text-slate-500 italic mt-2 border border-slate-300 p-1.5">
+        <p className="text-[8px] text-slate-700 italic mt-2 border border-[#8EAADB] p-1.5">
           Es responsabilidad del representante legal agendar los turnos necesarios en el MSP 171, IESS u otro profesional
           en salud y/o salud mental. Tiene 15 días a partir de la fecha para presentar el certificado correspondiente o
           documento de respaldo en el Departamento de Consejería Estudiantil para seguimiento del caso.
         </p>
 
-        <table className="w-full border-collapse mt-3">
+        <table className="w-full border-collapse mt-3 border border-[#8EAADB]">
           <tbody>
             <tr>
-              <td className={barCell} colSpan={2}>Ficha elaborada por</td>
-              <td className={barCell} colSpan={2}>Recibido por</td>
-              <td className={barCell} colSpan={2}>Autoridad institucional</td>
+              <td className="border border-[#8EAADB] font-bold text-center px-1.5 py-1 text-black uppercase" colSpan={2}>Ficha elaborada por</td>
+              <td className="border border-[#8EAADB] font-bold text-center px-1.5 py-1 text-black uppercase" colSpan={2}>Recibido por</td>
+              <td className="border border-[#8EAADB] font-bold text-center px-1.5 py-1 text-black uppercase" colSpan={2}>Autoridad institucional</td>
             </tr>
             <tr className="text-center">
               <td className={cell} colSpan={2}>
                 <div className="h-8" />
-                <div className="border-t border-slate-500 pt-1">{referral.elaborated_by_name || "—"}<br /><span className="text-slate-400">Coordinador/a DECE</span></div>
+                <div className="border-t border-[#8EAADB] pt-1 font-bold">{referral.elaborated_by_name || "—"}<br /><span className="text-slate-500 font-normal">Coordinador/a DECE</span></div>
               </td>
               <td className={cell} colSpan={2}>
                 <div className="h-8" />
-                <div className="border-t border-slate-500 pt-1">{referral.received_by || "—"}<br /><span className="text-slate-400">Representante legal</span></div>
+                <div className="border-t border-[#8EAADB] pt-1 font-bold">{referral.received_by || "—"}<br /><span className="text-slate-500 font-normal">Representante legal</span></div>
               </td>
               <td className={cell} colSpan={2}>
                 <div className="h-8" />
-                <div className="border-t border-slate-500 pt-1">{referral.authority_name || "—"}<br /><span className="text-slate-400">Rector/a</span></div>
+                <div className="border-t border-[#8EAADB] pt-1 font-bold">{referral.authority_name || "—"}<br /><span className="text-slate-500 font-normal">Rector/a</span></div>
               </td>
             </tr>
           </tbody>
