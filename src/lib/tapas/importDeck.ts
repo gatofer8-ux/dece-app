@@ -87,19 +87,47 @@ export async function importTapasDeckFromPdf(
   }
 
   const { pdfToPng } = await import("pdf-to-png-converter");
+  const { Jimp } = await import("jimp");
   const pages = assignment.map((a) => a.page);
   const rendered = await pdfToPng(pdf, { viewportScale: 2.0, pagesToProcess: pages });
 
   const dir = path.join(TAPAS_CARDS_DIR, institutionId);
   fs.mkdirSync(dir, { recursive: true });
 
+  // El PDF oficial "para presentar a la clase" muestra la cartilla (ilustración
+  // + nombre) en la mitad izquierda de una página horizontal, con el texto de
+  // la definición a la derecha. Se recorta a la cartilla para que no se vea
+  // diminuta. Fracciones medidas sobre el diseño (constante en todo el mazo).
+  const CROP = { x: 0.075, y: 0.015, w: 0.386, h: 0.945 };
+
+  async function cropCard(pngBuffer: Buffer): Promise<Buffer> {
+    try {
+      const img = await Jimp.read(pngBuffer);
+      const W = img.bitmap.width;
+      const H = img.bitmap.height;
+      // Solo recortar si es una página apaisada (layout de presentación).
+      if (W > H) {
+        img.crop({
+          x: Math.round(W * CROP.x),
+          y: Math.round(H * CROP.y),
+          w: Math.round(W * CROP.w),
+          h: Math.round(H * CROP.h),
+        });
+      }
+      return (await img.getBuffer("image/png")) as Buffer;
+    } catch {
+      return pngBuffer;
+    }
+  }
+
   const cards: Record<string, string> = {};
   for (let i = 0; i < assignment.length; i++) {
     const { key } = assignment[i];
     const content = rendered[i]?.content;
     if (!Buffer.isBuffer(content)) continue;
+    const cropped = await cropCard(content);
     const rel = path.join("tapas-cards", institutionId, `${key}.png`);
-    fs.writeFileSync(path.join(dir, `${key}.png`), content);
+    fs.writeFileSync(path.join(dir, `${key}.png`), cropped);
     cards[key] = rel.split(path.sep).join("/");
   }
 
