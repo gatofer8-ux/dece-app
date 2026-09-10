@@ -2588,11 +2588,11 @@ export async function generateReferralDocx(opts: {
           columnSpan: colSpan,
           width: { size: spanWidth(0, colSpan), type: WidthType.DXA },
           shading: { fill: bgColor },
-          margins: { top: 40, bottom: 40, left: 80, right: 80 },
+          margins: { top: 10, bottom: 10, left: 80, right: 80 },
           children: [
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              spacing: { line: 250, before: 0, after: 0 },
+              spacing: { line: 188, before: 0, after: 0 },
               children: [
                 new TextRun({
                   text,
@@ -2688,11 +2688,11 @@ export async function generateReferralDocx(opts: {
       rowSpan: opts.rowSpan,
       width: { size: spanWidth(opts.startCol, opts.colSpan), type: WidthType.DXA },
       shading: opts.bgColor ? { fill: opts.bgColor } : undefined,
-      margins: { top: 40, bottom: 40, left: 80, right: 80 },
+      margins: { top: 10, bottom: 10, left: 80, right: 80 },
       children: [
         new Paragraph({
           alignment: opts.align ?? AlignmentType.LEFT,
-          spacing: { line: 250, before: 0, after: 20 },
+          spacing: { line: 188, before: 0, after: 0 },
           children: runs.length > 0 ? runs : [new TextRun({ text: "—", size, font: "Calibri" })],
         }),
       ],
@@ -2714,7 +2714,7 @@ export async function generateReferralDocx(opts: {
     if (lines.length === 0) {
       paragraphs.push(
         new Paragraph({
-          spacing: { line: 250, before: 0, after: 20 },
+          spacing: { line: 188, before: 0, after: 0 },
           children: [
             new TextRun({ text: opts.boldPrefix, bold: true, size, font: "Calibri", color: COLOR_TEXT_BLACK }),
             new TextRun({ text: " —", bold: false, size, font: "Calibri", color: COLOR_TEXT_BLACK }),
@@ -2724,7 +2724,7 @@ export async function generateReferralDocx(opts: {
     } else {
       paragraphs.push(
         new Paragraph({
-          spacing: { line: 250, before: 0, after: 20 },
+          spacing: { line: 188, before: 0, after: 0 },
           children: [
             new TextRun({ text: opts.boldPrefix, bold: true, size, font: "Calibri", color: COLOR_TEXT_BLACK }),
             new TextRun({ text: " " + lines[0], bold: false, size, font: "Calibri", color: COLOR_TEXT_BLACK }),
@@ -2734,7 +2734,7 @@ export async function generateReferralDocx(opts: {
       for (let i = 1; i < lines.length; i++) {
         paragraphs.push(
           new Paragraph({
-            spacing: { line: 250, before: 0, after: 20 },
+            spacing: { line: 188, before: 0, after: 0 },
             children: [
               new TextRun({ text: lines[i], bold: false, size, font: "Calibri", color: COLOR_TEXT_BLACK }),
             ],
@@ -2746,7 +2746,7 @@ export async function generateReferralDocx(opts: {
     return new TableCell({
       columnSpan: opts.colSpan,
       width: { size: spanWidth(opts.startCol, opts.colSpan), type: WidthType.DXA },
-      margins: { top: 40, bottom: 40, left: 80, right: 80 },
+      margins: { top: 10, bottom: 10, left: 80, right: 80 },
       children: paragraphs,
     });
   }
@@ -2756,11 +2756,11 @@ export async function generateReferralDocx(opts: {
       columnSpan: 1,
       rowSpan: rowSpan,
       width: { size: spanWidth(startCol, 1), type: WidthType.DXA },
-      margins: { top: 40, bottom: 40, left: 20, right: 20 },
+      margins: { top: 8, bottom: 8, left: 20, right: 20 },
       children: [
         new Paragraph({
           alignment: AlignmentType.CENTER,
-          spacing: { line: 250, before: 0, after: 0 },
+          spacing: { line: 188, before: 0, after: 0 },
           children: [
             new TextRun({
               text: isChecked ? "X" : "",
@@ -2882,10 +2882,10 @@ export async function generateReferralDocx(opts: {
         new TableCell({
           columnSpan: 6,
           width: { size: spanWidth(8, 6), type: WidthType.DXA },
-          margins: { top: 40, bottom: 40, left: 80, right: 80 },
+          margins: { top: 10, bottom: 10, left: 80, right: 80 },
           children: [
             new Paragraph({
-              spacing: { line: 250, before: 0, after: 20 },
+              spacing: { line: 188, before: 0, after: 0 },
               children: [
                 new TextRun({ text: " Ficha No.: ", bold: true, size: 20, font: "Calibri", color: "0070C0" }),
                 new TextRun({ text: fichaNo, bold: true, size: 20, font: "Calibri", color: "0070C0" }),
@@ -2904,11 +2904,11 @@ export async function generateReferralDocx(opts: {
           columnSpan: 6,
           width: { size: spanWidth(0, 6), type: WidthType.DXA },
           shading: { fill: COLOR_BLUE_HEADER },
-          margins: { top: 40, bottom: 40, left: 80, right: 80 },
+          margins: { top: 10, bottom: 10, left: 80, right: 80 },
           children: [
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              spacing: { line: 250, before: 0, after: 0 },
+              spacing: { line: 188, before: 0, after: 0 },
               children: [new TextRun({ text: "INTERNA A LA INSTITUCIÓN EDUCATIVA", bold: true, size: 20, font: "Calibri", color: COLOR_TEXT_BLACK })],
             }),
           ],
@@ -2917,11 +2917,11 @@ export async function generateReferralDocx(opts: {
           columnSpan: 8,
           width: { size: spanWidth(6, 8), type: WidthType.DXA },
           shading: { fill: COLOR_BLUE_HEADER },
-          margins: { top: 40, bottom: 40, left: 80, right: 80 },
+          margins: { top: 10, bottom: 10, left: 80, right: 80 },
           children: [
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              spacing: { line: 250, before: 0, after: 0 },
+              spacing: { line: 188, before: 0, after: 0 },
               children: [new TextRun({ text: "INTERNA AL MINISTERIO DE EDUCACIÓN", bold: true, size: 20, font: "Calibri", color: COLOR_TEXT_BLACK })],
             }),
           ],
@@ -3105,13 +3105,16 @@ export async function generateReferralDocx(opts: {
           startCol: 0,
           colSpan: 14,
           boldPrefix: "Acciones desarrolladas: ",
+          // Las acciones van en línea seguida (no una debajo de otra) separadas
+          // por un espacio amplio, para ahorrar alto y que la ficha entre en
+          // una hoja. El texto se ajusta y va envolviendo dentro de la celda.
           content: referral.actions_taken
             ? referral.actions_taken
                 .split("\n")
                 .map((line) => line.trim())
                 .filter(Boolean)
                 .map((line) => (line.startsWith("-") ? line : `- ${line.replace(/^(\d+[\.\)]|[•\*\+])\s*/, "")}`))
-                .join("\n")
+                .join("     ")
             : "—",
         }),
       ],
@@ -3157,17 +3160,18 @@ export async function generateReferralDocx(opts: {
         new TableCell({
           columnSpan: 5,
           width: { size: spanWidth(0, 5), type: WidthType.DXA },
-          margins: { top: 80, bottom: 80, left: 60, right: 60 },
+          margins: { top: 12, bottom: 12, left: 60, right: 60 },
           children: [
-            new Paragraph({ text: "", spacing: { before: 180, after: 120 } }),
+            
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              spacing: { line: 250, before: 0, after: 0 },
+              spacing: { line: 188, before: 0, after: 0 },
               children: [
                 new TextRun({ text: "____________________________________\n", color: "64748B", size: 16 }),
                 new TextRun({ text: `${deceName}\n`, bold: true, size: 20, font: "Calibri" }),
                 new TextRun({ text: `${deceRole}\n`, size: 16, font: "Calibri" }),
-                ...(deceDoc ? [new TextRun({ text: deceDoc, size: 16, font: "Calibri" })] : []),
+                ...(deceDoc ? [new TextRun({ text: `${deceDoc}\n`, size: 16, font: "Calibri" })] : []),
+                new TextRun({ text: "Fecha: …..............................", size: 16, font: "Calibri" }),
               ],
             }),
           ],
@@ -3175,16 +3179,17 @@ export async function generateReferralDocx(opts: {
         new TableCell({
           columnSpan: 5,
           width: { size: spanWidth(5, 5), type: WidthType.DXA },
-          margins: { top: 80, bottom: 80, left: 60, right: 60 },
+          margins: { top: 12, bottom: 12, left: 60, right: 60 },
           children: [
-            new Paragraph({ text: "", spacing: { before: 180, after: 120 } }),
+            
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              spacing: { line: 250, before: 0, after: 0 },
+              spacing: { line: 188, before: 0, after: 0 },
               children: [
                 new TextRun({ text: "..............................................................\n", color: "64748B", size: 16 }),
                 new TextRun({ text: `${receivedName}\n`, bold: true, size: 20, font: "Calibri" }),
-                new TextRun({ text: "Representante legal", size: 16, font: "Calibri" }),
+                new TextRun({ text: "Representante legal\n", size: 16, font: "Calibri" }),
+                new TextRun({ text: "Fecha: …..............................", size: 16, font: "Calibri" }),
               ],
             }),
           ],
@@ -3192,27 +3197,21 @@ export async function generateReferralDocx(opts: {
         new TableCell({
           columnSpan: 4,
           width: { size: spanWidth(10, 4), type: WidthType.DXA },
-          margins: { top: 80, bottom: 80, left: 60, right: 60 },
+          margins: { top: 12, bottom: 12, left: 60, right: 60 },
           children: [
-            new Paragraph({ text: "", spacing: { before: 180, after: 120 } }),
+            
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              spacing: { line: 250, before: 0, after: 0 },
+              spacing: { line: 188, before: 0, after: 0 },
               children: [
                 new TextRun({ text: "____________________________________\n", color: "64748B", size: 16 }),
                 new TextRun({ text: `${authorityName}\n`, bold: true, size: 20, font: "Calibri" }),
-                new TextRun({ text: authorityRole, size: 16, font: "Calibri" }),
+                new TextRun({ text: `${authorityRole}\n`, size: 16, font: "Calibri" }),
+                new TextRun({ text: "Fecha: …..............................", size: 16, font: "Calibri" }),
               ],
             }),
           ],
         }),
-      ],
-    }),
-    new TableRow({
-      children: [
-        richCell({ startCol: 0, colSpan: 5, boldText: "Fecha: …......................................................" }),
-        richCell({ startCol: 5, colSpan: 5, boldText: "Fecha: …......................................................" }),
-        richCell({ startCol: 10, colSpan: 4, boldText: "Fecha: …......................................................" }),
       ],
     }),
 
@@ -3222,11 +3221,11 @@ export async function generateReferralDocx(opts: {
         new TableCell({
           columnSpan: 14,
           width: { size: 14838, type: WidthType.DXA },
-          margins: { top: 40, bottom: 40, left: 80, right: 80 },
+          margins: { top: 10, bottom: 10, left: 80, right: 80 },
           children: [
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              spacing: { line: 220, before: 0, after: 0 },
+              spacing: { line: 168, before: 0, after: 0 },
               children: [
                 new TextRun({
                   text: "ES RESPONSABILIDAD DEL REPRESENTANTE LEGAL AGENDAR LOS TURNOS NECESARIOS EN EL MSP 171 O IESS U OTRO PROFESIONAL EN SALUD Y/O SALUD MENTAL\nTIENE 15 DIAS A PARTIR DE LA FECHA PARA PRESENTAR EL CERTIFICADO CORRESPONDIENTE O DOCUMENTO DE RESPALDO EN EL DEPARTAMENTO DE CONSEJERÍA ESTUDIANTIL PARA SEGUIMIENTO DEL CASO",
@@ -3259,22 +3258,27 @@ export async function generateReferralDocx(opts: {
       {
         properties: {
           page: {
+            // docx 9.x, con `orientation: LANDSCAPE`, intercambia width/height.
+            // Por eso aquí van las medidas en VERTICAL (A4) y la librería las
+            // gira: el .docx descargado abre en horizontal de verdad en Word.
             size: {
-              width: 16838, // A4 Landscape
-              height: 11906,
+              width: 11906,
+              height: 16838,
               orientation: PageOrientation.LANDSCAPE,
             },
+            // Márgenes ajustados para que toda la ficha entre en UNA hoja
+            // horizontal sin perder legibilidad (cuerpo se mantiene en 10pt).
             margin: {
-              top: 1000,
-              right: 1000,
-              bottom: 1000,
-              left: 1000,
-              header: 500,
-              footer: 500,
+              top: 340,
+              right: 900,
+              bottom: 280,
+              left: 900,
+              header: 180,
+              footer: 180,
             },
           },
         },
-        headers: { default: createOfficialLandscapeHeader() },
+        headers: { default: createReferralCompactHeader() },
         footers: { default: createOfficialLandscapeFooter() },
         children: [
           new Table({
@@ -3290,6 +3294,33 @@ export async function generateReferralDocx(opts: {
   });
 
   return await Packer.toBuffer(doc);
+}
+
+/**
+ * Encabezado compacto para la Ficha de Derivación: la misma imagen oficial
+ * pero más baja, para que toda la ficha entre en una sola hoja horizontal.
+ */
+function createReferralCompactHeader() {
+  const headerImg = getImageBuffer("header_4k.png");
+
+  return new Header({
+    children: [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        indent: { left: -1700, right: -1700 },
+        spacing: { after: 0, before: 0 },
+        children: headerImg
+          ? [
+              new ImageRun({
+                data: headerImg,
+                transformation: { width: 720, height: 46 },
+                type: "png",
+              }),
+            ]
+          : [],
+      }),
+    ],
+  });
 }
 
 /**
