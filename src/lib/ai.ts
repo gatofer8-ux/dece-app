@@ -33,6 +33,74 @@ const MODEL_FALLBACK_CHAIN = [
 
 let currentKeyIndex = 0;
 
+/**
+ * Sanitiza la respuesta generada por la IA para garantizar texto plano formal institucional:
+ * - Sin sintaxis Markdown (negritas **, cursivas _, encabezados #, backticks `, citas >).
+ * - Normaliza viñetas con símbolos (•, -, *, +) a listas ordenadas limpias "1. ", "2. ".
+ * - Colapsa saltos de línea excesivos (\n{3,} -> \n\n).
+ * - Elimina espacios en blanco residuales al inicio y fin de cada línea y del documento.
+ */
+export function sanitizeAiText(raw: string | null | undefined): string {
+  if (!raw) return "";
+  let text = String(raw).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+
+  // 1. Quitar bloques de código y backticks
+  text = text.replace(/```[\s\S]*?```/g, (match) => {
+    return match.replace(/^```[a-zA-Z0-9_-]*\n?/, "").replace(/\n?```$/, "");
+  });
+  text = text.replace(/`([^`\n]+)`/g, "$1");
+
+  // 2. Quitar encabezados Markdown (#, ##, etc.) al inicio de línea
+  text = text.replace(/^#{1,6}\s+/gm, "");
+
+  // 3. Quitar negritas y cursivas Markdown
+  text = text.replace(/\*\*([^*]+)\*\*/g, "$1");
+  text = text.replace(/__([^_]+)__/g, "$1");
+  text = text.replace(/(^|[^\w*])\*([^*\n]+)\*([^\w*]|$)/g, "$1$2$3");
+  text = text.replace(/(^|[^\w_])_([^_\n]+)_([^\w_]|$)/g, "$1$2$3");
+
+  // 4. Quitar citas Markdown
+  text = text.replace(/^>\s*/gm, "");
+
+  // 5. Normalizar viñetas con símbolos a listas numeradas limpias
+  const lines = text.split("\n");
+  let listCounter = 1;
+
+  const normalizedLines = lines.map((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      listCounter = 1;
+      return "";
+    }
+
+    // Viñeta con símbolo: •, *, -, +
+    const bulletMatch = trimmed.match(/^([•\*\-\+])\s+(.*)$/);
+    if (bulletMatch) {
+      const content = bulletMatch[2];
+      const res = `${listCounter}. ${content}`;
+      listCounter++;
+      return res;
+    }
+
+    // Número existente: 1., 1), 1 -
+    const numMatch = trimmed.match(/^(\d+)[\.\)\-]\s*(.*)$/);
+    if (numMatch) {
+      const num = parseInt(numMatch[1], 10);
+      listCounter = num + 1;
+      return `${num}. ${numMatch[2]}`;
+    }
+
+    return line.trimEnd();
+  });
+
+  text = normalizedLines.join("\n");
+
+  // 6. Colapsar 3 o más saltos de línea a máximo 2
+  text = text.replace(/\n{3,}/g, "\n\n");
+
+  return text.trim();
+}
+
 function getClient(): GoogleGenAI | null {
   const apiKeyString = process.env.GEMINI_API_KEY;
   if (!apiKeyString) {
@@ -50,11 +118,21 @@ function getClient(): GoogleGenAI | null {
   // se hayan colado en texto libre. La seudonimización de nombres se hace en
   // origen (buildCaseContext / aiPrivacy), esto es la última barrera.
   const realGenerate = client.models.generateContent.bind(client.models);
-  client.models.generateContent = ((params: any) => {
+  client.models.generateContent = (async (params: any) => {
     if (typeof params?.contents === "string") {
       params = { ...params, contents: pseudonymize(params.contents) };
     }
-    return realGenerate(params);
+    const res = await realGenerate(params);
+    if (res && typeof res.text === "string") {
+      const clean = sanitizeAiText(res.text);
+      Object.defineProperty(res, "text", {
+        value: clean,
+        writable: true,
+        configurable: true,
+        enumerable: true,
+      });
+    }
+    return res;
   }) as typeof client.models.generateContent;
 
   return client;
@@ -125,13 +203,16 @@ export async function draftText(opts: {
 
   const prompt = `Eres un asistente que ayuda a un profesional del Departamento de Consejería Estudiantil (DECE) en Ecuador a redactar documentos técnicos oficiales de gestión de casos. Usa lenguaje profesional, claro, objetivo, respetuoso y con enfoque de derechos, sin emitir juicios de valor ni diagnósticos clínicos que no correspondan a un informe DECE.
 
-REGLA DE FORMATO ESTRICTA Y OBLIGATORIA:
-1. Si el campo a redactar dice 'Conclusiones', 'Recomendaciones' o menciona 'viñetas', ESTÁS OBLIGADO a usar saltos de línea físicos (\n) y guiones (-) para hacer una lista vertical real.
-2. NUNCA escribas conclusiones o recomendaciones en un solo párrafo condensado. Cada punto debe ir en un renglón nuevo.
-3. Si son conclusiones, DEBEN ser al menos 4 puntos separados.
+REGLAS DE FORMATO Y ESTILO ESTRICTAS (OBLIGATORIAS):
+1. Devuelve SIEMPRE texto plano limpio. NUNCA uses sintaxis Markdown (sin negritas **, sin cursivas _, sin títulos #, sin backticks \`).
+2. NUNCA uses viñetas con símbolos (como •, *, -). Para listas, conclusiones o recomendaciones, usa EXCLUSIVAMENTE numeración secuencial limpia: "1. ", "2. ", "3. ".
+3. Cada punto de una lista debe ir en un renglón nuevo.
+4. No dejes líneas en blanco al inicio ni al final del texto. Deja un máximo de una sola línea en blanco entre párrafos o secciones.
+5. Si son conclusiones o recomendaciones, redacta al menos 4 puntos enumerados de forma independiente.
 
   ${socializationRule}
-  ${bimonthlyRule}\n  Vas a redactar o mejorar el siguiente campo de un documento: "${opts.fieldLabel}".
+  ${bimonthlyRule}
+  Vas a redactar o mejorar el siguiente campo de un documento: "${opts.fieldLabel}".
 
 Contexto del caso (datos ya registrados en el sistema; úsalos para dar coherencia, pero NO inventes datos, nombres, fechas ni hechos que no aparezcan aquí):
 ${opts.context.trim() || "(sin contexto adicional disponible)"}
@@ -142,7 +223,7 @@ ${
     : "El campo está vacío — redacta un borrador inicial razonable basado únicamente en el contexto disponible."
 }
 
-Responde ÚNICAMENTE con el texto final del campo, en español, sin encabezados, sin comillas, sin explicaciones adicionales ni notas fuera del texto del documento.`;
+Responde ÚNICAMENTE con el texto final del campo, en español, en texto plano sin markdown, sin encabezados, sin comillas, sin explicaciones adicionales ni notas fuera del texto del documento.`;
 
   const preferredModel = process.env.GEMINI_MODEL;
   const modelsToTry = preferredModel
