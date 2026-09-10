@@ -179,6 +179,17 @@ export default async function CasoDetallePage({
   const violenceReports = db
     .prepare("SELECT * FROM violence_reports WHERE case_file_id = ? ORDER BY report_date DESC, created_at DESC")
     .all(caseFile.id) as ViolenceReportRow[];
+  let accompanimentReports: { id: string; report_number: string | null; report_date: string }[] = [];
+  try {
+    accompanimentReports = db
+      .prepare("SELECT id, report_number, report_date FROM case_accompaniment_reports WHERE case_file_id = ? ORDER BY created_at DESC")
+      .all(caseFile.id) as typeof accompanimentReports;
+  } catch {
+    /* tabla aún no migrada */
+  }
+  const isViolenceCase = ["VIOLENCIA_INTRAFAMILIAR", "VIOLENCIA_ESCOLAR_BULLYING", "VIOLENCIA_SEXUAL", "VULNERACION_DERECHOS"].includes(
+    caseFile.risk_type
+  );
   const socializationActs = db
     .prepare("SELECT * FROM socialization_acts WHERE case_file_id = ? ORDER BY act_date DESC, created_at DESC")
     .all(caseFile.id) as SocializationActRow[];
@@ -642,6 +653,36 @@ export default async function CasoDetallePage({
               {violenceReports.length === 0 && <p className="text-sm text-slate-400">Sin reportes registrados.</p>}
             </div>
           </section>
+
+          {/* Informe técnico de acompañamiento a víctimas de violencia */}
+          {isViolenceCase && (
+            <section className="card p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-slate-700">Informe técnico de acompañamiento a víctimas de violencia</h2>
+                <Link href={`/casos/${caseFile.id}/acompanamiento-tecnico/nueva`} className="text-xs text-brand-700 hover:underline">
+                  + Nuevo informe
+                </Link>
+              </div>
+              <div className="space-y-2">
+                {accompanimentReports.map((r) => (
+                  <div key={r.id} className="text-sm border-b border-slate-100 pb-2 flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                        {r.report_number || "Sin codificar"}
+                      </span>
+                      <span className="text-xs text-slate-500">• {formatDate(r.report_date)}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <a href={`/api/casos/${caseFile.id}/acompanamiento-tecnico/${r.id}/export-word`} className="text-xs text-blue-700 hover:underline font-medium">📄 Word</a>
+                      <Link href={`/casos/${caseFile.id}/acompanamiento-tecnico/${r.id}/editar`} className="text-xs text-slate-600 hover:underline">✏️ Editar</Link>
+                      <Link href={`/casos/${caseFile.id}/acompanamiento-tecnico/${r.id}/imprimir`} className="text-xs text-brand-700 hover:underline">🖨️ Imprimir</Link>
+                    </div>
+                  </div>
+                ))}
+                {accompanimentReports.length === 0 && <p className="text-sm text-slate-400">Sin informe técnico de acompañamiento registrado.</p>}
+              </div>
+            </section>
+          )}
 
           {/* Actas de socialización de vulnerabilidad */}
           <section className="card p-5">

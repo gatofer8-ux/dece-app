@@ -807,6 +807,43 @@ export interface ActivityReportRow {
   updated_at: string;
 }
 
+export interface CaseAccompanimentReportRow {
+  id: string;
+  case_file_id: string;
+  institution_id: string;
+  created_by_id: string | null;
+  report_number: string | null;
+  report_date: string;
+  professional_managing: string | null;
+  professional_signing: string | null;
+  signing_date: string | null;
+  student_full_name: string | null;
+  student_birth_day: string | null;
+  student_birth_month: string | null;
+  student_birth_year: string | null;
+  student_age: string | null;
+  student_nationality: string | null;
+  student_document_id: string | null;
+  student_grade: string | null;
+  student_jornada: string | null;
+  rep_full_name: string | null;
+  rep_document_id: string | null;
+  rep_relationship: string | null;
+  rep_address: string | null;
+  rep_phone_cell: string | null;
+  rep_phone_landline: string | null;
+  family_situation: string | null;
+  indicators_json: string;
+  risk_protection_json: string;
+  academic_performance: string | null;
+  accompaniment_actions: string | null;
+  ext_referral_json: string;
+  psychosocial_referral_json: string;
+  restitution_plan_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface TeacherAlertRow {
   id: string;
   institution_id: string;
