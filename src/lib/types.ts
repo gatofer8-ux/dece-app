@@ -789,6 +789,37 @@ export interface MeetingMinutesRow {
   updated_at: string;
 }
 
+export interface RestorativeCircleFichaRow {
+  id: string;
+  institution_id: string;
+  created_by_id: string | null;
+  school_year_id: string | null;
+  case_file_id: string | null;
+  student_id: string | null;
+  ficha_code: string | null;
+  center_name: string | null;
+  district_name: string | null;
+  facilitator_name: string | null;
+  circle_type: string | null;
+  participants_count: string | null;
+  participant_type: string | null;
+  problematica: string | null;
+  circle_date: string | null;
+  circle_time: string | null;
+  diagnostico: string | null;
+  objetivos: string | null;
+  declaracion_inicial: string | null;
+  q_icebreaker: string | null;
+  q_intro: string | null;
+  q_develop: string | null;
+  q_actions: string | null;
+  declaracion_cierre: string | null;
+  informe_circulo: string | null;
+  conclusion: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ActivityReportRow {
   id: string;
   institution_id: string;
