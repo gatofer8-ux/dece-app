@@ -98,7 +98,7 @@ export default async function CasoDetallePage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { checklist_guardado?: string };
+  searchParams: { checklist_guardado?: string; checklist_error?: string };
 }) {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
@@ -123,15 +123,20 @@ export default async function CasoDetallePage({
   const checklistItems = db
     .prepare("SELECT * FROM case_checklist_items WHERE case_file_id = ? ORDER BY item_order ASC")
     .all(caseFile.id) as CaseChecklistItemRow[];
-  const checklistAttachmentsById = new Map(
-    (
-      db
-        .prepare(
-          "SELECT id, filename, checklist_item_id FROM attachments WHERE case_file_id = ? AND checklist_item_id IS NOT NULL"
-        )
-        .all(caseFile.id) as { id: string; filename: string; checklist_item_id: string }[]
-    ).map((a) => [a.checklist_item_id, a])
-  );
+  let checklistAttachmentsById = new Map<string, { id: string; filename: string; checklist_item_id: string }>();
+  try {
+    checklistAttachmentsById = new Map(
+      (
+        db
+          .prepare(
+            "SELECT id, filename, checklist_item_id FROM attachments WHERE case_file_id = ? AND checklist_item_id IS NOT NULL"
+          )
+          .all(caseFile.id) as { id: string; filename: string; checklist_item_id: string }[]
+      ).map((a) => [a.checklist_item_id, a])
+    );
+  } catch {
+    // columna checklist_item_id aún inexistente (base sin migrar) — sin respaldos
+  }
   const checklistReviews = db
     .prepare("SELECT * FROM case_checklist_reviews WHERE case_file_id = ?")
     .all(caseFile.id) as CaseChecklistReviewRow[];
@@ -1245,6 +1250,12 @@ export default async function CasoDetallePage({
               </p>
             )}
 
+            {searchParams.checklist_error && (
+              <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                ⚠️ {searchParams.checklist_error}
+              </p>
+            )}
+
             {checklistItems.length === 0 && (
               <p className="text-sm text-slate-500 mb-3">Este caso todavía no tiene ningún checklist de expediente.</p>
             )}
@@ -1261,7 +1272,7 @@ export default async function CasoDetallePage({
                       🖨️ Imprimir
                     </Link>
                   </div>
-                  <form action={boundSaveChecklist} encType="multipart/form-data" className="space-y-4">
+                  <form action={boundSaveChecklist} className="space-y-4">
                     <div className="overflow-x-auto -mx-1">
                       <table className="w-full text-xs border-collapse">
                         <thead>
@@ -1270,7 +1281,7 @@ export default async function CasoDetallePage({
                             <th className="py-1 px-1">Ítem</th>
                             <th className="py-1 px-1 w-28 text-center">Sí / No</th>
                             <th className="py-1 px-1 w-40">Observaciones</th>
-                            <th className="py-1 px-1 w-52">Respaldo (archivo)</th>
+                            <th className="py-1 px-1 w-40">Respaldo</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1293,41 +1304,13 @@ export default async function CasoDetallePage({
                               <td className="py-2 px-1">
                                 <input name={`obs_${it.id}`} defaultValue={it.observations || ""} className="input !py-1 text-xs" />
                               </td>
-                              <td className="py-2 px-1">
+                              <td className="py-2 px-1 text-[11px] text-slate-500">
                                 {respaldo ? (
-                                  <div className="flex items-center gap-2">
-                                    <a
-                                      href={`/api/attachments/${respaldo.id}`}
-                                      target="_blank"
-                                      className="text-brand-700 hover:underline truncate max-w-[9rem]"
-                                      title={respaldo.filename}
-                                    >
-                                      📎 {respaldo.filename}
-                                    </a>
-                                    <button
-                                      type="submit"
-                                      formAction={unlinkChecklistItemAttachment.bind(null, caseFile.id, it.id)}
-                                      className="text-[11px] text-red-600 hover:underline shrink-0"
-                                    >
-                                      quitar
-                                    </button>
-                                  </div>
+                                  <a href={`/api/attachments/${respaldo.id}`} target="_blank" className="text-brand-700 hover:underline">
+                                    📎 adjunto
+                                  </a>
                                 ) : (
-                                  <div className="flex items-center gap-1">
-                                    <input
-                                      type="file"
-                                      name={`checklist_file_${it.id}`}
-                                      accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx"
-                                      className="text-[11px] w-32 file:mr-1 file:rounded file:border-0 file:bg-slate-100 file:px-1.5 file:py-0.5 file:text-[10px]"
-                                    />
-                                    <button
-                                      type="submit"
-                                      formAction={uploadChecklistItemAttachment.bind(null, caseFile.id, it.id)}
-                                      className="text-[11px] font-semibold text-brand-700 hover:underline shrink-0"
-                                    >
-                                      adjuntar
-                                    </button>
-                                  </div>
+                                  <span className="text-slate-300">— sin respaldo —</span>
                                 )}
                               </td>
                             </tr>
@@ -1357,6 +1340,54 @@ export default async function CasoDetallePage({
                       <button type="submit" className="btn-primary">Guardar checklist</button>
                     </div>
                   </form>
+
+                  {/* Respaldos documentales por ítem — formularios independientes
+                      (no anidados) para que el archivo se envíe correctamente. */}
+                  <div className="mt-5 border-t border-slate-200 pt-4">
+                    <h3 className="text-xs font-semibold text-slate-500 uppercase mb-2">Respaldos documentales del expediente</h3>
+                    <p className="text-xs text-slate-400 mb-3">
+                      Sube el documento de cada requisito (oficio + acuse de recibo, actas, informes…). Al adjuntarlo, el ítem queda en «SÍ».
+                      Formatos: PDF, imagen, Word o Excel — máx. 15 MB.
+                    </p>
+                    <ul className="space-y-2">
+                      {items.map((it) => {
+                        const respaldo = checklistAttachmentsById.get(it.id);
+                        return (
+                          <li key={it.id} className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs border-b border-slate-100 pb-2">
+                            <span className="flex-1 text-slate-700">
+                              <span className="text-slate-400 mr-1">{it.item_order}.</span>
+                              {it.item_text}
+                            </span>
+                            {respaldo ? (
+                              <div className="flex items-center gap-3 shrink-0">
+                                <a href={`/api/attachments/${respaldo.id}`} target="_blank" className="text-brand-700 hover:underline max-w-[12rem] truncate" title={respaldo.filename}>
+                                  📎 {respaldo.filename}
+                                </a>
+                                <form action={unlinkChecklistItemAttachment.bind(null, caseFile.id, it.id)}>
+                                  <button type="submit" className="text-red-600 hover:underline">quitar</button>
+                                </form>
+                              </div>
+                            ) : (
+                              <form
+                                action={uploadChecklistItemAttachment.bind(null, caseFile.id, it.id)}
+                                encType="multipart/form-data"
+                                className="flex items-center gap-2 shrink-0"
+                              >
+                                <input
+                                  type="file"
+                                  name="respaldo_file"
+                                  required
+                                  accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx"
+                                  className="text-[11px] w-44 file:mr-1 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-0.5 file:text-[10px]"
+                                />
+                                <button type="submit" className="text-[11px] font-semibold text-brand-700 hover:underline">adjuntar</button>
+                              </form>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
                 </div>
               ))}
             </div>

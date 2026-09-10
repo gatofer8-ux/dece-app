@@ -41,13 +41,16 @@ export default async function ImprimirChecklistPage({
     .all(caseFile.id) as CaseChecklistReviewRow[];
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
   const institution = db.prepare("SELECT * FROM institutions WHERE id = ?").get(institutionId) as InstitutionRow;
-  const itemsWithRespaldo = new Set(
-    (
-      db
-        .prepare("SELECT checklist_item_id FROM attachments WHERE case_file_id = ? AND checklist_item_id IS NOT NULL")
-        .all(caseFile.id) as { checklist_item_id: string }[]
-    ).map((a) => a.checklist_item_id)
-  );
+  let itemsWithRespaldo = new Set<string>();
+  try {
+    itemsWithRespaldo = new Set(
+      (
+        db
+          .prepare("SELECT checklist_item_id FROM attachments WHERE case_file_id = ? AND checklist_item_id IS NOT NULL")
+          .all(caseFile.id) as { checklist_item_id: string }[]
+      ).map((a) => a.checklist_item_id)
+    );
+  } catch {}
 
   return (
     <div className="max-w-4xl mx-auto bg-white">
