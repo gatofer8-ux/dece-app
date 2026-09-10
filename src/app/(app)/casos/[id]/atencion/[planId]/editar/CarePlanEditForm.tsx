@@ -25,10 +25,12 @@ export default function CarePlanEditForm({
   caseId,
   studentName,
   plan,
+  defaultProfessionalName,
 }: {
   caseId: string;
   studentName: string;
   plan: CaseCarePlanRow;
+  defaultProfessionalName?: string;
 }) {
   const updateForThisPlan = updateCarePlan.bind(null, caseId, plan.id);
   const [state, formAction] = useFormState(updateForThisPlan, initialState);
@@ -139,7 +141,7 @@ export default function CarePlanEditForm({
                 </button>
               )}
               <input name="accion" defaultValue={act.accion} placeholder="Acción a implementar" className="input sm:col-span-2" />
-              <input name="accion_profesional" defaultValue={act.profesional} placeholder="Profesional que ejecutará" className="input" />
+              <input name="accion_profesional" defaultValue={act.profesional || defaultProfessionalName || ""} placeholder="Profesional que ejecutará" className="input" />
               <input name="accion_tiempo" defaultValue={act.tiempo} placeholder="Tiempo (días/semanas/meses)" className="input" />
               <input name="accion_observaciones" defaultValue={act.observaciones} placeholder="Observaciones" className="input sm:col-span-4" />
             </div>

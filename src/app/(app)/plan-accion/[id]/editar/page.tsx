@@ -3,12 +3,14 @@ import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { listSchoolYears } from "@/lib/schoolYear";
 import { parseActionPlanItems, parseActionPlanAnalysts, parseActionPlanSignatories } from "@/lib/actionPlan";
+import { getSignatureDefaults } from "@/lib/caseDocumentDefaults";
 import type { ActionPlanRow } from "@/lib/types";
 import ActionPlanForm from "../../ActionPlanForm";
 
 export default async function EditarPlanAccionPage({ params }: { params: { id: string } }) {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
+  const sig = getSignatureDefaults(session, institutionId);
 
   const plan = db
     .prepare("SELECT * FROM action_plans WHERE id = ? AND institution_id = ?")
@@ -55,15 +57,15 @@ export default async function EditarPlanAccionPage({ params }: { params: { id: s
         defaultSchoolYearId={plan.school_year_id}
         defaultSchoolYearText={plan.school_year_text}
         defaultStudentsCount={plan.students_count}
-        defaultCoordinatorName={plan.coordinator_name}
+        defaultCoordinatorName={plan.coordinator_name || sig.deceCoordinator.fullName || ""}
         defaultAnalysts={analysts}
         defaultAvailableResources={plan.available_resources}
         defaultItems={items}
         defaultDeceResponsibleName={deceResponsibleName}
         defaultEvaluationNotes={plan.evaluation_notes}
         defaultElaboratedBy={elaborated}
-        defaultReviewedBy={plan.reviewed_by ? JSON.parse(plan.reviewed_by) : undefined}
-        defaultApprovedBy={plan.approved_by ? JSON.parse(plan.approved_by) : undefined}
+        defaultReviewedBy={plan.reviewed_by ? JSON.parse(plan.reviewed_by) : (sig.deceCoordinator.fullName ? { name: sig.deceCoordinator.fullName, role: "Coordinador(a) DECE" } : undefined)}
+        defaultApprovedBy={plan.approved_by ? JSON.parse(plan.approved_by) : (sig.authority.fullName ? { name: sig.authority.fullName, role: sig.authority.role } : undefined)}
         deceStaffNames={deceStaffNames}
         isEditing={true}
       />

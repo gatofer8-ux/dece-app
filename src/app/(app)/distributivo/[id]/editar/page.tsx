@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { listSchoolYears } from "@/lib/schoolYear";
 import { getDistributivoById, getInstitutionCoursesWithCounts, getInstitutionDeceTeam } from "@/lib/distributivo";
+import { getSignatureDefaults } from "@/lib/caseDocumentDefaults";
 import DistributivoForm from "../../DistributivoForm";
 import Link from "next/link";
 
@@ -12,6 +13,7 @@ export default async function EditarDistributivoPage({
 }) {
   const session = await requireRole(["ADMIN"]);
   const institutionId = requireInstitutionId(session);
+  const sig = getSignatureDefaults(session, institutionId);
 
   const data = getDistributivoById(params.id, institutionId);
   if (!data) {
@@ -49,7 +51,7 @@ export default async function EditarDistributivoPage({
         deceTeam={deceTeam}
         courseSummaries={courseSummaries}
         totalStudents={totalStudents}
-        currentUserName={session.user.name || ""}
+        currentUserName={data.distributivo.elaborated_by_name || sig.deceCoordinator.fullName || sig.deceProfessional.fullName || session.user.name || ""}
       />
     </div>
   );

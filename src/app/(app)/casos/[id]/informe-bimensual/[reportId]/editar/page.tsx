@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow, BimonthlyReportRow } from "@/lib/types";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import BimonthlyReportForm from "../../nueva/BimonthlyReportForm";
 
 export default async function EditarInformeBimensualPage({
@@ -23,6 +24,7 @@ export default async function EditarInformeBimensualPage({
   if (!report) notFound();
 
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
 
   return (
     <div className="space-y-6">
@@ -37,7 +39,8 @@ export default async function EditarInformeBimensualPage({
         institutionName={report.institution_name}
         amieCode={report.amie_code}
         schoolYearText={report.school_year_text}
-        defaultResponsibleName={session.user.name || ""}
+        defaultResponsibleName={defaults?.deceProfessional.fullName || session.user.name || ""}
+        defaultAuthorityName={defaults?.authority.fullName || ""}
         report={report}
       />
     </div>

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import { updateInterview } from "../../../../actions";
 import type { CaseFileRow, StudentRow, CaseInterviewRow } from "@/lib/types";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
@@ -25,6 +26,7 @@ export default async function EditarEntrevistaPage({ params }: { params: { id: s
   if (!interview) notFound();
 
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
 
   const boundUpdate = updateInterview.bind(null, caseFile.id, interview.id);
 
@@ -64,7 +66,7 @@ export default async function EditarEntrevistaPage({ params }: { params: { id: s
             </div>
             <div>
               <label className="label text-xs">Edad</label>
-              <input name="age" defaultValue={interview.age || ""} className="input" />
+              <input name="age" defaultValue={interview.age || (defaults?.studentAge ? String(defaults.studentAge) : "")} className="input" />
             </div>
             <div>
               <label className="label text-xs">Fecha de aplicación</label>
@@ -72,7 +74,7 @@ export default async function EditarEntrevistaPage({ params }: { params: { id: s
             </div>
             <div>
               <label className="label text-xs">Nombre del representante</label>
-              <input name="representative_name" defaultValue={interview.representative_name || ""} className="input" />
+              <input name="representative_name" defaultValue={interview.representative_name || student.representative || student.mother_name || student.father_name || ""} className="input" />
             </div>
           </div>
         </div>

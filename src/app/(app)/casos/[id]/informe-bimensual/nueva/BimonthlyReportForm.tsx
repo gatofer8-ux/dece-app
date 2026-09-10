@@ -30,6 +30,7 @@ export default function BimonthlyReportForm({
   amieCode,
   schoolYearText,
   defaultResponsibleName,
+  defaultAuthorityName,
   report,
 }: {
   caseId: string;
@@ -39,6 +40,7 @@ export default function BimonthlyReportForm({
   amieCode: string;
   schoolYearText: string;
   defaultResponsibleName: string;
+  defaultAuthorityName?: string;
   report?: BimonthlyReportRow;
 }) {
   const isEditing = Boolean(report);
@@ -382,7 +384,7 @@ export default function BimonthlyReportForm({
             <input
               type="text"
               name="reviewed_by_name"
-              defaultValue={report?.reviewed_by_name || "Autoridad educativa"}
+              defaultValue={report?.reviewed_by_name || defaultAuthorityName || "Autoridad educativa"}
               className="input text-xs font-medium"
               placeholder="Nombres y título de la autoridad"
             />

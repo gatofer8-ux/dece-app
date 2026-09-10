@@ -5,6 +5,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow, ViolenceReportRow } from "@/lib/types";
 import { formatStudentCourseFull } from "@/lib/studentCourse";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import ViolenceReportEditForm from "./ViolenceReportEditForm";
 
 export default async function EditarReporteHechoViolenciaPage({ params }: { params: { id: string; reportId: string } }) {
@@ -22,6 +23,16 @@ export default async function EditarReporteHechoViolenciaPage({ params }: { para
   if (!report) notFound();
 
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
+
+  const authorityUser = db
+    .prepare("SELECT name FROM users WHERE institution_id = ? AND role = 'AUTORIDAD' LIMIT 1")
+    .get(institutionId) as { name: string } | undefined;
+  const rectorName = defaults?.authority.fullName || authorityUser?.name || "";
+
+  const userDb = db.prepare("SELECT role, job_title FROM users WHERE id = ?").get(session.user.id) as { role?: string; job_title?: string } | undefined;
+  const isCoordinator = session.user.role === "ADMIN" || /coord/i.test(userDb?.job_title || "");
+  const defaultProfessionalRole = isCoordinator ? "COORDINADOR/A DECE" : (userDb?.job_title?.toUpperCase() || defaults?.deceProfessional.role || "ANALISTA DECE");
 
   return (
     <div>
@@ -43,6 +54,9 @@ export default async function EditarReporteHechoViolenciaPage({ params }: { para
         defaultRepresentativeName={student.representative || ""}
         defaultRepresentativeAddress={student.address || ""}
         defaultRepresentativePhone={student.rep_phone || ""}
+        defaultProfessionalName={defaults?.deceProfessional.fullName || session.user.name || ""}
+        defaultProfessionalRole={defaultProfessionalRole}
+        defaultRectoraName={rectorName || "Máxima Autoridad Institucional"}
       />
     </div>
   );

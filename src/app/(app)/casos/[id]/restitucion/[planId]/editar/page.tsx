@@ -4,6 +4,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow, InstitutionRow, CaseRestitutionPlanRow } from "@/lib/types";
 import { ensureDefaultSchoolYear } from "@/lib/schoolYear";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import RestitutionPlanForm from "../../nueva/RestitutionPlanForm";
 
 export default async function EditarPlanRestitucionPage({
@@ -27,6 +28,7 @@ export default async function EditarPlanRestitucionPage({
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
   const institution = db.prepare("SELECT * FROM institutions WHERE id = ?").get(institutionId) as InstitutionRow;
   const activeYear = institutionId ? ensureDefaultSchoolYear(institutionId) : null;
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
 
   return (
     <div>
@@ -37,7 +39,9 @@ export default async function EditarPlanRestitucionPage({
       <RestitutionPlanForm
         caseId={caseFile.id}
         institutionName={institution.name}
-        defaultPreparedBy={session.user.name || ""}
+        defaultPreparedBy={defaults?.deceProfessional.fullName || session.user.name || ""}
+        defaultCoordinatorName={defaults?.deceCoordinator.fullName || ""}
+        defaultAuthorityName={defaults?.authority.fullName || ""}
         student={student}
         institution={institution}
         activeYear={activeYear}

@@ -74,6 +74,8 @@ export default function RestitutionPlanForm({
   caseId,
   institutionName,
   defaultPreparedBy,
+  defaultCoordinatorName,
+  defaultAuthorityName,
   student,
   institution,
   activeYear,
@@ -82,6 +84,8 @@ export default function RestitutionPlanForm({
   caseId: string;
   institutionName: string;
   defaultPreparedBy: string;
+  defaultCoordinatorName?: string;
+  defaultAuthorityName?: string;
   student?: StudentRow | null;
   institution?: InstitutionRow | null;
   activeYear?: SchoolYearRow | null;
@@ -932,7 +936,7 @@ export default function RestitutionPlanForm({
               <p className="text-xs font-bold text-slate-700">Revisado por: Coordinador/a DECE</p>
               <input
                 name="reviewed_coordinator_name"
-                defaultValue={initialData?.reviewed_coordinator_name || "Mg. Marlon Jácome"}
+                defaultValue={initialData?.reviewed_coordinator_name || defaultCoordinatorName || "Mg. Marlon Jácome"}
                 placeholder="Nombre Coordinador/a DECE"
                 className="input text-xs font-medium"
                 required
@@ -954,7 +958,7 @@ export default function RestitutionPlanForm({
             <p className="text-xs font-bold text-slate-700">Revisado por: Autoridad Institucional (Rector/a)</p>
             <input
               name="reviewed_authority_name"
-              defaultValue={initialData?.reviewed_authority_name || (institution as any)?.rector_name || ""}
+              defaultValue={initialData?.reviewed_authority_name || defaultAuthorityName || (institution as any)?.rector_name || ""}
               placeholder="Nombre de la Rectora / Director"
               className="input text-xs font-medium"
               required

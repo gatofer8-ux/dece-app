@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow, CaseCarePlanRow } from "@/lib/types";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import CarePlanEditForm from "./CarePlanEditForm";
 
 export default async function EditarPlanAtencionPage({ params }: { params: { id: string; planId: string } }) {
@@ -21,6 +22,7 @@ export default async function EditarPlanAtencionPage({ params }: { params: { id:
   if (!plan) notFound();
 
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
 
   return (
     <div>
@@ -38,6 +40,7 @@ export default async function EditarPlanAtencionPage({ params }: { params: { id:
         caseId={caseFile.id}
         studentName={student.full_name}
         plan={plan}
+        defaultProfessionalName={defaults?.deceProfessional.fullName || session.user.name || ""}
       />
     </div>
   );

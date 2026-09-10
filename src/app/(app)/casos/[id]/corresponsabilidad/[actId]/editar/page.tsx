@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow, CaseCorresponsibilityActRow } from "@/lib/types";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import CorresponsibilityActForm from "../../CorresponsibilityActForm";
 
 export default async function EditarActaCorresponsabilidadPage({
@@ -23,6 +24,7 @@ export default async function EditarActaCorresponsabilidadPage({
   if (!act) notFound();
 
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
 
   return (
     <div className="space-y-6">
@@ -43,7 +45,12 @@ export default async function EditarActaCorresponsabilidadPage({
         representativeRelationship={act.representative_relationship}
         representativePhone={act.representative_phone}
         representativeAddress={act.representative_address}
-        initialData={act}
+        initialData={{
+          ...act,
+          dece_professional_name: act.dece_professional_name || defaults?.deceProfessional.fullName || session.user.name || "Profesional DECE",
+          dece_professional_id_num: act.dece_professional_id_num || defaults?.deceProfessional.documentId || "",
+          tutor_authority_name: act.tutor_authority_name || defaults?.authority.fullName || "",
+        }}
         isEditing={true}
         actId={act.id}
       />

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow, SocializationActRow } from "@/lib/types";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import SocializationActEditForm from "./SocializationActEditForm";
 
 export default async function EditarActaSocializacionPage({ params }: { params: { id: string; actId: string } }) {
@@ -21,6 +22,7 @@ export default async function EditarActaSocializacionPage({ params }: { params: 
   if (!act) notFound();
 
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
 
   return (
     <div>
@@ -38,6 +40,8 @@ export default async function EditarActaSocializacionPage({ params }: { params: 
         caseId={caseFile.id}
         studentName={student.full_name}
         act={act}
+        defaultPreparedBy={defaults?.deceProfessional.fullName || session.user.name || ""}
+        defaultApprovedBy={defaults?.authority.fullName || ""}
       />
     </div>
   );

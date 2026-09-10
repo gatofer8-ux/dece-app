@@ -34,6 +34,9 @@ export default function ViolenceReportEditForm({
   defaultRepresentativeName = "",
   defaultRepresentativeAddress = "",
   defaultRepresentativePhone = "",
+  defaultProfessionalName = "",
+  defaultProfessionalRole = "ANALISTA DECE",
+  defaultRectoraName = "",
 }: {
   caseId: string;
   studentName: string;
@@ -42,6 +45,9 @@ export default function ViolenceReportEditForm({
   defaultRepresentativeName?: string;
   defaultRepresentativeAddress?: string;
   defaultRepresentativePhone?: string;
+  defaultProfessionalName?: string;
+  defaultProfessionalRole?: string;
+  defaultRectoraName?: string;
 }) {
   const updateForThisReport = updateViolenceReport.bind(null, caseId, report.id);
   const [state, formAction] = useFormState(updateForThisReport, initialState);
@@ -278,15 +284,15 @@ export default function ViolenceReportEditForm({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
           <div>
             <label className="label text-xs">Profesional DECE</label>
-            <input name="analyst_name" defaultValue={report.analyst_name || ""} className="input text-xs" />
+            <input name="analyst_name" defaultValue={report.analyst_name || defaultProfessionalName || ""} className="input text-xs" />
           </div>
           <div>
             <label className="label text-xs">Rol del profesional</label>
-            <input name="analyst_role" defaultValue={report.analyst_role || "ANALISTA DECE"} className="input text-xs" />
+            <input name="analyst_role" defaultValue={report.analyst_role || defaultProfessionalRole || "ANALISTA DECE"} className="input text-xs" />
           </div>
           <div>
             <label className="label text-xs">Rector/a de la institución</label>
-            <input name="rectora_name" defaultValue={report.rectora_name || ""} className="input text-xs" />
+            <input name="rectora_name" defaultValue={report.rectora_name || defaultRectoraName || ""} className="input text-xs" />
           </div>
         </div>
       </div>

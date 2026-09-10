@@ -37,12 +37,20 @@ export default function SituationalReportForm({
   studentCourse,
   studentParallel,
   defaultResponsibleName,
+  defaultResponsibleRole,
+  defaultCoordinatorName,
+  defaultAuthorityName,
+  defaultAuthorityRole,
 }: {
   caseId: string;
   studentName: string;
   studentCourse: string;
   studentParallel: string;
   defaultResponsibleName: string;
+  defaultResponsibleRole?: string;
+  defaultCoordinatorName?: string;
+  defaultAuthorityName?: string;
+  defaultAuthorityRole?: string;
   report?: SituationalReportRow;
 }) {
   const actionFn = report ? updateSituationalReport.bind(null, report.id, caseId) : createSituationalReport.bind(null, caseId);
@@ -228,18 +236,18 @@ export default function SituationalReportForm({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="border border-slate-200 rounded-lg p-3">
             <p className="text-xs font-medium mb-2">1. Elaborado por (Desarrollo)</p>
-            <input name="preparer_name" defaultValue={defaultResponsibleName || "Mgr. Marlon Alberto Jácome S."} placeholder="Nombre" className="input mb-2" />
-            <input name="preparer_role" defaultValue={(report as any)?.preparer_role || ""} placeholder="Cargo" className="input" />
+            <input name="preparer_name" defaultValue={(report as any)?.preparer_name || defaultResponsibleName || ""} placeholder="Nombre" className="input mb-2" />
+            <input name="preparer_role" defaultValue={(report as any)?.preparer_role || defaultResponsibleRole || "ANALISTA DECE"} placeholder="Cargo" className="input" />
           </div>
           <div className="border border-slate-200 rounded-lg p-3">
             <p className="text-xs font-medium mb-2">2. Revisado por</p>
-            <input name="reviewer_name" defaultValue={(report as any)?.reviewer_name || ""} placeholder="Nombre" className="input mb-2" />
-            <input name="reviewer_role" defaultValue={(report as any)?.reviewer_role || ""} placeholder="Cargo" className="input" />
+            <input name="reviewer_name" defaultValue={(report as any)?.reviewer_name || defaultCoordinatorName || ""} placeholder="Nombre" className="input mb-2" />
+            <input name="reviewer_role" defaultValue={(report as any)?.reviewer_role || "COORDINADOR/A DECE"} placeholder="Cargo" className="input" />
           </div>
           <div className="border border-slate-200 rounded-lg p-3">
             <p className="text-xs font-medium mb-2">3. Aprobado por</p>
-            <input name="approver_name" defaultValue="" placeholder="Nombre" className="input mb-2" />
-            <input name="approver_role" defaultValue={(report as any)?.approver_role || ""} placeholder="Cargo" className="input" />
+            <input name="approver_name" defaultValue={(report as any)?.approver_name || defaultAuthorityName || ""} placeholder="Nombre" className="input mb-2" />
+            <input name="approver_role" defaultValue={(report as any)?.approver_role || defaultAuthorityRole || "RECTOR/A"} placeholder="Cargo" className="input" />
           </div>
         </div>
       </div>

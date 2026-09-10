@@ -30,10 +30,14 @@ export default function SocializationActEditForm({
   caseId,
   studentName,
   act,
+  defaultPreparedBy,
+  defaultApprovedBy,
 }: {
   caseId: string;
   studentName: string;
   act: SocializationActRow;
+  defaultPreparedBy?: string;
+  defaultApprovedBy?: string;
 }) {
   const updateForThisAct = updateSocializationAct.bind(null, caseId, act.id);
   const [state, formAction] = useFormState(updateForThisAct, initialState);
@@ -222,11 +226,11 @@ export default function SocializationActEditForm({
         <div className="space-y-3 text-xs">
           <div>
             <label className="label text-xs">Desarrollo del documento (profesional DECE)</label>
-            <input name="prepared_by_name" defaultValue={act.prepared_by_name || ""} className="input" />
+            <input name="prepared_by_name" defaultValue={act.prepared_by_name || defaultPreparedBy || ""} className="input" />
           </div>
           <div>
             <label className="label text-xs">Aprobación del documento (Rectora/Rector)</label>
-            <input name="approved_by_name" defaultValue={act.approved_by_name || ""} placeholder="Nombre de la Rectora o Rector" className="input" />
+            <input name="approved_by_name" defaultValue={act.approved_by_name || defaultApprovedBy || ""} placeholder="Nombre de la Rectora o Rector" className="input" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>

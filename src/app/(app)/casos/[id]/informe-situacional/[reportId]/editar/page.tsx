@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow, SituationalReportRow } from "@/lib/types";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import SituationalReportForm from "../../nueva/SituationalReportForm";
 
 export default async function EditarInformeSituacionalPage({ params }: { params: { id: string, reportId: string } }) {
@@ -17,6 +18,7 @@ export default async function EditarInformeSituacionalPage({ params }: { params:
   if (!report) notFound();
 
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
 
   return (
     <div>
@@ -26,7 +28,11 @@ export default async function EditarInformeSituacionalPage({ params }: { params:
         studentName={student.full_name}
         studentCourse={student.course}
         studentParallel={student.parallel || ""}
-        defaultResponsibleName={session.user.name || ""}
+        defaultResponsibleName={defaults?.deceProfessional.fullName || session.user.name || ""}
+        defaultResponsibleRole={defaults?.deceProfessional.role || "ANALISTA DECE"}
+        defaultCoordinatorName={defaults?.deceCoordinator.fullName || ""}
+        defaultAuthorityName={defaults?.authority.fullName || ""}
+        defaultAuthorityRole={defaults?.authority.role || "RECTOR/A"}
         report={report}
       />
     </div>

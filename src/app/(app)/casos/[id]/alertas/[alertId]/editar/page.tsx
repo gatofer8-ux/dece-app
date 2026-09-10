@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow, CaseAlertNotificationRow } from "@/lib/types";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import AlertNotificationForm from "../../AlertNotificationForm";
 
 export default async function EditarAlertaPage({
@@ -24,6 +25,7 @@ export default async function EditarAlertaPage({
   if (!alert) notFound();
 
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow | undefined;
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
 
   return (
     <div className="space-y-6">
@@ -46,9 +48,9 @@ export default async function EditarAlertaPage({
         studentParallel={alert.student_parallel || ""}
         studentJornada={alert.jornada || "MATUTINA"}
         docenteTutor={alert.docente_tutor || ""}
-        defaultNotificadorNombre={alert.notificador_nombre}
-        defaultNotificadorCargo={alert.notificador_cargo}
-        defaultNotificadorContacto={alert.notificador_contacto || ""}
+        defaultNotificadorNombre={alert.notificador_nombre || defaults?.deceProfessional.fullName || session.user.name || "Analista DECE"}
+        defaultNotificadorCargo={alert.notificador_cargo || defaults?.deceProfessional.role || "Analista DECE"}
+        defaultNotificadorContacto={alert.notificador_contacto || defaults?.deceProfessional.email || session.user.email || ""}
         initialData={alert}
         isEditing={true}
         alertId={alert.id}

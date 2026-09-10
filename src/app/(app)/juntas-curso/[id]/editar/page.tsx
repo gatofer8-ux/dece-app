@@ -3,6 +3,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { getCourseBoardReportById } from "@/lib/juntasCurso";
 import { getUserCoverage, getInstitutionCoursesWithCounts } from "@/lib/distributivo";
 import { listSchoolYears, getSelectedSchoolYear } from "@/lib/schoolYear";
+import { getSignatureDefaults } from "@/lib/caseDocumentDefaults";
 import CourseBoardReportForm from "../../CourseBoardReportForm";
 
 export default async function EditarInformeJuntaPage({
@@ -12,6 +13,7 @@ export default async function EditarInformeJuntaPage({
 }) {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
+  const sig = getSignatureDefaults(session, institutionId);
 
   const report = getCourseBoardReportById(params.id, institutionId);
   if (!report) notFound();
@@ -62,7 +64,7 @@ export default async function EditarInformeJuntaPage({
         availableCourses={availableCourses}
         schoolYears={schoolYears}
         selectedYearId={report.school_year_id}
-        currentUserName={report.user_name || session.user.name || "Profesional DECE"}
+        currentUserName={report.user_name || sig.deceProfessional.fullName || session.user.name || "Profesional DECE"}
         currentUserEmail={report.user_email || session.user.email || undefined}
         isCoordinatorOrAdmin={isCoordinatorOrAdmin}
       />

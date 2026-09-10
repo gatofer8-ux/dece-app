@@ -13,6 +13,7 @@ import {
   getCaseBimonthlyReports,
   getCasePsychosocialActionsSummary,
 } from "@/lib/caseClosureReportServer";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import CaseClosureReportForm from "../../nuevo/CaseClosureReportForm";
 
 export default async function EditarInformeCierrePage({
@@ -52,6 +53,7 @@ export default async function EditarInformeCierrePage({
   const defaultPsychosocialSummary =
     report.activities_psychosocial || getCasePsychosocialActionsSummary(caseFile.id);
   const bimonthlyItems = getCaseBimonthlyReports(caseFile.id);
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
 
   return (
     <div className="space-y-6">
@@ -69,6 +71,9 @@ export default async function EditarInformeCierrePage({
         defaultPsychosocialSummary={defaultPsychosocialSummary}
         bimonthlyItems={bimonthlyItems}
         report={report}
+        deceProfessional={defaults?.deceProfessional}
+        authority={defaults?.authority}
+        deceCoordinator={defaults?.deceCoordinator}
       />
     </div>
   );

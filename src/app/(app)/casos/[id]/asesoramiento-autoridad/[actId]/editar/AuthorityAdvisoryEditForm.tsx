@@ -20,9 +20,15 @@ function SubmitButton() {
 export default function AuthorityAdvisoryEditForm({
   caseId,
   act,
+  defaultProfessionalName,
+  defaultAuthorityName,
+  defaultAuthorityRole,
 }: {
   caseId: string;
   act: AuthorityAdvisoryActRow;
+  defaultProfessionalName?: string;
+  defaultAuthorityName?: string;
+  defaultAuthorityRole?: string;
 }) {
   const [state, formAction] = useFormState<ActionState, FormData>(
     updateAuthorityAdvisoryAct.bind(null, caseId, act.id),
@@ -268,7 +274,7 @@ export default function AuthorityAdvisoryEditForm({
             <p className="text-xs font-medium mb-2">Profesional DECE</p>
             <input
               name="dece_professional_name"
-              defaultValue={act.dece_professional_name || ""}
+              defaultValue={act.dece_professional_name || defaultProfessionalName || ""}
               placeholder="Nombre"
               className="input"
             />
@@ -277,13 +283,13 @@ export default function AuthorityAdvisoryEditForm({
             <p className="text-xs font-medium mb-2">Máxima autoridad institucional</p>
             <input
               name="authority_name"
-              defaultValue={act.authority_name || ""}
+              defaultValue={act.authority_name || defaultAuthorityName || ""}
               placeholder="Nombre"
               className="input mb-2"
             />
             <input
               name="authority_role"
-              defaultValue={act.authority_role || "Rector/a"}
+              defaultValue={act.authority_role || defaultAuthorityRole || "Rector/a"}
               placeholder="Cargo"
               className="input"
             />

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import AuthorityAdvisoryEditForm from "./AuthorityAdvisoryEditForm";
 import type { CaseFileRow, AuthorityAdvisoryActRow, StudentRow } from "@/lib/types";
 import Link from "next/link";
@@ -24,6 +25,7 @@ export default async function EditarActaAsesoramientoAutoridadPage({
   if (!act) notFound();
 
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
 
   return (
     <div>
@@ -39,7 +41,13 @@ export default async function EditarActaAsesoramientoAutoridadPage({
           ← Volver al acta
         </Link>
       </div>
-      <AuthorityAdvisoryEditForm caseId={caseFile.id} act={act} />
+      <AuthorityAdvisoryEditForm
+        caseId={caseFile.id}
+        act={act}
+        defaultProfessionalName={defaults?.deceProfessional.fullName || session.user.name || ""}
+        defaultAuthorityName={defaults?.authority.fullName || ""}
+        defaultAuthorityRole={defaults?.authority.role || "Rector/a"}
+      />
     </div>
   );
 }

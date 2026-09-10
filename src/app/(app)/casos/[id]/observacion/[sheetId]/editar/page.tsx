@@ -4,6 +4,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow, CaseObservationSheetRow } from "@/lib/types";
 import { parseOfficialObservationData } from "@/lib/observationSheet";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import ObservationSheetOfficialForm from "../../ObservationSheetOfficialForm";
 
 export default async function EditarFichaObservacionPage({
@@ -25,7 +26,9 @@ export default async function EditarFichaObservacionPage({
 
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
   const studentCourse = `${student.course || ""} ${student.parallel || ""}`.trim() || "No especificado";
-  const parsedData = parseOfficialObservationData(sheet.observation_data, session.user.name || undefined);
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
+  const defaultObserver = defaults?.deceProfessional.fullName || session.user.name || undefined;
+  const parsedData = parseOfficialObservationData(sheet.observation_data, defaultObserver);
 
   return (
     <div className="space-y-6">

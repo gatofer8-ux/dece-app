@@ -2,6 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { getAnnualManagementReportById } from "@/lib/informeGestion";
+import { getSignatureDefaults } from "@/lib/caseDocumentDefaults";
 import AnnualReportForm from "../../AnnualReportForm";
 import type { SchoolYearRow, InstitutionRow } from "@/lib/types";
 
@@ -19,6 +20,8 @@ export default async function EditAnnualReportPage({
   if (!institutionId) {
     redirect("/informe-gestion");
   }
+
+  const sig = getSignatureDefaults(session, institutionId);
 
   const report = getAnnualManagementReportById(params.id, institutionId);
   if (!report) {
@@ -39,7 +42,7 @@ export default async function EditAnnualReportPage({
       schoolYears={schoolYears}
       selectedYearId={report.school_year_id}
       currentUserId={session.user.id}
-      currentUserName={session.user.name || ""}
+      currentUserName={report.user_name || sig.deceProfessional.fullName || session.user.name || ""}
       currentUserEmail={session.user.email || undefined}
       currentUserRole={session.user.role}
       institutionName={institution?.name || "UNIDAD EDUCATIVA"}

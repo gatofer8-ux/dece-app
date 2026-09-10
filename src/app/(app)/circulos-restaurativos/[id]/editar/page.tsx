@@ -3,6 +3,7 @@ import { requireSession, requireInstitutionId } from "@/lib/session";
 import { canManageStudents, roleHomePath } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { getCircleConsentById } from "@/lib/restorativeCircleConsent";
+import { getSignatureDefaults } from "@/lib/caseDocumentDefaults";
 import { PageHeader } from "@/components/ui";
 import CirculoConsentForm from "../../CirculoConsentForm";
 import type { StudentRow } from "@/lib/types";
@@ -17,6 +18,7 @@ export default async function EditarCirculoConsentPage({
     redirect(roleHomePath(session.user.role));
   }
   const institutionId = requireInstitutionId(session);
+  const sig = getSignatureDefaults(session, institutionId);
 
   const consent = await getCircleConsentById(params.id, institutionId);
   if (!consent) notFound();
@@ -45,7 +47,7 @@ export default async function EditarCirculoConsentPage({
         initialData={consent}
         students={students}
         prefilledStudent={prefilledStudent}
-        currentUserName={session.user.name || "Profesional DECE"}
+        currentUserName={consent.dece_name || sig.deceProfessional.fullName || session.user.name || "Profesional DECE"}
       />
     </div>
   );
