@@ -63,6 +63,9 @@ export default function CaseClosureReportForm({
   defaultPsychosocialSummary,
   bimonthlyItems,
   report,
+  deceProfessional,
+  authority,
+  deceCoordinator,
 }: {
   caseId: string;
   student: StudentRow;
@@ -73,6 +76,9 @@ export default function CaseClosureReportForm({
   defaultPsychosocialSummary: string;
   bimonthlyItems: BimonthlyConsolidatedItem[];
   report?: CaseClosureReportRow;
+  deceProfessional?: { fullName: string; name: string; role: string; email: string; phoneExt: string };
+  authority?: { fullName: string; name: string; role: string };
+  deceCoordinator?: { fullName: string; name: string; role: string };
 }) {
   const isEditing = Boolean(report);
   const actionFn = report
@@ -297,7 +303,7 @@ export default function CaseClosureReportForm({
               <input
                 type="text"
                 name="dece_name"
-                defaultValue={report?.dece_name || "Profesional DECE"}
+                defaultValue={report?.dece_name || deceProfessional?.fullName || "Profesional DECE"}
                 required
                 className="input text-xs"
               />
@@ -307,7 +313,7 @@ export default function CaseClosureReportForm({
               <input
                 type="text"
                 name="dece_role"
-                defaultValue={report?.dece_role || "PROFESIONAL DECE INSTITUCIONAL"}
+                defaultValue={report?.dece_role || deceProfessional?.role || "PROFESIONAL DECE INSTITUCIONAL"}
                 required
                 className="input text-xs"
               />
@@ -318,7 +324,7 @@ export default function CaseClosureReportForm({
                 <input
                   type="text"
                   name="dece_phone_ext"
-                  defaultValue={report?.dece_phone_ext || ""}
+                  defaultValue={report?.dece_phone_ext || deceProfessional?.phoneExt || ""}
                   className="input text-xs"
                   placeholder="Ext. 104"
                 />
@@ -328,7 +334,7 @@ export default function CaseClosureReportForm({
                 <input
                   type="email"
                   name="dece_email"
-                  defaultValue={report?.dece_email || ""}
+                  defaultValue={report?.dece_email || deceProfessional?.email || ""}
                   className="input text-xs"
                   placeholder="dece@institucion.edu.ec"
                 />
@@ -344,7 +350,7 @@ export default function CaseClosureReportForm({
               <input
                 type="text"
                 name="authority_name"
-                defaultValue={report?.authority_name || "Msc. Máxima Autoridad Institucional"}
+                defaultValue={report?.authority_name || authority?.fullName || "Msc. Máxima Autoridad Institucional"}
                 required
                 className="input text-xs"
               />
@@ -354,7 +360,7 @@ export default function CaseClosureReportForm({
               <input
                 type="text"
                 name="authority_role"
-                defaultValue={report?.authority_role || "RECTOR (E) DE LA UNIDAD EDUCATIVA"}
+                defaultValue={report?.authority_role || authority?.role || "RECTOR (E) DE LA UNIDAD EDUCATIVA"}
                 required
                 className="input text-xs"
               />
@@ -943,7 +949,7 @@ export default function CaseClosureReportForm({
               <input
                 type="text"
                 name="elaborated_by_name"
-                defaultValue={report?.elaborated_by_name || "Psic. Profesional DECE"}
+                defaultValue={report?.elaborated_by_name || deceProfessional?.fullName || "Psic. Profesional DECE"}
                 required
                 className="input text-xs"
               />
@@ -953,7 +959,7 @@ export default function CaseClosureReportForm({
               <input
                 type="text"
                 name="elaborated_by_role"
-                defaultValue={report?.elaborated_by_role || "ANALISTA DECE"}
+                defaultValue={report?.elaborated_by_role || deceProfessional?.role || "ANALISTA DECE"}
                 required
                 className="input text-xs"
               />
@@ -978,7 +984,7 @@ export default function CaseClosureReportForm({
               <input
                 type="text"
                 name="reviewed_by_name"
-                defaultValue={report?.reviewed_by_name || "Coordinadora DECE Institucional"}
+                defaultValue={report?.reviewed_by_name || deceCoordinator?.fullName || "Coordinadora DECE Institucional"}
                 required
                 className="input text-xs"
               />
@@ -1013,7 +1019,7 @@ export default function CaseClosureReportForm({
               <input
                 type="text"
                 name="approved_by_name"
-                defaultValue={report?.approved_by_name || "Msc. Máxima Autoridad Institucional"}
+                defaultValue={report?.approved_by_name || authority?.fullName || "Msc. Máxima Autoridad Institucional"}
                 required
                 className="input text-xs"
               />

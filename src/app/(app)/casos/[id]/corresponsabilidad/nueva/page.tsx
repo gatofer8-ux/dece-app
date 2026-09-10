@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow, InstitutionRow } from "@/lib/types";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import CorresponsibilityActForm from "../CorresponsibilityActForm";
 
 export default async function NuevaActaCorresponsabilidadPage({
@@ -19,6 +20,7 @@ export default async function NuevaActaCorresponsabilidadPage({
 
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
   const institution = db.prepare("SELECT * FROM institutions WHERE id = ?").get(institutionId) as InstitutionRow;
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
 
   // Extraer ciudad sugerida de la institución
   const cityMatch = institution.address?.match(/(?:cantón|ciudad de|en)\s+([A-Za-zÁÉÍÓÚáéíóúñÑ]+)/i);
@@ -44,7 +46,8 @@ export default async function NuevaActaCorresponsabilidadPage({
         representativeAddress={student.address || student.representative_address || ""}
         initialData={{
           city: defaultCity,
-          dece_professional_name: session.user.name || "Profesional DECE",
+          dece_professional_name: defaults?.deceProfessional.fullName || session.user.name || "Profesional DECE",
+          dece_professional_id_num: defaults?.deceProfessional.documentId || "",
         }}
         isEditing={false}
       />

@@ -4,6 +4,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow, InstitutionRow, SchoolYearRow } from "@/lib/types";
 import { generateReportNumber } from "@/lib/caseClosureReport";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import {
   getCaseBimonthlyReports,
   getCasePsychosocialActionsSummary,
@@ -39,6 +40,7 @@ export default async function NuevoInformeCierrePage({
   const defaultReportNumber = generateReportNumber(institution?.name || "UE", schoolYearText);
   const defaultPsychosocialSummary = getCasePsychosocialActionsSummary(caseFile.id);
   const bimonthlyItems = getCaseBimonthlyReports(caseFile.id);
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
 
   return (
     <div className="space-y-6">
@@ -55,6 +57,9 @@ export default async function NuevoInformeCierrePage({
         defaultReportNumber={defaultReportNumber}
         defaultPsychosocialSummary={defaultPsychosocialSummary}
         bimonthlyItems={bimonthlyItems}
+        deceProfessional={defaults?.deceProfessional}
+        authority={defaults?.authority}
+        deceCoordinator={defaults?.deceCoordinator}
       />
     </div>
   );

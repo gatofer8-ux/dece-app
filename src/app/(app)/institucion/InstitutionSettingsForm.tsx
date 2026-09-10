@@ -235,6 +235,48 @@ export default function InstitutionSettingsForm({ institution }: { institution: 
               className="input text-xs"
             />
           </div>
+
+          <div>
+            <label className="label text-xs">Teléfono / conmutador</label>
+            <input
+              type="text"
+              name="institution_phone"
+              defaultValue={(institution as any).institution_phone || ""}
+              placeholder="Ej. (03) 2844-123"
+              className="input text-xs"
+            />
+          </div>
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-slate-200">
+          <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+            🖋️ Autoridad y coordinación
+          </h3>
+          <p className="text-[11px] text-slate-500 mb-3">
+            Estos datos se precargan automáticamente en las firmas de todos los informes y actas del DECE.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="label text-xs">Título de la autoridad</label>
+              <input type="text" name="rector_title" defaultValue={(institution as any).rector_title || ""} placeholder="Msc. / Dr. / Lic." className="input text-xs" />
+            </div>
+            <div>
+              <label className="label text-xs">Nombre de la máxima autoridad</label>
+              <input type="text" name="rector_name" defaultValue={(institution as any).rector_name || ""} placeholder="Nombres y apellidos del rector(a)" className="input text-xs" />
+            </div>
+            <div>
+              <label className="label text-xs">Cargo</label>
+              <input type="text" name="rector_role" defaultValue={(institution as any).rector_role || "RECTOR(A) DE LA UNIDAD EDUCATIVA"} className="input text-xs" />
+            </div>
+            <div>
+              <label className="label text-xs">Título coordinador/a DECE</label>
+              <input type="text" name="dece_coordinator_title" defaultValue={(institution as any).dece_coordinator_title || ""} placeholder="Msc. / Lcda." className="input text-xs" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="label text-xs">Nombre coordinador/a DECE</label>
+              <input type="text" name="dece_coordinator_name" defaultValue={(institution as any).dece_coordinator_name || ""} placeholder="Nombres y apellidos" className="input text-xs" />
+            </div>
+          </div>
         </div>
 
         <div className="pt-2 flex justify-end">

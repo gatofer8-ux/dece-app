@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow, InstitutionRow } from "@/lib/types";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import ReferralForm from "./ReferralForm";
 
 function computeAge(birthDate: string | null): string {
@@ -25,13 +26,14 @@ export default async function NuevaDerivacionPage({ params }: { params: { id: st
   if (!caseFile) notFound();
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
   const institution = db.prepare("SELECT * FROM institutions WHERE id = ?").get(institutionId) as InstitutionRow;
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
 
   return (
     <div>
       <PageHeader title="Ficha de derivación" description={`${student.full_name} — ${caseFile.code}`} />
       <ReferralForm
         caseId={caseFile.id}
-        defaultElaboratedBy={session.user.name || ""}
+        defaultElaboratedBy={defaults?.deceProfessional.fullName || session.user.name || ""}
         defaultAge={computeAge(student.birth_date)}
         defaultDistrictOfficeLabel={institution.district ? `DIRECCIÓN DISTRITAL DE EDUCACIÓN ${institution.district}` : ""}
       />

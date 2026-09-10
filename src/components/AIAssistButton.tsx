@@ -78,9 +78,9 @@ export default function AIAssistButton({
       {heightened && !error && (
         <span
           className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-1"
-          title="Por el tipo de caso (violencia sexual, salud mental o consumo), no se envió el relato ni los documentos del caso a la IA — solo datos mínimos. Revisa el borrador."
+          title="Caso de tipo delicado (violencia sexual, salud mental o consumo). Los datos del estudiante y su familia se seudonimizan antes de enviarlos a la IA. Revisa el borrador antes de guardar."
         >
-          🔒 Confidencialidad reforzada: sin datos del caso
+          🔒 Caso delicado: datos seudonimizados
         </span>
       )}
     </span>

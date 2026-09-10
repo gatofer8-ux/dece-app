@@ -10,8 +10,19 @@
  */
 
 /**
- * Tipos de riesgo (case_files.risk_type) para los que NO se envía el relato del
- * caso a la IA — solo datos mínimos no identificativos. Editable.
+ * Cómo se tratan los casos de tipo delicado (violencia sexual, salud mental,
+ * consumo) al usar la IA:
+ *
+ * - "seudonimizado" (por defecto): se envía el relato como al resto de casos,
+ *   pero seudonimizado (sin nombres ni cédula). Mejores borradores.
+ * - "estricto": no se envía NADA del relato ni de los documentos, solo
+ *   código/tipo/estado. Máxima privacidad.
+ */
+export const AI_HEIGHTENED_MODE: "seudonimizado" | "estricto" = "seudonimizado";
+
+/**
+ * Tipos de riesgo (case_files.risk_type) considerados de confidencialidad
+ * reforzada. Editable.
  */
 export const HEIGHTENED_CONFIDENTIALITY_RISK_TYPES = new Set<string>([
   "VIOLENCIA_SEXUAL",
@@ -19,8 +30,17 @@ export const HEIGHTENED_CONFIDENTIALITY_RISK_TYPES = new Set<string>([
   "CONSUMO_SUSTANCIAS",
 ]);
 
-export function isHeightenedConfidentiality(riskType: string | null | undefined): boolean {
+/** True si el tipo es delicado. */
+export function isHeightenedRiskType(riskType: string | null | undefined): boolean {
   return !!riskType && HEIGHTENED_CONFIDENTIALITY_RISK_TYPES.has(riskType);
+}
+
+/**
+ * True solo si hay que APLICAR el corte total del relato — es decir, tipo
+ * delicado Y modo "estricto".
+ */
+export function isHeightenedConfidentiality(riskType: string | null | undefined): boolean {
+  return AI_HEIGHTENED_MODE === "estricto" && isHeightenedRiskType(riskType);
 }
 
 /** Palabras que nunca deben tratarse como "nombre" aunque aparezcan en uno. */

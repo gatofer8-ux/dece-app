@@ -5,7 +5,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { requireOwnedCase } from "@/lib/scopedDb";
 import { logger } from "@/lib/logger";
 import { draftText, draftBimonthlyMatrixDraft, draftObservationComment, draftObservationGlobalAnalysis, draftCorresponsibilityDifficulty, draftCorresponsibilityLegalFramework, draftCorresponsibilityCommitments, isAiConfigured } from "@/lib/ai";
-import { pseudonymize, isHeightenedConfidentiality, minimalCaseContext, type CaseEntities } from "@/lib/aiPrivacy";
+import { pseudonymize, isHeightenedConfidentiality, isHeightenedRiskType, minimalCaseContext, type CaseEntities } from "@/lib/aiPrivacy";
 import type { CorresponsibilityConflictType } from "@/lib/types";
 import type { CaseFileRow, StudentRow, ViolenceReportRow, CaseActionRow } from "@/lib/types";
 
@@ -224,12 +224,11 @@ export async function generateAiDraft(
   const caseFile = db.prepare("SELECT risk_type FROM case_files WHERE id = ?").get(caseId) as
     | { risk_type: string }
     | undefined;
-  const heightened = isHeightenedConfidentiality(caseFile?.risk_type);
 
   const context = buildCaseContext(caseId, institutionId);
   const result = await draftText({ fieldLabel, context, currentText: currentText || "" });
   if ("error" in result) return { error: result.error };
-  return { text: result.text, heightenedConfidentiality: heightened };
+  return { text: result.text, heightenedConfidentiality: isHeightenedRiskType(caseFile?.risk_type) };
 }
 
 export async function generateBimonthlyMatrixSuggestions(

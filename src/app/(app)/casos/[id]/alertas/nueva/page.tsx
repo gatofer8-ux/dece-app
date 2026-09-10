@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow, InstitutionRow } from "@/lib/types";
+import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import AlertNotificationForm from "../AlertNotificationForm";
 
 export default async function NuevaAlertaPage({
@@ -18,6 +19,7 @@ export default async function NuevaAlertaPage({
   if (!caseFile) notFound();
 
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
+  const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
 
   // Extraer tutor del curso si existe en cuotas institucionales
   let tutorName = "";
@@ -59,8 +61,8 @@ export default async function NuevaAlertaPage({
         studentParallel={student.parallel || ""}
         studentJornada={student.jornada || "MATUTINA"}
         docenteTutor={tutorName}
-        defaultNotificadorNombre={session.user.name || "Analista DECE"}
-        defaultNotificadorCargo="Analista DECE"
+        defaultNotificadorNombre={defaults?.deceProfessional.fullName || session.user.name || "Analista DECE"}
+        defaultNotificadorCargo={defaults?.deceProfessional.role || "Analista DECE"}
         defaultNotificadorContacto={session.user.email || ""}
         isEditing={false}
       />

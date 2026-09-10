@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
   pseudonymize,
+  isHeightenedRiskType,
   isHeightenedConfidentiality,
   minimalCaseContext,
+  AI_HEIGHTENED_MODE,
   HEIGHTENED_CONFIDENTIALITY_RISK_TYPES,
 } from "./aiPrivacy";
 
@@ -57,11 +59,19 @@ describe("aiPrivacy — seudonimización", () => {
 
 describe("aiPrivacy — confidencialidad reforzada", () => {
   it("identifica los tipos de riesgo reforzados", () => {
-    expect(isHeightenedConfidentiality("VIOLENCIA_SEXUAL")).toBe(true);
-    expect(isHeightenedConfidentiality("SALUD_MENTAL")).toBe(true);
-    expect(isHeightenedConfidentiality("CONSUMO_SUSTANCIAS")).toBe(true);
-    expect(isHeightenedConfidentiality("DIFICULTAD_APRENDIZAJE")).toBe(false);
-    expect(isHeightenedConfidentiality(null)).toBe(false);
+    expect(isHeightenedRiskType("VIOLENCIA_SEXUAL")).toBe(true);
+    expect(isHeightenedRiskType("SALUD_MENTAL")).toBe(true);
+    expect(isHeightenedRiskType("CONSUMO_SUSTANCIAS")).toBe(true);
+    expect(isHeightenedRiskType("DIFICULTAD_APRENDIZAJE")).toBe(false);
+    expect(isHeightenedRiskType(null)).toBe(false);
+  });
+
+  it("el corte total solo se aplica en modo estricto", () => {
+    if (AI_HEIGHTENED_MODE === "estricto") {
+      expect(isHeightenedConfidentiality("VIOLENCIA_SEXUAL")).toBe(true);
+    } else {
+      expect(isHeightenedConfidentiality("VIOLENCIA_SEXUAL")).toBe(false);
+    }
   });
 
   it("minimalCaseContext no filtra nada de la narrativa", () => {

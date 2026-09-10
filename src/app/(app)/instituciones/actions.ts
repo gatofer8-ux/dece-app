@@ -121,13 +121,19 @@ export async function updateOwnInstitutionDetails(_prevState: ActionState, formD
   if (sealError) return { error: sealError };
 
   db.prepare(
-    `UPDATE institutions SET 
-       name = @name, 
-       amie_code = @amie_code, 
-       district = @district, 
-       circuit = @circuit, 
-       zona = @zona, 
+    `UPDATE institutions SET
+       name = @name,
+       amie_code = @amie_code,
+       district = @district,
+       circuit = @circuit,
+       zona = @zona,
        address = @address,
+       institution_phone = @institution_phone,
+       rector_title = @rector_title,
+       rector_name = @rector_name,
+       rector_role = @rector_role,
+       dece_coordinator_title = @dece_coordinator_title,
+       dece_coordinator_name = @dece_coordinator_name,
        seal_image = COALESCE(@seal_image, seal_image),
        updated_at = datetime('now')
      WHERE id = @id`
@@ -139,6 +145,12 @@ export async function updateOwnInstitutionDetails(_prevState: ActionState, formD
     circuit: str(formData, "circuit"),
     zona: str(formData, "zona"),
     address: str(formData, "address"),
+    institution_phone: str(formData, "institution_phone"),
+    rector_title: str(formData, "rector_title"),
+    rector_name: str(formData, "rector_name"),
+    rector_role: str(formData, "rector_role") || "RECTOR(A) DE LA UNIDAD EDUCATIVA",
+    dece_coordinator_title: str(formData, "dece_coordinator_title"),
+    dece_coordinator_name: str(formData, "dece_coordinator_name"),
     seal_image: sealDataUri,
   });
 
