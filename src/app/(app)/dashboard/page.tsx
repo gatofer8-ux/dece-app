@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
-import { PageHeader, Badge, formatDate } from "@/components/ui";
-import { RISK_TYPE_LABELS, CASE_STATUS_LABELS, type CaseFileRow, type RiskType } from "@/lib/types";
+import { PageHeader } from "@/components/ui";
+import { CASE_STATUS_LABELS, CASE_PRIORITY_LABELS, RISK_TYPE_LABELS, type CaseFileRow, type RiskType } from "@/lib/types";
+import { caseStatusStyle, priorityStyle, riskTypeStyle } from "@/lib/statusColors";
 import { getSelectedSchoolYear } from "@/lib/schoolYear";
 import DashboardCharts from "@/components/DashboardCharts";
+import KpiCard from "@/components/KpiCard";
 
 export default async function DashboardPage() {
   const session = await requireRole(["ADMIN", "DECE"]);
@@ -150,6 +152,8 @@ export default async function DashboardPage() {
     return { month, cases: c, attentions: a };
   });
 
+  const casesTrend = monthlyStats.map((m) => m.cases);
+
   // 11. Casos Recientes
   const recentCases = db
     .prepare(
@@ -188,49 +192,15 @@ export default async function DashboardPage() {
         }
       />
 
-      {/* Tarjetas KPI de Estado Rápido */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
-        <div className="card p-3.5 bg-gradient-to-br from-blue-50/60 to-white border-blue-100">
-          <div className="text-xs font-semibold text-blue-900 uppercase tracking-tight">Estudiantes</div>
-          <div className="text-2xl font-bold text-slate-900 mt-1">{totalStudents}</div>
-          <div className="text-[11px] text-slate-500 mt-0.5">Matrícula activa</div>
-        </div>
-
-        <div className="card p-3.5 bg-gradient-to-br from-amber-50/60 to-white border-amber-100">
-          <div className="text-xs font-semibold text-amber-900 uppercase tracking-tight">Casos Activos</div>
-          <div className="text-2xl font-bold text-amber-700 mt-1">{openCases}</div>
-          <div className="text-[11px] text-slate-500 mt-0.5">En acompañamiento</div>
-        </div>
-
-        <div className="card p-3.5 bg-gradient-to-br from-rose-50/60 to-white border-rose-100">
-          <div className="text-xs font-semibold text-rose-900 uppercase tracking-tight">Prioridad Alta</div>
-          <div className="text-2xl font-bold text-rose-600 mt-1">{highPriority}</div>
-          <div className="text-[11px] text-slate-500 mt-0.5">Riesgo urgente</div>
-        </div>
-
-        <div className="card p-3.5 bg-gradient-to-br from-purple-50/60 to-white border-purple-100">
-          <div className="text-xs font-semibold text-purple-900 uppercase tracking-tight">Alertas Pendientes</div>
-          <div className="text-2xl font-bold text-purple-700 mt-1">{pendingAlerts}</div>
-          <div className="text-[11px] text-slate-500 mt-0.5">Por docentes</div>
-        </div>
-
-        <div className="card p-3.5 bg-gradient-to-br from-indigo-50/60 to-white border-indigo-100">
-          <div className="text-xs font-semibold text-indigo-900 uppercase tracking-tight">Derivaciones</div>
-          <div className="text-2xl font-bold text-indigo-700 mt-1">{pendingReferrals}</div>
-          <div className="text-[11px] text-slate-500 mt-0.5">En proceso externo</div>
-        </div>
-
-        <div className="card p-3.5 bg-gradient-to-br from-red-50/60 to-white border-red-100">
-          <div className="text-xs font-semibold text-red-900 uppercase tracking-tight">Checklists Incompletos</div>
-          <div className="text-2xl font-bold text-red-700 mt-1">{incompleteChecklists}</div>
-          <div className="text-[11px] text-slate-500 mt-0.5">Casos con docs. faltantes</div>
-        </div>
-
-        <div className="card p-3.5 bg-gradient-to-br from-emerald-50/60 to-white border-emerald-100">
-          <div className="text-xs font-semibold text-emerald-900 uppercase tracking-tight">Citas Hoy</div>
-          <div className="text-2xl font-bold text-emerald-700 mt-1">{todayAppointments}</div>
-          <div className="text-[11px] text-slate-500 mt-0.5">{todayStr}</div>
-        </div>
+      {/* Tarjetas KPI — clicables, con tendencia de 6 meses donde aplica */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3.5">
+        <KpiCard label="Estudiantes" value={totalStudents} hint="Matrícula activa" tone="brand" href="/estudiantes" />
+        <KpiCard label="Casos activos" value={openCases} hint="En acompañamiento" tone="amber" href="/casos" trend={casesTrend} />
+        <KpiCard label="Prioridad alta" value={highPriority} hint="Riesgo urgente" tone="rose" href="/casos?priority=ALTA" />
+        <KpiCard label="Alertas pendientes" value={pendingAlerts} hint="Por docentes" tone="purple" href="/alertas" />
+        <KpiCard label="Derivaciones" value={pendingReferrals} hint="En proceso externo" tone="indigo" href="/derivaciones" />
+        <KpiCard label="Checklists incompletos" value={incompleteChecklists} hint="Docs. faltantes" tone="red" href="/casos" />
+        <KpiCard label="Citas hoy" value={todayAppointments} hint={todayStr} tone="emerald" href="/citas" />
       </div>
 
       {/* Gráficos Visuales y Casos Recientes */}
@@ -270,14 +240,18 @@ export default async function DashboardPage() {
                     <div className="text-xs font-semibold text-slate-800 group-hover:text-brand-900 truncate">
                       {c.student_name}
                     </div>
-                    <div className="text-[11px] text-slate-500 truncate">
-                      {c.code} · {c.student_course}
+                    <div className="text-[11px] text-slate-500 truncate flex items-center gap-1.5">
+                      <span className={`h-1.5 w-1.5 rounded-full ${riskTypeStyle(c.risk_type).dot}`} />
+                      {c.code} · {RISK_TYPE_LABELS[c.risk_type] || c.risk_type}
                     </div>
                   </div>
                   <div className="shrink-0 flex items-center gap-1">
-                    <Badge color={c.status === "CERRADO" ? "green" : c.status === "ABIERTO" ? "amber" : "blue"}>
-                      {CASE_STATUS_LABELS[c.status]}
-                    </Badge>
+                    {c.priority === "ALTA" && (
+                      <span className={`badge ${priorityStyle("ALTA").badge}`}>{CASE_PRIORITY_LABELS.ALTA}</span>
+                    )}
+                    <span className={`badge ${caseStatusStyle(c.status).badge}`}>
+                      {CASE_STATUS_LABELS[c.status] || c.status}
+                    </span>
                   </div>
                 </Link>
               ))
