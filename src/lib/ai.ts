@@ -169,6 +169,23 @@ export async function draftText(opts: {
       "6. Comunicación asertiva, escucha activa y motivación que refuercen sus factores protectores y resiliencia.\n"
     : "";
 
+  const isSocializationAgreements =
+    opts.fieldLabel.toLowerCase().includes("acuerdo") &&
+    (opts.fieldLabel.toLowerCase().includes("socializ") || opts.fieldLabel.toLowerCase().includes("vulnerabilidad"));
+
+  const socializationAgreementsRule = isSocializationAgreements
+    ? "\nREGLA OBLIGATORIA PARA ACUERDOS EN ACTA DE SOCIALIZACIÓN:\n" +
+      "Debes proponer entre 3 y 6 acuerdos y compromisos concretos, verificables y articulados para garantizar los derechos y la permanencia del/la estudiante en situación de vulnerabilidad.\n" +
+      "Toma en cuenta exhaustivamente la situación de vulnerabilidad descrita, las estrategias socioemocionales de aula y los antecedentes del caso.\n" +
+      "Cada acuerdo DEBE estar redactado como un compromiso específico de los actores escolares y familiares, estructurado con la fórmula de compromiso formal:\n" +
+      "1. 'El docente tutor se compromete a...'\n" +
+      "2. 'Los docentes de las diferentes asignaturas se comprometen a...'\n" +
+      "3. 'El Departamento de Consejería Estudiantil (DECE) se compromete a...'\n" +
+      "4. 'El representante legal se compromete a...'\n" +
+      "5. (Otros acuerdos formativos o pedagógicos específicos del caso).\n" +
+      "Presenta la respuesta ÚNICAMENTE como una lista numerada (1., 2., 3., 4., etc.), con un acuerdo por línea, en texto plano.\n"
+    : "";
+
   const isBimonthly = opts.fieldLabel.toLowerCase().includes("bimensual") || (opts.fieldLabel.toLowerCase().includes("acompañamiento") && !isSocializationStrategies);
   const bimonthlyRule = isBimonthly
     ? "\nREGLA OBLIGATORIA PARA INFORME BIMENSUAL (Violencia Sexual):\n" +
@@ -211,6 +228,7 @@ REGLAS DE FORMATO Y ESTILO ESTRICTAS (OBLIGATORIAS):
 5. Si son conclusiones o recomendaciones, redacta al menos 4 puntos enumerados de forma independiente.
 
   ${socializationRule}
+  ${socializationAgreementsRule}
   ${bimonthlyRule}
   Vas a redactar o mejorar el siguiente campo de un documento: "${opts.fieldLabel}".
 

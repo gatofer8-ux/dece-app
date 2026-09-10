@@ -67,6 +67,26 @@ export default function SocializationActEditForm({
     setAgreementRows((rows) => rows.filter((r) => r.key !== key));
   }
 
+  function syncAgreementsContext() {
+    const vuln = (document.getElementById("edit-socialization-vulnerability-type") as HTMLInputElement)?.value || "";
+    const strat = (document.getElementById("edit-sa-psychosocial-strategies") as HTMLTextAreaElement)?.value || "";
+    const trigger = document.getElementById("edit-sa-agreements-ai-trigger") as HTMLTextAreaElement | null;
+    if (trigger) {
+      trigger.value = `TIPO DE VULNERABILIDAD DEL CASO:\n${vuln}\n\nESTRATEGIAS DE AULA REDACTADAS:\n${strat}`;
+    }
+  }
+
+  function handleAgreementsAiResult(text: string) {
+    const lines = text
+      .split(/\n+/)
+      .map((l) => l.replace(/^(\d+[\.\)\-]|•|\*|-)\s*/, "").trim())
+      .filter((l) => l.length > 5);
+    if (lines.length > 0) {
+      setAgreementRows(lines.map((val, idx) => ({ key: Date.now() + idx, defaultValue: val })));
+      setNextAgreementKey(Date.now() + lines.length);
+    }
+  }
+
   function addTeacherRow() {
     setTeacherSignatures((rows) => [...rows, { asignatura: "", docente: "" }]);
   }
@@ -156,8 +176,19 @@ export default function SocializationActEditForm({
 
       {/* Acuerdos */}
       <div>
+        <textarea id="edit-sa-agreements-ai-trigger" className="hidden" defaultValue="" readOnly />
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-xs font-semibold text-slate-500 uppercase">Acuerdos</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-xs font-semibold text-slate-500 uppercase">Acuerdos</h3>
+            <div onMouseEnter={syncAgreementsContext} onPointerDown={syncAgreementsContext}>
+              <AIAssistButton
+                targetId="edit-sa-agreements-ai-trigger"
+                caseId={caseId}
+                fieldLabel="Acuerdos y compromisos específicos del Acta de Socialización"
+                onResult={handleAgreementsAiResult}
+              />
+            </div>
+          </div>
           <button type="button" onClick={addAgreementRow} className="text-xs text-brand-700 hover:underline">
             + Agregar acuerdo
           </button>
@@ -165,14 +196,23 @@ export default function SocializationActEditForm({
         <div className="space-y-2">
           {agreementRows.map((row) => (
             <div key={row.key} className="flex items-start gap-2">
-              <textarea name="agreement" defaultValue={row.defaultValue} rows={2} className="textarea flex-1" />
-              <button
-                type="button"
-                onClick={() => removeAgreementRow(row.key)}
-                className="text-xs text-red-600 hover:underline mt-1 shrink-0"
-              >
-                Quitar
-              </button>
+              <textarea
+                id={`edit-sa-agreement-row-${row.key}`}
+                name="agreement"
+                defaultValue={row.defaultValue}
+                rows={2}
+                className="textarea flex-1"
+              />
+              <div className="flex items-center gap-1 mt-1 shrink-0">
+                <VoiceDictationButton targetId={`edit-sa-agreement-row-${row.key}`} />
+                <button
+                  type="button"
+                  onClick={() => removeAgreementRow(row.key)}
+                  className="text-xs text-red-600 hover:underline px-1"
+                >
+                  Quitar
+                </button>
+              </div>
             </div>
           ))}
         </div>
