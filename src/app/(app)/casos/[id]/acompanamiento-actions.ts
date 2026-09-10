@@ -18,6 +18,11 @@ import {
   type IndicatorsData,
   type RiskProtectionData,
 } from "@/lib/accompanimentReport";
+import {
+  studentGradeLabel,
+  isBachilleratoStudent,
+  getBachilleratoSpecialty,
+} from "@/lib/studentCourse";
 import type { CaseAccompanimentReportRow } from "@/lib/types";
 
 const TEXT_COLUMNS = [
@@ -156,50 +161,119 @@ export async function draftAccompanimentField(
   const label = ACCOMPANIMENT_AI_LABELS[fieldKey];
   if (!label) return { error: "Campo no válido." };
 
-  // Contexto breve del caso (la seudonimización del choke-point de ai.ts se
-  // encarga de los nombres/cédulas antes de enviar a la IA).
   let context = "";
   try {
     const cf = db
-      .prepare("SELECT risk_type, description FROM case_files WHERE id = ? AND institution_id = ?")
-      .get(caseId, institutionId) as { risk_type: string; description: string } | undefined;
+      .prepare("SELECT risk_type, description, detection_date, detection_source, code FROM case_files WHERE id = ? AND institution_id = ?")
+      .get(caseId, institutionId) as { risk_type: string; description: string; detection_date?: string; detection_source?: string; code?: string } | undefined;
+
     const st = db
-      .prepare("SELECT s.full_name, s.course, s.parallel, s.birth_date FROM case_files cf JOIN students s ON s.id = cf.student_id WHERE cf.id = ?")
-      .get(caseId) as { full_name: string; course: string; parallel: string | null; birth_date: string | null } | undefined;
-    const acts = db
-      .prepare("SELECT type, description FROM case_actions WHERE case_file_id = ? ORDER BY date DESC LIMIT 8")
-      .all(caseId) as { type: string; description: string }[];
+      .prepare(`
+        SELECT s.full_name, s.course, s.parallel, s.education_level, s.bachillerato_specialty,
+               s.document_id, s.birth_date, s.gender, s.jornada, s.nationality,
+               s.representative, s.rep_phone, s.representative_document_id, s.lives_with, s.address
+        FROM case_files cf
+        JOIN students s ON s.id = cf.student_id
+        WHERE cf.id = ?
+      `)
+      .get(caseId) as any | undefined;
+
+    let studentDetails = "";
+    if (st) {
+      const fullGrade = studentGradeLabel(st) || [st.course, st.parallel].filter(Boolean).join(" ");
+      const isBach = isBachilleratoStudent(st);
+      const specialty = isBach ? getBachilleratoSpecialty(st) : "";
+
+      let ageStr = "";
+      if (st.birth_date) {
+        const t = new Date(st.birth_date).getTime();
+        if (!Number.isNaN(t)) {
+          const age = Math.floor((Date.now() - t) / (365.25 * 24 * 3600 * 1000));
+          if (age >= 0 && age < 100) ageStr = `${age} años`;
+        }
+      }
+
+      studentDetails = [
+        `DATOS DE IDENTIFICACIÓN DEL ESTUDIANTE (Deben constar con rigor en la redacción):`,
+        `- Nombres y apellidos completos: ${st.full_name}`,
+        `- Documento de identidad (C.I.): ${st.document_id || "s/n"}`,
+        `- Edad: ${ageStr || "s/n"}${st.birth_date ? ` (Fecha de nacimiento: ${st.birth_date})` : ""}`,
+        `- Nivel Educativo: ${isBach ? "BACHILLERATO" : (st.education_level || "Educación General Básica (EGB)")}`,
+        `- Pertenece a Bachillerato: ${isBach ? "SÍ (Estudiante de nivel Bachillerato)" : "NO (Educación General Básica - EGB)"}`,
+        isBach ? `- Especialidad / Figura Profesional de Bachillerato: ${specialty}` : "",
+        `- Grado / Curso oficial: ${fullGrade}`,
+        `- Jornada: ${st.jornada || "Matutina"}`,
+        `- Representante legal: ${st.representative || "s/n"}${st.rep_phone ? ` (Teléfono: ${st.rep_phone})` : ""}`,
+        st.lives_with ? `- Convivencia familiar: vive con ${st.lives_with}` : "",
+        st.address ? `- Domicilio: ${st.address}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+    }
+
+    const caseActions = db
+      .prepare(`
+        SELECT date, type, description, created_at
+        FROM case_actions
+        WHERE case_file_id = ?
+        ORDER BY date ASC, created_at ASC
+      `)
+      .all(caseId) as { date: string | null; type: string; description: string; created_at?: string }[];
+
+    const esquelas = db
+      .prepare(`
+        SELECT citation_number, citation_date, citation_time, citation_reason, citation_place
+        FROM dece_esquelas
+        WHERE case_file_id = ?
+        ORDER BY citation_date ASC
+      `)
+      .all(caseId) as any[];
+
+    const plan = db
+      .prepare("SELECT * FROM case_restitution_plans WHERE case_file_id = ? ORDER BY created_at DESC LIMIT 1")
+      .get(caseId) as any;
+
+    const actionItems: string[] = [];
+    for (const act of caseActions) {
+      const d = act.date ? act.date.slice(0, 10) : "";
+      actionItems.push(`• ${d ? `[Fecha: ${d}] ` : ""}${act.type}: ${act.description}`);
+    }
+    for (const esq of esquelas) {
+      const d = esq.citation_date ? esq.citation_date.slice(0, 10) : "";
+      actionItems.push(
+        `• ${d ? `[Fecha: ${d}] ` : ""}Convocatoria DECE N° ${esq.citation_number} (Hora: ${esq.citation_time || "08:30"} en ${esq.citation_place || "DECE"}): ${esq.citation_reason}`
+      );
+    }
+    if (plan?.accompaniment_actions) {
+      try {
+        const planActs = JSON.parse(plan.accompaniment_actions) as any[];
+        for (const pa of planActs) {
+          const fIni = pa.fecha_inicio || "";
+          const fFin = pa.fecha_fin ? ` hasta ${pa.fecha_fin}` : "";
+          actionItems.push(
+            `• ${fIni ? `[Fecha: desde ${fIni}${fFin}] ` : ""}${pa.categoria || "Acción planificada"}: a cargo de ${pa.ejecutor || "DECE"}. ${pa.descripcion || pa.accion || ""}`
+          );
+        }
+      } catch {
+        /* noop */
+      }
+    }
+
+    const actionsText = actionItems.length
+      ? `HISTORIAL DE ACCIONES DE ACOMPAÑAMIENTO REALIZADAS (CON FECHAS OBLIGATORIAS):\n${actionItems.join("\n")}`
+      : `HISTORIAL DE ACCIONES: Caso detectado el ${cf?.detection_date || new Date().toISOString().slice(0, 10)}.`;
+
     context = [
-      cf ? `Tipo de riesgo del caso: ${cf.risk_type}` : "",
-      cf?.description ? `Descripción del caso: ${cf.description}` : "",
-      st ? `Estudiante: ${st.full_name}, ${st.course} ${st.parallel || ""}` : "",
-      acts.length ? "Acciones registradas en el caso: " + acts.map((a) => `${a.type} — ${a.description}`).join("; ") : "",
+      `EXPEDIENTE DEL CASO: Código ${cf?.code || "s/n"} | Tipo de riesgo: ${cf?.risk_type || ""}`,
+      cf?.description ? `Descripción / motivo del caso: ${cf.description}` : "",
+      cf?.detection_date ? `Fecha de detección: ${cf.detection_date}` : "",
+      studentDetails,
+      actionsText,
     ]
       .filter(Boolean)
-      .join("\n");
+      .join("\n\n");
   } catch {
     context = "";
-  }
-
-  // Si vincula un plan de acompañamiento y restitución, se añade su resumen.
-  const plan = db
-    .prepare(
-      "SELECT risk_factors, accompaniment_actions, legal_instances FROM case_restitution_plans WHERE case_file_id = ? ORDER BY created_at DESC LIMIT 1"
-    )
-    .get(caseId) as { risk_factors: string | null; accompaniment_actions: string | null; legal_instances: string | null } | undefined;
-  if (plan && fieldKey === "accompaniment_actions") {
-    try {
-      const acts = JSON.parse(plan.accompaniment_actions || "[]") as Array<Record<string, string>>;
-      if (acts.length) {
-        context +=
-          "\nAcciones registradas en el plan de acompañamiento y restitución: " +
-          acts
-            .map((a) => `${a.categoria || ""} (ejecuta ${a.ejecutor || "?"}, desde ${a.fecha_inicio || "?"}${a.fecha_fin ? " hasta " + a.fecha_fin : ""})`)
-            .join("; ");
-      }
-    } catch {
-      /* noop */
-    }
   }
 
   const result = await draftText({ fieldLabel: label, context, currentText: currentText || "" });

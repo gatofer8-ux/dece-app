@@ -18,6 +18,64 @@ export interface StudentCourseInput {
  * - "2.° de Bachillerato General Unificado “C”"
  * - "10.° de EGB “A” — Matutina"
  */
+export function isBachilleratoStudent(student?: StudentCourseInput | null): boolean {
+  if (!student) return false;
+  const rawCourse = (student.course || "").trim();
+  const rawSpecialty = (student.bachillerato_specialty || "").trim();
+  const level = (student.education_level || "").toUpperCase();
+
+  return (
+    level === "BACHILLERATO" ||
+    !!rawSpecialty ||
+    /bach(?:illerato)?|bgu/i.test(rawCourse) ||
+    /t[eé]cnic|ciencias|contabilidad|inform[aá]tica/i.test(rawCourse) ||
+    /^(?:1|2|3)(?:ro|do|er|ero|°|\.)?\s*(?:año|ano)?\s*(?:de\s*)?(?:bach(?:illerato)?|bgu)/i.test(rawCourse) ||
+    (/(?:primero|segundo|tercero)\s*(?:de\s*)?(?:bach(?:illerato)?|bgu)/i.test(rawCourse)) ||
+    (/^(?:1|2|3)(?:ro|do|er|ero|°|\.)?$/i.test(rawCourse) && level === "BACHILLERATO")
+  );
+}
+
+export function getBachilleratoSpecialty(student?: StudentCourseInput | null): string {
+  if (!student) return "";
+  const rawCourse = (student.course || "").trim();
+  const rawSpecialty = (student.bachillerato_specialty || "").trim();
+
+  if (rawSpecialty) {
+    const lowerSpec = rawSpecialty.toLowerCase().trim();
+    if (lowerSpec.startsWith("técnico") || lowerSpec.startsWith("tecnico")) {
+      return rawSpecialty;
+    } else if (lowerSpec === "ciencias" || lowerSpec === "en ciencias") {
+      return "Ciencias";
+    } else if (lowerSpec === "informática" || lowerSpec === "informatica") {
+      return "Técnico en Informática";
+    } else if (lowerSpec === "contabilidad") {
+      return "Técnico en Contabilidad";
+    } else if (/^(general|unificado|bgu|general unificado)$/i.test(lowerSpec)) {
+      return "General Unificado";
+    } else if (lowerSpec.startsWith("en ")) {
+      return rawSpecialty.slice(3).trim();
+    } else if (/t[eé]cnic/i.test(lowerSpec)) {
+      // La figura profesional ya contiene "Técnico" (p.ej. "Soporte Técnico
+      // de Equipos Informáticos"): se evita el doble "Técnico en Técnico".
+      return `Técnico, figura profesional “${rawSpecialty}”`;
+    } else {
+      return `Técnico en ${rawSpecialty}`;
+    }
+  }
+
+  if (/ciencias/i.test(rawCourse)) {
+    return "Ciencias";
+  } else if (/inform[aá]tica|sistemas|computaci[oó]n/i.test(rawCourse)) {
+    return "Técnico en Informática";
+  } else if (/contabilidad/i.test(rawCourse)) {
+    return "Técnico en Contabilidad";
+  } else if (/t[eé]cnic/i.test(rawCourse)) {
+    return "Técnico";
+  }
+
+  return "General Unificado";
+}
+
 export function formatStudentCourseFull(
   student?: StudentCourseInput | null,
   opts?: { includeJornada?: boolean }
@@ -27,68 +85,37 @@ export function formatStudentCourseFull(
 
   const rawCourse = (student.course || "").trim();
   const rawParallel = (student.parallel || "").trim();
-  const rawSpecialty = (student.bachillerato_specialty || "").trim();
   const rawJornada = (student.jornada || "").trim();
-  const level = (student.education_level || "").toUpperCase();
 
-  const isBachillerato =
-    level === "BACHILLERATO" ||
-    !!rawSpecialty ||
-    /bachillerato|bgu/i.test(rawCourse) ||
-    /^(?:1|2|3)(?:ro|do|er|ero|°)?s*(?:año|ano)?s*(?:bachillerato|bgu)/i.test(rawCourse) ||
-    (/^(?:1|2|3)(?:ro|do|er|ero|°)?$/i.test(rawCourse) && level === "BACHILLERATO");
+  const isBachillerato = isBachilleratoStudent(student);
 
   let baseCourse = rawCourse;
 
   if (isBachillerato) {
     // Extraer número de año (1, 2 o 3)
     let yearNum = "1";
-    if (/(?:^|)(?:3|3ro|3er|3ero|tercer|tercero|3°)(?:|$)/i.test(rawCourse)) {
+    if (/(?:^|\b|\D)(?:3|3ro|3er|3ero|tercer|tercero|3°|3\.)(?:\b|\s|\D|$)/i.test(rawCourse)) {
       yearNum = "3";
-    } else if (/(?:^|)(?:2|2do|segundo|2°)(?:|$)/i.test(rawCourse)) {
+    } else if (/(?:^|\b|\D)(?:2|2do|segundo|2°|2\.)(?:\b|\s|\D|$)/i.test(rawCourse)) {
       yearNum = "2";
-    } else if (/(?:^|)(?:1|1ro|1er|1ero|primer|primero|1°)(?:|$)/i.test(rawCourse)) {
+    } else if (/(?:^|\b|\D)(?:1|1ro|1er|1ero|primer|primero|1°|1\.)(?:\b|\s|\D|$)/i.test(rawCourse)) {
       yearNum = "1";
     }
 
+    const spec = getBachilleratoSpecialty(student);
     let formattedSpecialty = "";
-    if (rawSpecialty) {
-      const lowerSpec = rawSpecialty.toLowerCase();
-      if (lowerSpec.startsWith("técnico") || lowerSpec.startsWith("tecnico")) {
-        formattedSpecialty = ` ${rawSpecialty}`;
-      } else if (lowerSpec === "ciencias") {
-        formattedSpecialty = " en Ciencias";
-      } else if (lowerSpec === "informática" || lowerSpec === "informatica") {
-        formattedSpecialty = " Técnico en Informática";
-      } else if (lowerSpec === "contabilidad") {
-        formattedSpecialty = " Técnico en Contabilidad";
-      } else if (/^(general|unificado|bgu|general unificado)$/i.test(lowerSpec)) {
-        formattedSpecialty = " General Unificado";
-      } else if (lowerSpec.startsWith("en ")) {
-        formattedSpecialty = ` ${rawSpecialty}`;
-      } else if (/t[eé]cnic/i.test(lowerSpec)) {
-        // La figura profesional ya contiene "Técnico" (p.ej. "Soporte Técnico
-        // de Equipos Informáticos"): se evita el doble "Técnico en Técnico".
-        formattedSpecialty = ` Técnico, figura profesional “${rawSpecialty}”`;
-      } else {
-        formattedSpecialty = ` Técnico en ${rawSpecialty}`;
-      }
+    if (spec === "Ciencias") {
+      formattedSpecialty = " en Ciencias";
+    } else if (spec.startsWith("Técnico") || spec.startsWith(" Técnico")) {
+      formattedSpecialty = spec.startsWith(" ") ? spec : ` ${spec}`;
+    } else if (spec === "General Unificado") {
+      formattedSpecialty = " General Unificado";
     } else {
-      if (/ciencias/i.test(rawCourse)) {
-        formattedSpecialty = " en Ciencias";
-      } else if (/inform[aá]tica/i.test(rawCourse)) {
-        formattedSpecialty = " Técnico en Informática";
-      } else if (/contabilidad/i.test(rawCourse)) {
-        formattedSpecialty = " Técnico en Contabilidad";
-      } else if (/t[eé]cnico/i.test(rawCourse)) {
-        formattedSpecialty = " Técnico";
-      } else {
-        formattedSpecialty = " General Unificado";
-      }
+      formattedSpecialty = spec ? ` ${spec}` : " General Unificado";
     }
 
     baseCourse = `${yearNum}.° de Bachillerato${formattedSpecialty}`;
-  } else if (/^(?:10|9|8|7|6|5|4|3|2|1)(?:mo|no|vo|to|ro|do|er|ero|°)?s*(?:egb|b[aá]sica)?/i.test(rawCourse)) {
+  } else if (/^(?:10|9|8|7|6|5|4|3|2|1)(?:mo|no|vo|to|ro|do|er|ero|°|\.)?\s*(?:egb|b[aá]sica)?/i.test(rawCourse)) {
     // EGB
     const m = rawCourse.match(/^(10|9|8|7|6|5|4|3|2|1)/);
     if (m) {

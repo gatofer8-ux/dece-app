@@ -8,6 +8,8 @@ import { updateInterview } from "../../../../actions";
 import type { CaseFileRow, StudentRow, CaseInterviewRow } from "@/lib/types";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
 import AIAssistButton from "@/components/AIAssistButton";
+import AppendAwarenessNoteButton from "@/components/AppendAwarenessNoteButton";
+import { getDefaultInterviewCommitment } from "@/lib/interviewDefaults";
 import Link from "next/link";
 
 const EMOTIONAL_OPTIONS = ["Estable", "Inestable", "Llanto fácil", "Triste", "Alegre", "Agresivo", "Evasivo"];
@@ -183,20 +185,24 @@ export default async function EditarEntrevistaPage({ params }: { params: { id: s
         </div>
 
         <div>
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase mb-2">4. Compromiso</h3>
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="text-xs font-semibold text-slate-500 uppercase">4. Compromiso</h3>
             <div className="flex items-center gap-2">
+              <AppendAwarenessNoteButton targetId="interview-commitment" />
               <VoiceDictationButton targetId="interview-commitment" />
               <AIAssistButton targetId="interview-commitment" caseId={caseFile.id} fieldLabel="Compromisos asumidos en la entrevista" />
             </div>
           </div>
+          <p className="text-[11px] text-slate-500 mb-1.5">
+            Incluye acuerdos específicos y la constancia de toma de conocimiento y corresponsabilidad del representante.
+          </p>
           <textarea
             id="interview-commitment"
             name="commitment"
-            rows={3}
-            defaultValue={interview.commitment || ""}
+            rows={7}
+            defaultValue={interview.commitment || getDefaultInterviewCommitment(student.full_name)}
             placeholder="Compromisos asumidos..."
-            className="textarea"
+            className="textarea text-xs leading-relaxed"
           />
         </div>
 

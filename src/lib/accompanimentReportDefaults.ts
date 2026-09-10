@@ -44,11 +44,31 @@ export function getAccompanimentPrefill(
       accompanimentActions = acts
         .map(
           (a) =>
-            `- ${a.categoria || "Acción"}: a cargo de ${a.ejecutor || "—"}${
+            `• ${a.categoria || "Acción"}: a cargo de ${a.ejecutor || "—"}${
               a.fecha_inicio ? `, desde ${a.fecha_inicio}` : ""
             }${a.fecha_fin ? ` hasta ${a.fecha_fin}` : ""}.`
         )
         .join("\n");
+    } catch {
+      /* noop */
+    }
+  }
+
+  if (!accompanimentActions) {
+    try {
+      const caseActs = db
+        .prepare(
+          "SELECT date, type, description FROM case_actions WHERE case_file_id = ? ORDER BY date ASC, created_at ASC"
+        )
+        .all(caseId) as { date: string | null; type: string; description: string }[];
+      if (caseActs.length) {
+        accompanimentActions = caseActs
+          .map((a) => {
+            const d = a.date ? a.date.slice(0, 10) : "";
+            return `• ${d ? `[Fecha: ${d}] ` : ""}${a.type}: ${a.description}`;
+          })
+          .join("\n");
+      }
     } catch {
       /* noop */
     }
