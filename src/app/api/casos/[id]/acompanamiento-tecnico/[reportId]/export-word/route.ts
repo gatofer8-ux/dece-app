@@ -13,7 +13,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string;
     .get(params.reportId, params.id, session.user.institution_id) as CaseAccompanimentReportRow | undefined;
   if (!report) return NextResponse.json({ error: "Informe no encontrado" }, { status: 404 });
 
-  const buffer = await generateAccompanimentReportDocx(report);
+  const institution = db
+    .prepare("SELECT name, amie_code FROM institutions WHERE id = ?")
+    .get(session.user.institution_id) as { name: string; amie_code: string | null } | undefined;
+  const buffer = await generateAccompanimentReportDocx(report, institution);
   const safe = (report.student_full_name || "Informe").replace(/[^a-zA-Z0-9-_]/g, "_").slice(0, 80);
   return new NextResponse(buffer, {
     headers: {

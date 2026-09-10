@@ -77,9 +77,10 @@ export default async function ImprimirInformeAcompanamientoPage({
 
         <table className="w-full border-collapse">
           <tbody>
-            <tr><td className={lbl}>Institución educativa:</td><td className={cell}>{institution.name}</td><td className={lbl}>Código AMIE:</td><td className={cell}>{institution.amie_code || ""}</td></tr>
-            <tr><td className={lbl}>Informe N°:</td><td className={`${cell} font-semibold`}>{r.report_number || ""}</td><td className={lbl}>Fecha de elaboración:</td><td className={cell}>{fmt(r.report_date)}</td></tr>
-            <tr><td className={lbl}>Profesional DECE que maneja el caso:</td><td className={cell} colSpan={3}>{r.professional_managing || ""}</td></tr>
+            <tr><td className={cell} colSpan={4}><span className="font-semibold">Institución educativa:</span> {institution.name}</td></tr>
+            <tr><td className={cell} colSpan={4}><span className="font-semibold">Código AMIE:</span> {institution.amie_code || ""}</td></tr>
+            <tr><td className={cell} colSpan={2}><span className="font-semibold">Informe N°:</span> {r.report_number || ""}</td><td className={cell} colSpan={2}><span className="font-semibold">Fecha de elaboración del informe:</span> {fmt(r.report_date)}</td></tr>
+            <tr><td className={cell} colSpan={4}><span className="font-semibold">Nombre de profesional DECE que maneja el caso:</span> {r.professional_managing || ""}</td></tr>
           </tbody>
         </table>
 

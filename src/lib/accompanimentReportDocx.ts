@@ -142,7 +142,10 @@ function fmtD(d: string | null | undefined) {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : d || "";
 }
 
-export async function generateAccompanimentReportDocx(report: CaseAccompanimentReportRow): Promise<Buffer> {
+export async function generateAccompanimentReportDocx(
+  report: CaseAccompanimentReportRow,
+  institution?: { name?: string | null; amie_code?: string | null } | null
+): Promise<Buffer> {
   const ind = parseIndicators(report.indicators_json);
   const rp = parseRiskProtection(report.risk_protection_json);
   const ext = parseExtReferral(report.ext_referral_json);
@@ -156,7 +159,8 @@ export async function generateAccompanimentReportDocx(report: CaseAccompanimentR
     R([cell([new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [run("INFORME DE ACOMPAÑAMIENTO A VÍCTIMAS FRENTE A SITUACIONES DE VIOLENCIA DETECTADAS EN EL ÁMBITO EDUCATIVO", { bold: true, size: BODY })] })], { fill: FILL_TITLE })]),
 
     // Cabecera
-    fieldRow("Institución educativa:", ""),
+    fieldRow("Institución educativa:", institution?.name || ""),
+    fieldRow("Código AMIE:", institution?.amie_code || ""),
     R([
       cell([new Paragraph({ spacing: { after: 0 }, children: [run("Informe N°: ", { bold: true }), run(report.report_number || "", {})] })], { span: NCOLS / 2 }),
       cell([new Paragraph({ spacing: { after: 0 }, children: [run("Fecha de elaboración del informe: ", { bold: true }), run(fmtD(report.report_date), {})] })], { span: NCOLS / 2 }),
