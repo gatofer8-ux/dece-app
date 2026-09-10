@@ -2852,7 +2852,7 @@ export async function generateReferralDocx(opts: {
               new TableRow({
                 children: [
                   lbl("Historia de la situación actual", 1),
-                  val(referral.background_summary || referral.reason || "—", 5, false),
+                  val(referral.current_situation_history || referral.background_summary || referral.reason || "—", 5, false),
                 ],
               }),
               new TableRow({

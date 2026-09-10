@@ -27,13 +27,15 @@ function insertReferral(
   requireOwnedCase(caseId, institutionId);
   const id = randomUUID();
 
+  const currentSituation = str(formData, "current_situation_history") || str(formData, "background_summary");
+
   db.prepare(
     `INSERT INTO referrals
       (id, case_file_id, created_by_id, scope, institution, reason, informed_consent, consent_signed_by, referral_date, status,
-       destination_detail, background_summary, actions_taken, care_type_required, observations,
+       destination_detail, background_summary, current_situation_history, actions_taken, care_type_required, observations,
        elaborated_by_name, received_by, authority_name,
        student_age, student_disability, student_nationality, representative_document_id, district_office_label)
-     VALUES (?, ?, ?, ?, ?, ?, 0, NULL, ?, 'PENDIENTE', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+     VALUES (?, ?, ?, ?, ?, ?, 0, NULL, ?, 'PENDIENTE', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     caseId,
@@ -43,7 +45,8 @@ function insertReferral(
     str(formData, "reason") || "",
     str(formData, "referral_date") || new Date().toISOString(),
     str(formData, "destination_detail"),
-    str(formData, "background_summary"),
+    currentSituation,
+    currentSituation,
     str(formData, "actions_taken"),
     str(formData, "care_type_required"),
     str(formData, "observations"),
@@ -105,6 +108,8 @@ export async function updateOfficialReferral(
   const institutionId = requireInstitutionId(session);
   requireOwnedCase(caseId, institutionId);
 
+  const currentSituation = str(formData, "current_situation_history") || str(formData, "background_summary");
+
   try {
     db.prepare(
       `UPDATE referrals SET
@@ -114,6 +119,7 @@ export async function updateOfficialReferral(
         referral_date = ?,
         destination_detail = ?,
         background_summary = ?,
+        current_situation_history = ?,
         actions_taken = ?,
         care_type_required = ?,
         observations = ?,
@@ -133,7 +139,8 @@ export async function updateOfficialReferral(
       str(formData, "reason") || "",
       str(formData, "referral_date") || new Date().toISOString(),
       str(formData, "destination_detail"),
-      str(formData, "background_summary"),
+      currentSituation,
+      currentSituation,
       str(formData, "actions_taken"),
       str(formData, "care_type_required"),
       str(formData, "observations"),

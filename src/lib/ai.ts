@@ -233,6 +233,19 @@ export async function draftText(opts: {
       "5. NO redactes párrafos explicativos, ni introducciones, ni burocracia extensa. Devuelve ÚNICAMENTE la lista con guiones.\n"
     : "";
 
+  const isCurrentSituationHistory =
+    opts.fieldLabel.toLowerCase().includes("historia de la situación actual") ||
+    opts.fieldLabel.toLowerCase().includes("situación actual en la ficha de derivación");
+
+  const currentSituationRule = isCurrentSituationHistory
+    ? "\nREGLA OBLIGATORIA PARA 'HISTORIA DE LA SITUACIÓN ACTUAL' EN FICHA DE DERIVACIÓN:\n" +
+      "1. Redacta un resumen clínico y psicosocial conciso de EXACTAMENTE 4 a 6 oraciones continuas en un solo párrafo.\n" +
+      "2. Redacción estrictamente factual, objetiva, profesional y en tercera persona ('El estudiante...', 'Se evidencia...', 'La representante refiere...').\n" +
+      "3. Describe de forma sucinta el motivo de seguimiento, la conducta o sintomatología observada, la dinámica familiar y los factores identificados.\n" +
+      "4. NO redactes párrafos excesivamente largos, NO uses listas numeradas ni viñetas, mantén una redacción compacta y clínica.\n" +
+      "5. NO emitas juicios de valor ni diagnósticos clínicos nosológicos definitivos.\n"
+    : "";
+
   const prompt = `Eres un asistente que ayuda a un profesional del Departamento de Consejería Estudiantil (DECE) en Ecuador a redactar documentos técnicos oficiales de gestión de casos. Usa lenguaje profesional, claro, objetivo, respetuoso y con enfoque de derechos, sin emitir juicios de valor ni diagnósticos clínicos que no correspondan a un informe DECE.
 
 REGLAS DE FORMATO Y ESTILO ESTRICTAS (OBLIGATORIAS):
@@ -246,6 +259,7 @@ REGLAS DE FORMATO Y ESTILO ESTRICTAS (OBLIGATORIAS):
   ${socializationAgreementsRule}
   ${bimonthlyRule}
   ${referralActionsRule}
+  ${currentSituationRule}
   Vas a redactar o mejorar el siguiente campo de un documento: "${opts.fieldLabel}".
 
 Contexto del caso (datos ya registrados en el sistema; úsalos para dar coherencia, pero NO inventes datos, nombres, fechas ni hechos que no aparezcan aquí):

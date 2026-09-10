@@ -121,10 +121,10 @@ export default function ReferralForm({
 
       <div>
         <div className="flex items-center justify-between">
-          <label className="label text-xs">Motivo de la derivación *</label>
+          <label className="label text-xs">Motivo breve de la derivación *</label>
           <div className="flex items-center gap-2">
             <VoiceDictationButton targetId="referral-reason" />
-            <AIAssistButton targetId="referral-reason" caseId={caseId} fieldLabel="Motivo de la derivación" />
+            <AIAssistButton targetId="referral-reason" caseId={caseId} fieldLabel="Motivo breve de la derivación" />
           </div>
         </div>
         <textarea
@@ -134,6 +134,7 @@ export default function ReferralForm({
           defaultValue={initialData?.reason || ""}
           rows={2}
           className="textarea"
+          placeholder="Ej: Derivación a Centro de Salud para evaluación y atención psicológica especializada."
         />
       </div>
 
@@ -145,12 +146,13 @@ export default function ReferralForm({
             <AIAssistButton targetId="referral-background" caseId={caseId} fieldLabel="Historia de la situación actual en la ficha de derivación" />
           </div>
         </div>
-        <p className="text-xs text-slate-400 mb-1">Síntesis de la situación del/la estudiante, el entorno educativo y familiar desde el ámbito de la atención psicosocial.</p>
+        <p className="text-xs text-slate-400 mb-1">Síntesis de la situación del/la estudiante, el entorno educativo y familiar desde el ámbito de la atención psicosocial (resumen clínico conciso de 4 a 6 oraciones, en 3ra persona).</p>
         <textarea
           id="referral-background"
-          name="background_summary"
-          defaultValue={initialData?.background_summary || ""}
-          rows={3}
+          name="current_situation_history"
+          defaultValue={initialData?.current_situation_history || initialData?.background_summary || ""}
+          placeholder="Resumen clínico y psicosocial conciso (4 a 6 oraciones en tercera persona) describiendo el motivo de seguimiento, conducta o sintomatología observada, dinámica familiar y factores identificados."
+          rows={4}
           className="textarea"
         />
       </div>

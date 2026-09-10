@@ -215,7 +215,8 @@ CREATE TABLE IF NOT EXISTS referrals (
   follow_up_date    TEXT,
   -- Campos adicionales para generar la Ficha de Derivación oficial (E.D3.C1.DE...)
   destination_detail   TEXT, -- categoría exacta del destino (ver src/lib/referral.ts)
-  background_summary   TEXT, -- historia de la situación actual
+  background_summary   TEXT, -- historia de la situación actual (legado)
+  current_situation_history TEXT, -- historia de la situación actual (formato oficial)
   actions_taken        TEXT, -- acciones desarrolladas en el ámbito de atención psicosocial
   care_type_required    TEXT, -- tipo de atención que se requiere de la entidad interna/externa
   observations          TEXT,

@@ -211,7 +211,7 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
             </tr>
             <tr>
               <td className={labelCell} colSpan={1}>Historia de la situación actual</td>
-              <td className={cell} colSpan={5}><p className="whitespace-pre-wrap font-normal">{referral.background_summary || referral.reason || "—"}</p></td>
+              <td className={cell} colSpan={5}><p className="whitespace-pre-wrap font-normal">{referral.current_situation_history || referral.background_summary || referral.reason || "—"}</p></td>
             </tr>
             <tr>
               <td className={labelCell} colSpan={1}>Acciones desarrolladas</td>

@@ -415,6 +415,7 @@ export interface ReferralRow {
   follow_up_date: string | null;
   destination_detail: string | null;
   background_summary: string | null;
+  current_situation_history: string | null;
   actions_taken: string | null;
   care_type_required: string | null;
   observations: string | null;
