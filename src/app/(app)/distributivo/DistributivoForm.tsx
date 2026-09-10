@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import Link from "next/link";
 import { saveDistributivo, saveCourseQuotasAction, loadCourseQuotasAction, clearCourseQuotasAction, deleteDistributivo } from "./actions";
 import { loadDesktopTutorsAction, uploadTutorsFileAction } from "./tutors-actions";
@@ -15,12 +15,14 @@ import type {
   UserRow,
 } from "@/lib/types";
 import { compareCoursesDescending, compareCoursesAscending } from "@/lib/courseOrder";
+import { makeParallelKey, parseParallelKey, normalizeCourseKey, type CourseParallelDetail } from "@/lib/distributivo";
 
 interface CourseSummary {
   course: string;
   totalStudents: number;
   parallels: string[];
   jornadas: string[];
+  parallelDetails?: CourseParallelDetail[];
 }
 
 interface ProfessionalAssignmentState {
@@ -155,6 +157,48 @@ export default function DistributivoForm({
 
   // Estado de asignaciones
   const [assignments, setAssignments] = useState<ProfessionalAssignmentState[]>(() => {
+    const expandInitialParallels = (courses: string[], parallels: string[]): string[] => {
+      const hasStructured = parallels.some((p) => typeof p === "string" && p.includes("::"));
+      if (hasStructured) {
+        return parallels;
+      }
+      const result: string[] = [];
+      for (const cName of courses) {
+        const cleanC = cName.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase();
+        const cs = initialCourseSummaries.find(
+          (c) =>
+            c.course === cName ||
+            c.course.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase() === cleanC
+        );
+        if (cs) {
+          const pDetails =
+            cs.parallelDetails && cs.parallelDetails.length > 0
+              ? cs.parallelDetails
+              : cs.parallels.map((p) => ({
+                  parallel: p,
+                  jornada:
+                    cs.jornadas[0] ||
+                    (cs.course.includes("Vespertina")
+                      ? "VESPERTINA"
+                      : cs.course.includes("Nocturna")
+                      ? "NOCTURNA"
+                      : "MATUTINA"),
+                  student_count: cs.totalStudents,
+                }));
+          for (const pd of pDetails) {
+            if (
+              parallels.length === 0 ||
+              parallels.includes(pd.parallel) ||
+              parallels.includes(pd.parallel.toUpperCase())
+            ) {
+              result.push(makeParallelKey(cs.course, pd.parallel, pd.jornada));
+            }
+          }
+        }
+      }
+      return result.length > 0 ? result : parallels;
+    };
+
     const teamAssignments: ProfessionalAssignmentState[] = deceTeam.map((user, idx) => {
       const existing = existingAssignments?.find((a) => a.user_id === user.id);
       let parsedCourses: string[] = [];
@@ -182,7 +226,7 @@ export default function DistributivoForm({
         jornada: existing?.jornada || "MATUTINA",
         subniveles: parsedSubniveles,
         courses: parsedCourses,
-        parallels: parsedParallels,
+        parallels: expandInitialParallels(parsedCourses, parsedParallels),
         estimatedStudentsCount: existing?.estimated_students_count || 0,
         specificResponsibilities: existing?.specific_responsibilities || "",
         hasEnlazada: existing?.has_enlazada === 1 || Boolean(existing?.enlazada_name),
@@ -209,7 +253,7 @@ export default function DistributivoForm({
             jornada: ea.jornada || "MATUTINA",
             subniveles: parsedSubniveles,
             courses: parsedCourses,
-            parallels: parsedParallels,
+            parallels: expandInitialParallels(parsedCourses, parsedParallels),
             estimatedStudentsCount: ea.estimated_students_count || 0,
             specificResponsibilities: ea.specific_responsibilities || "",
             hasEnlazada: ea.has_enlazada === 1 || Boolean(ea.enlazada_name),
@@ -232,6 +276,111 @@ export default function DistributivoForm({
   const numProfessionals = deceTeam.length;
   const targetPerAnalyst = numProfessionals > 0 ? Math.round(totalStudents / numProfessionals) : 0;
   const isSingleProfessional = numProfessionals === 1;
+
+  const getParallelDetailsForCourse = (c: CourseSummary): CourseParallelDetail[] => {
+    if (c.parallelDetails && c.parallelDetails.length > 0) {
+      return c.parallelDetails;
+    }
+    const countPerP = c.parallels.length > 0 ? Math.round(c.totalStudents / c.parallels.length) : c.totalStudents;
+    const shift = c.jornadas[0] || (c.course.includes("Vespertina") ? "VESPERTINA" : c.course.includes("Nocturna") ? "NOCTURNA" : "MATUTINA");
+    return c.parallels.map((p) => ({
+      parallel: p,
+      jornada: shift,
+      student_count: countPerP,
+    }));
+  };
+
+  const isParallelAssignedToUser = (
+    userId: string,
+    courseName: string,
+    parallel: string,
+    jornada?: string
+  ): boolean => {
+    const userAssign = assignments.find((a) => a.userId === userId);
+    if (!userAssign) return false;
+
+    const key = makeParallelKey(courseName, parallel, jornada);
+    const cleanCourse = courseName.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim();
+    const cleanCourseLower = cleanCourse.toLowerCase();
+    const targetJornada = (jornada || "").toUpperCase().trim();
+    const pUpper = parallel.toUpperCase().trim();
+
+    for (const p of userAssign.parallels) {
+      if (p === key) return true;
+      const parsed = parseParallelKey(p);
+      if (parsed) {
+        const parsedClean = parsed.course.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase();
+        const sameCourse = parsedClean === cleanCourseLower;
+        const sameParallel = parsed.parallel.toUpperCase() === pUpper;
+        const sameJornada = !targetJornada || !parsed.jornada || parsed.jornada.toUpperCase() === targetJornada;
+        if (sameCourse && sameParallel && sameJornada) {
+          return true;
+        }
+      }
+    }
+
+    const hasCourse = userAssign.courses.some((c) => {
+      const cClean = c.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase();
+      const shiftMatch = c.match(/\((Matutina|Vespertina|Nocturna)\)$/i);
+      const cShift = (shiftMatch ? shiftMatch[1] : "").toUpperCase().trim();
+      if (targetJornada && cShift && targetJornada !== cShift) return false;
+      return cClean === cleanCourseLower;
+    });
+
+    if (hasCourse) {
+      const hasAnyParallelForCourse = userAssign.parallels.some((p) => {
+        const parsed = parseParallelKey(p);
+        if (!parsed) return false;
+        const parsedClean = parsed.course.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase();
+        return parsedClean === cleanCourseLower;
+      });
+      if (!hasAnyParallelForCourse) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  const calculateStudentsForUser = (
+    userCourses: string[],
+    userParallels: string[],
+    summaries = courseSummaries
+  ): number => {
+    let total = 0;
+    const cleanUserCourses = userCourses.map((c) =>
+      c.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim()
+    );
+
+    for (const cs of summaries) {
+      const cleanCs = cs.course.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim();
+      const pDetails = getParallelDetailsForCourse(cs);
+
+      const matchingPKeys = userParallels.filter((p) => {
+        const parsed = parseParallelKey(p);
+        return parsed && (parsed.course === cleanCs || parsed.course === cs.course);
+      });
+
+      if (matchingPKeys.length > 0) {
+        for (const pk of matchingPKeys) {
+          const parsed = parseParallelKey(pk);
+          if (!parsed) continue;
+          const foundPd = pDetails.find(
+            (pd) =>
+              pd.parallel.toUpperCase() === parsed.parallel.toUpperCase() &&
+              (!parsed.jornada || pd.jornada.toUpperCase() === parsed.jornada.toUpperCase())
+          );
+          if (foundPd) {
+            total += foundPd.student_count;
+          }
+        }
+      } else if (cleanUserCourses.includes(cleanCs) || userCourses.includes(cs.course)) {
+        total += cs.totalStudents;
+      }
+    }
+
+    return total;
+  };
 
   const calculateStudentsForCourses = (selectedCourses: string[], summaries = courseSummaries) => {
     return summaries
@@ -262,65 +411,238 @@ export default function DistributivoForm({
     return Array.from(subniveles);
   };
 
-  // ---------------------------------------------------------------------------
-  // 1. ASIGNACIÓN RÁPIDA POR BLOQUES (EVITA ESTAR SEÑALANDO CURSO POR CURSO)
-  // ---------------------------------------------------------------------------
+  const matchesParallelKey = (
+    key: string,
+    courseName: string,
+    parallel: string,
+    jornada?: string
+  ): boolean => {
+    const cleanCourseLower = courseName.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase();
+    const pUpper = parallel.toUpperCase().trim();
+    const targetJornada = (jornada || "").toUpperCase().trim();
+
+    const parsed = parseParallelKey(key);
+    if (!parsed) return false;
+    const parsedClean = parsed.course.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase();
+    const sameCourse = parsedClean === cleanCourseLower;
+    const sameParallel = parsed.parallel.toUpperCase() === pUpper;
+    const sameJornada = !targetJornada || !parsed.jornada || parsed.jornada.toUpperCase() === targetJornada;
+    return sameCourse && sameParallel && sameJornada;
+  };
+
+  const toggleParallelForUser = (
+    userId: string,
+    courseName: string,
+    parallel: string,
+    jornada: string
+  ) => {
+    const pKey = makeParallelKey(courseName, parallel, jornada);
+    const cleanCourse = courseName.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim();
+    const cleanCourseLower = cleanCourse.toLowerCase();
+
+    setAssignments((prev) => {
+      const targetUser = prev.find((a) => a.userId === userId);
+      if (!targetUser) return prev;
+
+      const isAlreadyAssigned = isParallelAssignedToUser(userId, courseName, parallel, jornada);
+
+      return prev.map((a) => {
+        if (a.userId === userId) {
+          let nextParallels: string[] = [];
+          let nextCourses = [...a.courses];
+
+          if (isAlreadyAssigned) {
+            nextParallels = a.parallels.filter(
+              (p) => p !== pKey && !matchesParallelKey(p, courseName, parallel, jornada)
+            );
+            const stillHasParallels = nextParallels.some((p) => {
+              const parsed = parseParallelKey(p);
+              if (!parsed) return false;
+              const parsedClean = parsed.course.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase();
+              return parsedClean === cleanCourseLower;
+            });
+            if (!stillHasParallels) {
+              nextCourses = nextCourses.filter(
+                (c) => c !== courseName && c.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase() !== cleanCourseLower
+              );
+            }
+          } else {
+            nextParallels = Array.from(new Set([...a.parallels, pKey]));
+            if (!nextCourses.some((c) => c.toLowerCase() === courseName.toLowerCase())) {
+              nextCourses.push(courseName);
+            }
+          }
+
+          const nextCount = calculateStudentsForUser(nextCourses, nextParallels);
+          return {
+            ...a,
+            courses: nextCourses,
+            parallels: nextParallels,
+            estimatedStudentsCount: nextCount,
+            subniveles: inferSubnivelesForCourses(nextCourses),
+          };
+        } else {
+          if (!isAlreadyAssigned && isParallelAssignedToUser(a.userId, courseName, parallel, jornada)) {
+            const nextParallels = a.parallels.filter(
+              (p) => p !== pKey && !matchesParallelKey(p, courseName, parallel, jornada)
+            );
+            const stillHas = nextParallels.some((p) => {
+              const parsed = parseParallelKey(p);
+              if (!parsed) return false;
+              const parsedClean = parsed.course.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase();
+              return parsedClean === cleanCourseLower;
+            });
+            const nextCourses = stillHas
+              ? a.courses
+              : a.courses.filter(
+                  (c) => c !== courseName && c.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase() !== cleanCourseLower
+                );
+            return {
+              ...a,
+              courses: nextCourses,
+              parallels: nextParallels,
+              estimatedStudentsCount: calculateStudentsForUser(nextCourses, nextParallels),
+              subniveles: inferSubnivelesForCourses(nextCourses),
+            };
+          }
+          return a;
+        }
+      });
+    });
+  };
+
+  const assignParallelDirectly = (
+    targetUserId: string,
+    courseName: string,
+    parallel: string,
+    jornada: string
+  ) => {
+    const pKey = makeParallelKey(courseName, parallel, jornada);
+    const cleanCourse = courseName.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim();
+    const cleanCourseLower = cleanCourse.toLowerCase();
+
+    setAssignments((prev) =>
+      prev.map((a) => {
+        if (targetUserId && a.userId === targetUserId) {
+          const nextParallels = Array.from(new Set([...a.parallels, pKey]));
+          const nextCourses = a.courses.includes(courseName) ? a.courses : [...a.courses, courseName];
+          return {
+            ...a,
+            courses: nextCourses,
+            parallels: nextParallels,
+            estimatedStudentsCount: calculateStudentsForUser(nextCourses, nextParallels),
+            subniveles: inferSubnivelesForCourses(nextCourses),
+          };
+        } else {
+          const hadIt = isParallelAssignedToUser(a.userId, courseName, parallel, jornada);
+          if (hadIt) {
+            const nextParallels = a.parallels.filter(
+              (p) => p !== pKey && !matchesParallelKey(p, courseName, parallel, jornada)
+            );
+            const stillHas = nextParallels.some((p) => {
+              const parsed = parseParallelKey(p);
+              if (!parsed) return false;
+              const parsedClean = parsed.course.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase();
+              return parsedClean === cleanCourseLower;
+            });
+            const nextCourses = stillHas
+              ? a.courses
+              : a.courses.filter(
+                  (c) => c !== courseName && c.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase() !== cleanCourseLower
+                );
+            return {
+              ...a,
+              courses: nextCourses,
+              parallels: nextParallels,
+              estimatedStudentsCount: calculateStudentsForUser(nextCourses, nextParallels),
+              subniveles: inferSubnivelesForCourses(nextCourses),
+            };
+          }
+          return a;
+        }
+      })
+    );
+  };
+
   const assignBlockToUser = (
     userId: string,
     blockType: "MATUTINA" | "VESPERTINA" | "NOCTURNA" | "ELEMENTAL" | "MEDIA" | "SUPERIOR" | "BACHILLERATO" | "ALL"
   ) => {
-    setAssignments((prev) =>
-      prev.map((a) => {
-        if (a.userId !== userId) return a;
+    setAssignments((prev) => {
+      let matchingCourses: string[] = [];
+      if (blockType === "ALL") {
+        matchingCourses = courseSummaries.map((c) => c.course);
+      } else if (blockType === "MATUTINA") {
+        matchingCourses = courseSummaries
+          .filter((c) => c.course.includes("(Matutina)") || c.jornadas.includes("MATUTINA"))
+          .map((c) => c.course);
+      } else if (blockType === "VESPERTINA") {
+        matchingCourses = courseSummaries
+          .filter((c) => c.course.includes("(Vespertina)") || c.jornadas.includes("VESPERTINA"))
+          .map((c) => c.course);
+      } else if (blockType === "NOCTURNA") {
+        matchingCourses = courseSummaries
+          .filter((c) => c.course.includes("(Nocturna)") || c.jornadas.includes("NOCTURNA"))
+          .map((c) => c.course);
+      } else if (blockType === "ELEMENTAL") {
+        matchingCourses = courseSummaries
+          .filter((c) => c.course.includes("2.°") || c.course.includes("3.°") || c.course.includes("4.°"))
+          .map((c) => c.course);
+      } else if (blockType === "MEDIA") {
+        matchingCourses = courseSummaries
+          .filter((c) => c.course.includes("5.°") || c.course.includes("6.°") || c.course.includes("7.°"))
+          .map((c) => c.course);
+      } else if (blockType === "SUPERIOR") {
+        matchingCourses = courseSummaries
+          .filter((c) => c.course.includes("8.°") || c.course.includes("9.°") || c.course.includes("10.°"))
+          .map((c) => c.course);
+      } else if (blockType === "BACHILLERATO") {
+        matchingCourses = courseSummaries
+          .filter(
+            (c) =>
+              c.course.toLowerCase().includes("bachillerato") ||
+              c.course.toLowerCase().includes("bgu") ||
+              c.course.toLowerCase().includes("técnico")
+          )
+          .map((c) => c.course);
+      }
 
-        let matchingCourses: string[] = [];
-        if (blockType === "ALL") {
-          matchingCourses = courseSummaries.map((c) => c.course);
-        } else if (blockType === "MATUTINA") {
-          matchingCourses = courseSummaries
-            .filter((c) => c.course.includes("(Matutina)") || c.jornadas.includes("MATUTINA"))
-            .map((c) => c.course);
-        } else if (blockType === "VESPERTINA") {
-          matchingCourses = courseSummaries
-            .filter((c) => c.course.includes("(Vespertina)") || c.jornadas.includes("VESPERTINA"))
-            .map((c) => c.course);
-        } else if (blockType === "NOCTURNA") {
-          matchingCourses = courseSummaries
-            .filter((c) => c.course.includes("(Nocturna)") || c.jornadas.includes("NOCTURNA"))
-            .map((c) => c.course);
-        } else if (blockType === "ELEMENTAL") {
-          matchingCourses = courseSummaries
-            .filter((c) => c.course.includes("2.°") || c.course.includes("3.°") || c.course.includes("4.°"))
-            .map((c) => c.course);
-        } else if (blockType === "MEDIA") {
-          matchingCourses = courseSummaries
-            .filter((c) => c.course.includes("5.°") || c.course.includes("6.°") || c.course.includes("7.°"))
-            .map((c) => c.course);
-        } else if (blockType === "SUPERIOR") {
-          matchingCourses = courseSummaries
-            .filter((c) => c.course.includes("8.°") || c.course.includes("9.°") || c.course.includes("10.°"))
-            .map((c) => c.course);
-        } else if (blockType === "BACHILLERATO") {
-          matchingCourses = courseSummaries
-            .filter(
-              (c) =>
-                c.course.toLowerCase().includes("bachillerato") ||
-                c.course.toLowerCase().includes("bgu") ||
-                c.course.toLowerCase().includes("técnico")
-            )
-            .map((c) => c.course);
+      const matchingKeysToAdd: string[] = [];
+      for (const cName of matchingCourses) {
+        const cs = courseSummaries.find((c) => c.course === cName);
+        if (cs) {
+          const pDetails = getParallelDetailsForCourse(cs);
+          for (const pd of pDetails) {
+            matchingKeysToAdd.push(makeParallelKey(cName, pd.parallel, pd.jornada));
+          }
         }
+      }
 
-        const nextCourses = Array.from(new Set([...a.courses, ...matchingCourses]));
-        const count = calculateStudentsForCourses(nextCourses);
-        return {
-          ...a,
-          courses: nextCourses,
-          estimatedStudentsCount: count,
-          subniveles: inferSubnivelesForCourses(nextCourses),
-        };
-      })
-    );
+      return prev.map((a) => {
+        if (a.userId === userId) {
+          const nextCourses = Array.from(new Set([...a.courses, ...matchingCourses]));
+          const nextParallels = Array.from(new Set([...a.parallels, ...matchingKeysToAdd]));
+          const count = calculateStudentsForUser(nextCourses, nextParallels);
+          return {
+            ...a,
+            courses: nextCourses,
+            parallels: nextParallels,
+            estimatedStudentsCount: count,
+            subniveles: inferSubnivelesForCourses(nextCourses),
+          };
+        } else {
+          const nextParallels = a.parallels.filter((p) => !matchingKeysToAdd.includes(p));
+          const nextCourses = a.courses.filter((c) => !matchingCourses.includes(c));
+          return {
+            ...a,
+            courses: nextCourses,
+            parallels: nextParallels,
+            estimatedStudentsCount: calculateStudentsForUser(nextCourses, nextParallels),
+            subniveles: inferSubnivelesForCourses(nextCourses),
+          };
+        }
+      });
+    });
 
     setDistributionNotice("✓ Bloque asignado exitosamente al profesional.");
     setTimeout(() => setDistributionNotice(null), 4000);
@@ -330,34 +652,42 @@ export default function DistributivoForm({
     setAssignments((prev) =>
       prev.map((a) =>
         a.userId === userId
-          ? { ...a, courses: [], estimatedStudentsCount: 0, subniveles: [] }
+          ? { ...a, courses: [], parallels: [], estimatedStudentsCount: 0, subniveles: [] }
           : a
       )
     );
   };
 
   const assignCourseToUserDirectly = (courseName: string, targetUserId: string) => {
+    const cs = courseSummaries.find((c) => c.course === courseName);
+    const pDetails = cs ? getParallelDetailsForCourse(cs) : [];
+    const keysToAdd = pDetails.map((pd) => makeParallelKey(courseName, pd.parallel, pd.jornada));
+    const cleanCourse = courseName.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim();
+
     setAssignments((prev) =>
       prev.map((a) => {
         if (a.userId === targetUserId) {
           const nextCourses = a.courses.includes(courseName) ? a.courses : [...a.courses, courseName];
+          const nextParallels = Array.from(new Set([...a.parallels, ...keysToAdd]));
           return {
             ...a,
             courses: nextCourses,
-            estimatedStudentsCount: calculateStudentsForCourses(nextCourses),
+            parallels: nextParallels,
+            estimatedStudentsCount: calculateStudentsForUser(nextCourses, nextParallels),
             subniveles: inferSubnivelesForCourses(nextCourses),
           };
         } else {
-          if (a.courses.includes(courseName)) {
-            const nextCourses = a.courses.filter((c) => c !== courseName);
-            return {
-              ...a,
-              courses: nextCourses,
-              estimatedStudentsCount: calculateStudentsForCourses(nextCourses),
-              subniveles: inferSubnivelesForCourses(nextCourses),
-            };
-          }
-          return a;
+          const nextParallels = a.parallels.filter(
+            (p) => !keysToAdd.includes(p) && !p.startsWith(`${cleanCourse}::`)
+          );
+          const nextCourses = a.courses.filter((c) => c !== courseName);
+          return {
+            ...a,
+            courses: nextCourses,
+            parallels: nextParallels,
+            estimatedStudentsCount: calculateStudentsForUser(nextCourses, nextParallels),
+            subniveles: inferSubnivelesForCourses(nextCourses),
+          };
         }
       })
     );
@@ -369,22 +699,53 @@ export default function DistributivoForm({
   };
 
   const toggleCourseForUser = (userId: string, courseName: string) => {
-    setAssignments((prev) =>
-      prev.map((a) => {
-        if (a.userId !== userId) return a;
-        const exists = a.courses.includes(courseName);
-        const nextCourses = exists
-          ? a.courses.filter((c) => c !== courseName)
-          : [...a.courses, courseName];
-        const nextCount = calculateStudentsForCourses(nextCourses);
-        return {
-          ...a,
-          courses: nextCourses,
-          estimatedStudentsCount: nextCount,
-          subniveles: inferSubnivelesForCourses(nextCourses),
-        };
-      })
-    );
+    const cs = courseSummaries.find((c) => c.course === courseName);
+    const pDetails = cs ? getParallelDetailsForCourse(cs) : [];
+    const cleanCourse = courseName.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim();
+    const keys = pDetails.map((pd) => makeParallelKey(courseName, pd.parallel, pd.jornada));
+
+    setAssignments((prev) => {
+      const targetUser = prev.find((a) => a.userId === userId);
+      if (!targetUser) return prev;
+      const exists = targetUser.courses.includes(courseName);
+
+      return prev.map((a) => {
+        if (a.userId === userId) {
+          let nextCourses: string[] = [];
+          let nextParallels = [...a.parallels];
+
+          if (exists) {
+            nextCourses = a.courses.filter((c) => c !== courseName);
+            nextParallels = a.parallels.filter((p) => !keys.includes(p) && !p.startsWith(`${cleanCourse}::`));
+          } else {
+            nextCourses = [...a.courses, courseName];
+            nextParallels = Array.from(new Set([...nextParallels, ...keys]));
+          }
+
+          const nextCount = calculateStudentsForUser(nextCourses, nextParallels);
+          return {
+            ...a,
+            courses: nextCourses,
+            parallels: nextParallels,
+            estimatedStudentsCount: nextCount,
+            subniveles: inferSubnivelesForCourses(nextCourses),
+          };
+        } else {
+          if (!exists) {
+            const nextParallels = a.parallels.filter((p) => !keys.includes(p) && !p.startsWith(`${cleanCourse}::`));
+            const nextCourses = a.courses.filter((c) => c !== courseName);
+            return {
+              ...a,
+              courses: nextCourses,
+              parallels: nextParallels,
+              estimatedStudentsCount: calculateStudentsForUser(nextCourses, nextParallels),
+              subniveles: inferSubnivelesForCourses(nextCourses),
+            };
+          }
+          return a;
+        }
+      });
+    });
   };
 
   const toggleSubnivelForUser = (userId: string, subnivel: string) => {
@@ -1332,7 +1693,33 @@ export default function DistributivoForm({
           const actualUserName = a.userName || deceTeam[idx]?.name || deceTeam[0]?.name;
           const actualRoleLabel = a.userRoleLabel || (deceTeam[idx]?.role === "ADMIN" ? "Coordinador/a DECE" : "Analista DECE");
 
-          const assignedParallels = Array.from(
+          const rawP = a.parallels || [];
+          const finalParallels: string[] = [];
+
+          for (const cName of a.courses || []) {
+            const cleanC = cName.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim();
+            const specificKeys = rawP.filter((pk) => {
+              const parsed = parseParallelKey(pk);
+              return parsed && (parsed.course === cleanC || parsed.course === cName);
+            });
+
+            if (specificKeys.length > 0) {
+              finalParallels.push(...specificKeys);
+            } else {
+              // Si no hay paralelos específicos seleccionados para este curso, expandir todos los paralelos del curso
+              const cs = courseSummaries.find(
+                (c) => c.course === cName || c.course.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim() === cleanC
+              );
+              if (cs) {
+                const pDetails = getParallelDetailsForCourse(cs);
+                for (const pd of pDetails) {
+                  finalParallels.push(makeParallelKey(cs.course, pd.parallel, pd.jornada));
+                }
+              }
+            }
+          }
+
+          const fallbackParallels = Array.from(
             new Set(
               courseSummaries
                 .filter((c) => a.courses.includes(c.course))
@@ -1350,7 +1737,7 @@ export default function DistributivoForm({
             jornada: a.jornada || "MATUTINA",
             subniveles: a.subniveles || [],
             courses: a.courses || [],
-            parallels: assignedParallels,
+            parallels: finalParallels.length > 0 ? Array.from(new Set(finalParallels)) : fallbackParallels,
             estimated_students_count: Number(a.estimatedStudentsCount) || 0,
             estimatedStudentsCount: Number(a.estimatedStudentsCount) || 0,
             specific_responsibilities: a.specificResponsibilities || "",
@@ -1812,43 +2199,105 @@ export default function DistributivoForm({
                       No hay cursos registrados. Haz clic en <strong>"Oferta, Cursos Técnicos y Numéricos"</strong> para agregarlos.
                     </div>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       {courseSummaries.map((c) => {
-                        const isSelected = assignment.courses.includes(c.course);
-                        const assignedToOther = assignments.find(
-                          (other) => other.userId !== assignment.userId && other.courses.includes(c.course)
-                        );
+                        const pDetails = getParallelDetailsForCourse(c);
+                        const assignedToThisCount = pDetails.filter((pd) =>
+                          isParallelAssignedToUser(assignment.userId, c.course, pd.parallel, pd.jornada)
+                        ).length;
+                        const isAllAssignedToThis = pDetails.length > 0 && assignedToThisCount === pDetails.length;
+                        const isPartiallyAssigned = assignedToThisCount > 0 && !isAllAssignedToThis;
 
                         return (
-                          <button
+                          <div
                             key={c.course}
-                            type="button"
-                            onClick={() => toggleCourseForUser(assignment.userId, c.course)}
-                            className={`px-2.5 py-1.5 rounded text-xs font-medium text-left border transition-all flex items-center gap-2 ${
-                              isSelected
-                                ? "bg-indigo-600 text-white border-indigo-700 shadow-sm"
-                                : assignedToOther
-                                ? "bg-slate-100 text-slate-400 border-slate-200 opacity-60 hover:opacity-100"
-                                : "bg-white text-slate-700 border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/30"
+                            className={`p-2.5 rounded-lg border text-xs transition-all ${
+                              isAllAssignedToThis
+                                ? "bg-indigo-50/80 border-indigo-300 shadow-xs"
+                                : isPartiallyAssigned
+                                ? "bg-amber-50/70 border-amber-300 shadow-xs"
+                                : "bg-white border-slate-200 hover:border-slate-300"
                             }`}
                           >
-                            <span>{isSelected ? "✓" : "+"}</span>
-                            <span>{c.course}</span>
-                            <span
-                              className={`text-[10px] px-1.5 py-0.2 rounded ${
-                                isSelected
-                                  ? "bg-indigo-700 text-indigo-100"
-                                  : "bg-slate-200 text-slate-600"
-                              }`}
-                            >
-                              {c.totalStudents} est. ({c.parallels.join(",")})
-                            </span>
-                            {assignedToOther && !isSelected && (
-                              <span className="text-[9px] italic text-slate-400">
-                                ({assignedToOther.userName.split(" ")[0]})
-                              </span>
-                            )}
-                          </button>
+                            <div className="flex items-center justify-between gap-1.5 mb-2">
+                              <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                                <span className="font-bold text-slate-900 truncate" title={c.course}>
+                                  {c.course}
+                                </span>
+                                <span className="text-[10px] text-slate-500 font-medium whitespace-nowrap">
+                                  ({c.totalStudents} est.)
+                                </span>
+                                {isPartiallyAssigned && (
+                                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-200/80 text-amber-900 font-bold whitespace-nowrap">
+                                    {assignedToThisCount}/{pDetails.length} par.
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => toggleCourseForUser(assignment.userId, c.course)}
+                                className={`text-[10px] font-semibold px-2 py-0.5 rounded transition shrink-0 ${
+                                  isAllAssignedToThis
+                                    ? "bg-rose-100 text-rose-700 hover:bg-rose-200"
+                                    : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+                                }`}
+                              >
+                                {isAllAssignedToThis ? "✕ Quitar todo" : "+ Todo"}
+                              </button>
+                            </div>
+
+                            {/* Chips de paralelos individuales */}
+                            <div className="flex flex-wrap gap-1.5">
+                              {pDetails.map((pd) => {
+                                const isAssignedToThis = isParallelAssignedToUser(
+                                  assignment.userId,
+                                  c.course,
+                                  pd.parallel,
+                                  pd.jornada
+                                );
+                                const otherUser = !isAssignedToThis
+                                  ? assignments.find(
+                                      (other) =>
+                                        other.userId !== assignment.userId &&
+                                        isParallelAssignedToUser(other.userId, c.course, pd.parallel, pd.jornada)
+                                    )
+                                  : null;
+
+                                return (
+                                  <button
+                                    key={`${c.course}-${pd.parallel}-${pd.jornada}`}
+                                    type="button"
+                                    onClick={() =>
+                                      toggleParallelForUser(assignment.userId, c.course, pd.parallel, pd.jornada)
+                                    }
+                                    className={`px-2 py-1 rounded text-[11px] font-semibold flex items-center gap-1 border transition-all ${
+                                      isAssignedToThis
+                                        ? "bg-indigo-600 text-white border-indigo-700 shadow-xs"
+                                        : otherUser
+                                        ? "bg-slate-100 text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-700 hover:bg-indigo-50/40"
+                                        : "bg-white text-slate-700 border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/50"
+                                    }`}
+                                    title={
+                                      isAssignedToThis
+                                        ? "Asignado a este profesional. Clic para desasignar."
+                                        : otherUser
+                                        ? `Asignado actualmente a ${otherUser.userName}. Clic para transferir a este profesional.`
+                                        : "Sin asignar. Clic para asignar a este profesional."
+                                    }
+                                  >
+                                    <span>{isAssignedToThis ? "✓" : "+"}</span>
+                                    <span>Par. {pd.parallel}</span>
+                                    <span className="text-[9.5px] opacity-85">({pd.student_count})</span>
+                                    {otherUser && (
+                                      <span className="text-[9px] font-normal italic opacity-90">
+                                        ({otherUser.userName.split(" ")[0]})
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
                         );
                       })}
                     </div>
@@ -2070,47 +2519,139 @@ export default function DistributivoForm({
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {courseSummaries.map((c, idx) => {
-                  const assignedAnalyst = assignments.find((a) => a.courses.includes(c.course));
+                  const pDetails = getParallelDetailsForCourse(c);
+
+                  // Identificar asignación por paralelo
+                  const parallelAssignments = pDetails.map((pd) => {
+                    const assignedUser = deceTeam.find((u) =>
+                      isParallelAssignedToUser(u.id, c.course, pd.parallel, pd.jornada)
+                    );
+                    return { pd, assignedUser };
+                  });
+
+                  const uniqueAssignedUsers = Array.from(
+                    new Set(parallelAssignments.map((pa) => pa.assignedUser?.id).filter(Boolean))
+                  );
+
+                  const isSingleUserAssigned =
+                    uniqueAssignedUsers.length === 1 && parallelAssignments.every((pa) => pa.assignedUser);
+                  const isSplit = uniqueAssignedUsers.length > 1;
+                  const commonUserId = isSingleUserAssigned ? uniqueAssignedUsers[0] : "";
 
                   return (
-                    <tr key={c.course} className="hover:bg-indigo-50/30 transition-colors">
-                      <td className="py-2 px-3 text-slate-400 font-mono">{idx + 1}</td>
-                      <td className="py-2 px-4 font-semibold text-slate-800">
-                        {c.course}
-                      </td>
-                      <td className="py-2 px-3">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700">
-                          {c.jornadas.join(", ") || "General"}
-                        </span>
-                      </td>
-                      <td className="py-2 px-3 text-slate-600">
-                        {c.parallels.join(", ")}
-                      </td>
-                      <td className="py-2 px-3 text-center font-bold text-slate-900">
-                        {c.totalStudents}
-                      </td>
-                      <td className="py-2 px-4">
-                        <select
-                          value={assignedAnalyst?.userId || ""}
-                          onChange={(e) => assignCourseToUserDirectly(c.course, e.target.value)}
-                          className={`input text-xs py-1 font-semibold ${
-                            assignedAnalyst
-                              ? "bg-indigo-50/80 border-indigo-300 text-indigo-900"
-                              : "bg-white text-slate-500 border-slate-200"
-                          }`}
+                    <Fragment key={c.course}>
+                      {/* Fila principal del curso */}
+                      <tr className="bg-slate-50/80 hover:bg-slate-100/70 border-t-2 border-slate-200 transition-colors">
+                        <td className="py-2.5 px-3 text-slate-500 font-mono font-bold">{idx + 1}</td>
+                        <td className="py-2.5 px-4 font-bold text-slate-900">
+                          <div className="flex items-center gap-2">
+                            <span>{c.course}</span>
+                            {isSplit && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-bold">
+                                🔀 Dividido por paralelos
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-white border border-slate-200 text-slate-700">
+                            {c.jornadas.join(", ") || "General"}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 font-semibold text-slate-700">
+                          {c.parallels.map((p) => `Par. ${p}`).join(", ")}
+                        </td>
+                        <td className="py-2.5 px-3 text-center font-black text-slate-900">
+                          {c.totalStudents}
+                        </td>
+                        <td className="py-2.5 px-4">
+                          <select
+                            value={isSplit ? "__SPLIT__" : commonUserId}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === "__SPLIT__") return;
+                              assignCourseToUserDirectly(c.course, val);
+                            }}
+                            className={`input text-xs py-1 font-semibold ${
+                              isSplit
+                                ? "bg-amber-50 border-amber-300 text-amber-900 font-bold"
+                                : commonUserId
+                                ? "bg-indigo-50/80 border-indigo-300 text-indigo-900"
+                                : "bg-white text-slate-500 border-slate-200"
+                            }`}
+                          >
+                            {isSplit ? (
+                              <option value="__SPLIT__">🔀 Dividido entre profesionales (ver subfilas)</option>
+                            ) : (
+                              <option value="">-- Sin Asignar (Todo el Curso) --</option>
+                            )}
+                            {deceTeam.map((u) => {
+                              const userAssignment = assignments.find((a) => a.userId === u.id);
+                              return (
+                                <option key={u.id} value={u.id}>
+                                  {u.name} ({userAssignment?.jornada || "DECE"} • {userAssignment?.estimatedStudentsCount || 0} est.)
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </td>
+                      </tr>
+
+                      {/* Subfilas por cada paralelo individual del curso */}
+                      {parallelAssignments.map(({ pd, assignedUser }) => (
+                        <tr
+                          key={`${c.course}_${pd.parallel}_${pd.jornada}`}
+                          className="bg-white hover:bg-indigo-50/20 border-b border-slate-100 transition-colors"
                         >
-                          <option value="">-- Sin Asignar --</option>
-                          {deceTeam.map((u) => {
-                            const userAssignment = assignments.find((a) => a.userId === u.id);
-                            return (
-                              <option key={u.id} value={u.id}>
-                                {u.name} ({userAssignment?.jornada || "DECE"} • {userAssignment?.estimatedStudentsCount || 0} est.)
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </td>
-                    </tr>
+                          <td className="py-1.5 px-3"></td>
+                          <td className="py-1.5 px-4 pl-8">
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-400 font-mono text-xs">↳</span>
+                              <span className="font-semibold text-slate-800">
+                                Paralelo {pd.parallel}
+                              </span>
+                              {pd.tutor_name && (
+                                <span className="text-[10px] text-slate-500 italic">
+                                  (Tutor: {pd.tutor_name})
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-1.5 px-3 text-slate-500 text-[11px] font-medium">
+                            {pd.jornada}
+                          </td>
+                          <td className="py-1.5 px-3 text-slate-600 font-mono text-[11px]">
+                            Par. {pd.parallel}
+                          </td>
+                          <td className="py-1.5 px-3 text-center font-bold text-slate-700">
+                            {pd.student_count}
+                          </td>
+                          <td className="py-1.5 px-4">
+                            <select
+                              value={assignedUser?.id || ""}
+                              onChange={(e) =>
+                                assignParallelDirectly(e.target.value, c.course, pd.parallel, pd.jornada)
+                              }
+                              className={`input text-xs py-1 font-semibold ${
+                                assignedUser
+                                  ? "bg-indigo-50/70 border-indigo-200 text-indigo-900"
+                                  : "bg-white text-slate-400 border-slate-200"
+                              }`}
+                            >
+                              <option value="">-- Sin Asignar --</option>
+                              {deceTeam.map((u) => {
+                                const userAssignment = assignments.find((a) => a.userId === u.id);
+                                return (
+                                  <option key={u.id} value={u.id}>
+                                    {u.name} ({userAssignment?.jornada || "DECE"})
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                    </Fragment>
                   );
                 })}
               </tbody>

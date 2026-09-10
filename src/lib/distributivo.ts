@@ -233,6 +233,21 @@ export function saveInstitutionCourseQuotas(
   tx();
 }
 
+export interface CourseParallelDetail {
+  parallel: string;
+  jornada: string;
+  student_count: number;
+  tutor_name?: string | null;
+}
+
+export interface CourseSummaryItem {
+  course: string;
+  totalStudents: number;
+  parallels: string[];
+  jornadas: string[];
+  parallelDetails: CourseParallelDetail[];
+}
+
 /**
  * Obtiene los cursos y paralelos registrados en la institución con conteos de estudiantes.
  * Integra inteligentemente los estudiantes registrados con los numéricos configurados.
@@ -249,12 +264,7 @@ export function getInstitutionCoursesWithCounts(
     student_count: number;
     tutor_name?: string | null;
   }>;
-  courseSummaries: Array<{
-    course: string;
-    totalStudents: number;
-    parallels: string[];
-    jornadas: string[];
-  }>;
+  courseSummaries: CourseSummaryItem[];
   totalStudents: number;
   isFromQuotas: boolean;
 } {
@@ -314,7 +324,7 @@ export function getInstitutionCoursesWithCounts(
   // Agrupado por curso (diferenciando por jornada si el plantel tiene más de una)
   const courseSummaryMap = new Map<
     string,
-    { course: string; totalStudents: number; parallels: string[]; jornadas: string[] }
+    CourseSummaryItem
   >();
 
   for (const r of effectiveRows) {
@@ -328,14 +338,37 @@ export function getInstitutionCoursesWithCounts(
       totalStudents: 0,
       parallels: [],
       jornadas: [],
+      parallelDetails: [],
     };
     existing.totalStudents += r.student_count;
+    const pUpper = (r.parallel || "A").trim().toUpperCase();
+    const jUpper = (r.jornada || "MATUTINA").trim().toUpperCase();
+
     if (r.parallel && !existing.parallels.includes(r.parallel)) {
       existing.parallels.push(r.parallel);
     }
     if (r.jornada && !existing.jornadas.includes(r.jornada)) {
       existing.jornadas.push(r.jornada);
     }
+
+    const existingPd = existing.parallelDetails.find(
+      (pd) => pd.parallel === pUpper && pd.jornada === jUpper
+    );
+    if (existingPd) {
+      existingPd.student_count += r.student_count;
+      if (!existingPd.tutor_name && r.tutor_name) {
+        existingPd.tutor_name = r.tutor_name;
+      }
+    } else {
+      existing.parallelDetails.push({
+        parallel: pUpper,
+        jornada: jUpper,
+        student_count: r.student_count,
+        tutor_name: r.tutor_name || null,
+      });
+    }
+
+    existing.parallelDetails.sort((a, b) => a.parallel.localeCompare(b.parallel));
     courseSummaryMap.set(courseKey, existing);
   }
 
@@ -396,5 +429,157 @@ export function normalizeCourseKey(name: string | null | undefined): string {
        .replace(/\bi\s+(bgu|egb)\b/g, "1 $1");
   s = s.replace(/\bde\b/g, "").replace(/\bdel\b/g, "").replace(/\bano\b/g, "").replace(/\banos\b/g, "").replace(/\bgrado\b/g, "").replace(/\bcurso\b/g, "").replace(/\bnivel\b/g, "");
   return s.trim().replace(/\s+/g, " ");
+}
+
+/**
+ * Genera una clave canónica para identificar de forma unívoca un paralelo específico de un curso y jornada.
+ * Formato: "3.° EGB::A::MATUTINA"
+ */
+export function makeParallelKey(course: string, parallel: string, jornada?: string): string {
+  const cClean = course.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim();
+  const pClean = (parallel || "A").trim().toUpperCase();
+  const jClean = (jornada || "MATUTINA").trim().toUpperCase();
+  return `${cClean}::${pClean}::${jClean}`;
+}
+
+/**
+ * Parsea una clave canónica de paralelo generada por makeParallelKey.
+ */
+export function parseParallelKey(key: string): { course: string; parallel: string; jornada: string } | null {
+  if (!key || typeof key !== "string" || !key.includes("::")) return null;
+  const parts = key.split("::");
+  if (parts.length >= 3) {
+    return {
+      course: parts[0].trim(),
+      parallel: parts[1].trim().toUpperCase(),
+      jornada: parts[2].trim().toUpperCase(),
+    };
+  }
+  if (parts.length === 2) {
+    return {
+      course: parts[0].trim(),
+      parallel: parts[1].trim().toUpperCase(),
+      jornada: "MATUTINA",
+    };
+  }
+  return null;
+}
+
+/**
+ * Construye dinámicamente el filtro SQL WHERE para respetar estrictamente la cobertura de un analista:
+ * cursos específicos, paralelos asignados y jornadas correspondientes.
+ */
+export function buildCoverageSqlFilter(
+  coverage: UserCoverage,
+  tableAlias = ""
+): { sql: string; params: any[] } {
+  const prefix = tableAlias ? `${tableAlias}.` : "";
+
+  if (coverage.isAllInstitutional) {
+    return { sql: "1=1", params: [] };
+  }
+
+  const clauses: string[] = [];
+  const params: any[] = [];
+
+  // Parsear claves de paralelos específicos si existen
+  const parsedParallelKeys: Array<{ course: string; parallel: string; jornada?: string }> = [];
+  for (const p of coverage.parallels || []) {
+    const parsed = parseParallelKey(p);
+    if (parsed) {
+      parsedParallelKeys.push(parsed);
+    }
+  }
+
+  // Agrupar por curso
+  const courseSpecificKeys = new Map<string, Array<{ parallel: string; jornada?: string }>>();
+  for (const item of parsedParallelKeys) {
+    const normC = normalizeCourseKey(item.course);
+    const list = courseSpecificKeys.get(normC) || [];
+    list.push({ parallel: item.parallel, jornada: item.jornada });
+    courseSpecificKeys.set(normC, list);
+  }
+
+  const processedNormCourses = new Set<string>();
+
+  // Helper para generar condición de jornada
+  const makeJornadaCond = (jVal: string | null) => {
+    if (!jVal) return null;
+    const jUpper = jVal.toUpperCase().trim();
+    if (jUpper === "VESPERTINA" || jUpper === "NOCTURNA") {
+      return { cond: `${prefix}jornada = ? COLLATE NOCASE`, param: jUpper };
+    }
+    // Para MATUTINA, permitir también NULL (por registros antiguos o predeterminados)
+    return { cond: `(${prefix}jornada = ? COLLATE NOCASE OR ${prefix}jornada IS NULL)`, param: "MATUTINA" };
+  };
+
+  // Recorrer cursos asignados
+  for (const c of coverage.courses || []) {
+    const shiftMatch = c.match(/^(.*?)\s*\((Matutina|Vespertina|Nocturna)\)$/i);
+    const cleanCourse = shiftMatch ? shiftMatch[1].trim() : c.trim();
+    const explicitShift = shiftMatch ? shiftMatch[2].toUpperCase() : null;
+    const normC = normalizeCourseKey(cleanCourse);
+
+    processedNormCourses.add(normC);
+
+    const specificParallels = courseSpecificKeys.get(normC);
+
+    if (specificParallels && specificParallels.length > 0) {
+      for (const sp of specificParallels) {
+        const jVal = sp.jornada || explicitShift || (coverage.jornadas.length === 1 && coverage.jornadas[0] !== "COMPLETA" && coverage.jornadas[0] !== "TODAS" ? coverage.jornadas[0] : null);
+        const jFilter = makeJornadaCond(jVal);
+
+        if (jFilter) {
+          clauses.push(`(${prefix}course = ? COLLATE NOCASE AND ${prefix}parallel = ? COLLATE NOCASE AND ${jFilter.cond})`);
+          params.push(cleanCourse, sp.parallel, jFilter.param);
+        } else {
+          clauses.push(`(${prefix}course = ? COLLATE NOCASE AND ${prefix}parallel = ? COLLATE NOCASE)`);
+          params.push(cleanCourse, sp.parallel);
+        }
+      }
+    } else {
+      // Si no hay restricción de paralelos para este curso, aplica para todos sus paralelos
+      const jVal = explicitShift || (coverage.jornadas.length === 1 && coverage.jornadas[0] !== "COMPLETA" && coverage.jornadas[0] !== "TODAS" ? coverage.jornadas[0] : null);
+      const jFilter = makeJornadaCond(jVal);
+
+      if (jFilter) {
+        clauses.push(`(${prefix}course = ? COLLATE NOCASE AND ${jFilter.cond})`);
+        params.push(cleanCourse, jFilter.param);
+      } else {
+        clauses.push(`(${prefix}course = ? COLLATE NOCASE)`);
+        params.push(cleanCourse);
+      }
+    }
+  }
+
+  // Cursos que solo vinieron en las claves de paralelos
+  for (const [normC, pList] of courseSpecificKeys.entries()) {
+    if (!processedNormCourses.has(normC)) {
+      for (const sp of pList) {
+        // Buscar nombre de curso original en el item
+        const origItem = parsedParallelKeys.find(k => normalizeCourseKey(k.course) === normC);
+        const cName = origItem?.course || normC;
+        const jVal = sp.jornada || (coverage.jornadas.length === 1 && coverage.jornadas[0] !== "COMPLETA" && coverage.jornadas[0] !== "TODAS" ? coverage.jornadas[0] : null);
+        const jFilter = makeJornadaCond(jVal);
+
+        if (jFilter) {
+          clauses.push(`(${prefix}course = ? COLLATE NOCASE AND ${prefix}parallel = ? COLLATE NOCASE AND ${jFilter.cond})`);
+          params.push(cName, sp.parallel, jFilter.param);
+        } else {
+          clauses.push(`(${prefix}course = ? COLLATE NOCASE AND ${prefix}parallel = ? COLLATE NOCASE)`);
+          params.push(cName, sp.parallel);
+        }
+      }
+    }
+  }
+
+  if (clauses.length === 0) {
+    return { sql: "1=0", params: [] };
+  }
+
+  return {
+    sql: `(${clauses.join(" OR ")})`,
+    params,
+  };
 }
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { db } from "@/lib/db";
-import { getActiveDistributivo, getUserCoverage, compareCoursesDescending } from "@/lib/distributivo";
+import { getActiveDistributivo, getUserCoverage, compareCoursesDescending, parseParallelKey } from "@/lib/distributivo";
 import { getSelectedSchoolYear } from "@/lib/schoolYear";
 import { PageHeader, EmptyState, StatCard, formatDate } from "@/components/ui";
 import type { DeceDistributivoRow } from "@/lib/types";
@@ -122,14 +122,34 @@ export default async function DistributivoPage() {
             <div className="text-xs font-medium text-slate-700 mb-1.5">Cursos y Paralelos asignados:</div>
             {userCoverage.courses.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
-                {userCoverage.courses.map((c) => (
-                  <span
-                    key={c}
-                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-white text-indigo-800 border border-indigo-200"
-                  >
-                    {c}
-                  </span>
-                ))}
+                {userCoverage.courses.map((c) => {
+                  const cleanC = c.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase();
+                  const specificParallels = (userCoverage.parallels || [])
+                    .map((p) => parseParallelKey(p))
+                    .filter(
+                      (p) =>
+                        p &&
+                        (p.course.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase() ===
+                          cleanC ||
+                          p.course.toLowerCase() === c.toLowerCase())
+                    )
+                    .map((p) => p!.parallel);
+                  const uniqueP = Array.from(new Set(specificParallels)).sort();
+
+                  return (
+                    <span
+                      key={c}
+                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-white text-indigo-800 border border-indigo-200 shadow-xs"
+                    >
+                      <span className="font-semibold">{c}</span>
+                      {uniqueP.length > 0 && (
+                        <span className="ml-1 px-1 py-0.2 rounded bg-indigo-50 text-indigo-700 font-bold text-[10px]">
+                          (Par. {uniqueP.join(", ")})
+                        </span>
+                      )}
+                    </span>
+                  );
+                })}
               </div>
             ) : (
               <span className="text-xs text-slate-500 italic">
@@ -226,6 +246,7 @@ export default async function DistributivoPage() {
                 <tbody className="divide-y divide-slate-100">
                   {assignments.map((assignment, idx) => {
                     let parsedCourses: string[] = [];
+                    let parsedParallels: string[] = [];
                     let parsedSubniveles: string[] = [];
                     try {
                       parsedCourses = JSON.parse(assignment.courses || "[]");
@@ -233,6 +254,11 @@ export default async function DistributivoPage() {
                       parsedCourses = [];
                     }
                     parsedCourses.sort((a, b) => compareCoursesDescending(a, b));
+                    try {
+                      parsedParallels = JSON.parse(assignment.parallels || "[]");
+                    } catch {
+                      parsedParallels = [];
+                    }
                     try {
                       parsedSubniveles = JSON.parse(assignment.subniveles || "[]");
                     } catch {
@@ -276,14 +302,33 @@ export default async function DistributivoPage() {
                         <td className="py-3 px-4 max-w-xs">
                           {parsedCourses.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
-                              {parsedCourses.map((c) => (
-                                <span
-                                  key={c}
-                                  className="inline-block px-1.5 py-0.5 text-[10px] bg-slate-100 text-slate-800 rounded border border-slate-200"
-                                >
-                                  {c}
-                                </span>
-                              ))}
+                              {parsedCourses.map((c) => {
+                                const cleanC = c.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase();
+                                const specificParallels = parsedParallels
+                                  .map((p) => parseParallelKey(p))
+                                  .filter(
+                                    (p) =>
+                                      p &&
+                                      (p.course.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase() === cleanC ||
+                                        p.course.toLowerCase() === c.toLowerCase())
+                                  )
+                                  .map((p) => p!.parallel);
+                                const uniqueP = Array.from(new Set(specificParallels)).sort();
+
+                                return (
+                                  <span
+                                    key={c}
+                                    className="inline-block px-1.5 py-0.5 text-[10px] bg-slate-100 text-slate-800 rounded border border-slate-200"
+                                  >
+                                    <span className="font-semibold">{c}</span>
+                                    {uniqueP.length > 0 && (
+                                      <span className="ml-1 text-[9px] font-bold text-indigo-700">
+                                        (Par. {uniqueP.join(", ")})
+                                      </span>
+                                    )}
+                                  </span>
+                                );
+                              })}
                             </div>
                           ) : (
                             <span className="text-slate-400 italic">Sin cursos asignados</span>

@@ -4,7 +4,7 @@ import UploadStudentListPDFButton from "@/components/UploadStudentListPDFButton"
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader, Badge, EmptyState } from "@/components/ui";
 import type { StudentRow } from "@/lib/types";
-import { getUserCoverage } from "@/lib/distributivo";
+import { getUserCoverage, buildCoverageSqlFilter } from "@/lib/distributivo";
 import { formatDocumentId } from "@/lib/documentId";
 
 export default async function EstudiantesPage({
@@ -17,11 +17,32 @@ export default async function EstudiantesPage({
   const coverage = await getUserCoverage(session.user.id, institutionId, session.user.role);
 
   let coursesRaw = db.prepare("SELECT DISTINCT course FROM students WHERE institution_id = ? AND course IS NOT NULL ORDER BY course ASC").all(institutionId) as { course: string }[];
-  const parallelsRaw = db.prepare("SELECT DISTINCT parallel FROM students WHERE institution_id = ? AND parallel IS NOT NULL ORDER BY parallel ASC").all(institutionId) as { parallel: string }[];
+  let parallelsRaw = db.prepare("SELECT DISTINCT parallel FROM students WHERE institution_id = ? AND parallel IS NOT NULL ORDER BY parallel ASC").all(institutionId) as { parallel: string }[];
   const specialtiesRaw = db.prepare("SELECT DISTINCT bachillerato_specialty FROM students WHERE institution_id = ? AND bachillerato_specialty IS NOT NULL ORDER BY bachillerato_specialty ASC").all(institutionId) as { bachillerato_specialty: string }[];
 
-  if (!coverage.isAllInstitutional && coverage.courses.length > 0) {
-    coursesRaw = coursesRaw.filter((r) => coverage.courses.includes(r.course));
+  if (!coverage.isAllInstitutional) {
+    if (coverage.courses.length > 0) {
+      const cleanCoverageCourses = coverage.courses.map((c) =>
+        c.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim()
+      );
+      coursesRaw = coursesRaw.filter(
+        (r) => cleanCoverageCourses.includes(r.course) || coverage.courses.includes(r.course)
+      );
+    }
+    if (coverage.parallels.length > 0) {
+      const allowedParallels = new Set<string>();
+      for (const p of coverage.parallels) {
+        if (p.includes("::")) {
+          const parts = p.split("::");
+          if (parts[1]) allowedParallels.add(parts[1].toUpperCase());
+        } else {
+          allowedParallels.add(p.toUpperCase());
+        }
+      }
+      if (allowedParallels.size > 0) {
+        parallelsRaw = parallelsRaw.filter((r) => allowedParallels.has((r.parallel || "").toUpperCase()));
+      }
+    }
   }
 
   const courses = coursesRaw.map(r => r.course);
@@ -34,26 +55,10 @@ export default async function EstudiantesPage({
   const params: any[] = [institutionId];
 
   if (!coverage.isAllInstitutional) {
-    if (coverage.courses.length > 0) {
-      const courseClauses: string[] = [];
-      const courseParams: any[] = [];
-      for (const c of coverage.courses) {
-        const match = c.match(/^(.*?)\s*\((Matutina|Vespertina|Nocturna)\)$/i);
-        if (match) {
-          const rawCourse = match[1].trim();
-          const jVal = match[2].toUpperCase();
-          courseClauses.push("(course = ? AND (jornada = ? OR jornada IS NULL))");
-          courseParams.push(rawCourse, jVal);
-        } else {
-          courseClauses.push("course = ?");
-          courseParams.push(c);
-        }
-      }
-      where += ` AND (${courseClauses.join(" OR ")})`;
-      params.push(...courseParams);
-    } else {
-      where += " AND (created_by_id = ? OR created_by_id IS NULL)";
-      params.push(session.user.id);
+    const coverageFilter = buildCoverageSqlFilter(coverage);
+    if (coverageFilter.sql !== "1=1") {
+      where += ` AND ${coverageFilter.sql}`;
+      params.push(...coverageFilter.params);
     }
   }
   if (estado === "activos") where += " AND active = 1";

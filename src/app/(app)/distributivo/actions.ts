@@ -1,6 +1,6 @@
 "use server";
 
-import { saveInstitutionCourseQuotas, getInstitutionCourseQuotas, getInstitutionCoursesWithCounts, normalizeCourseKey } from "@/lib/distributivo";
+import { saveInstitutionCourseQuotas, getInstitutionCourseQuotas, getInstitutionCoursesWithCounts, normalizeCourseKey, parseParallelKey } from "@/lib/distributivo";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -160,58 +160,134 @@ export async function saveDistributivo(
 
         // Mapear y guardar los cursos del profesional usando los identificadores exactos de getInstitutionCoursesWithCounts
         const canonicalCourses: string[] = rawCourses.map((rc) => {
+          // 1. Si coincide de forma exacta con un curso existente, conservarlo tal cual (incluyendo su Jornada)
+          const exactSummary = coursesInfo.courseSummaries.find((cs) => cs.course === rc);
+          if (exactSummary) return exactSummary.course;
+
           const normRc = normalizeCourseKey(rc);
-          const foundSummary = coursesInfo.courseSummaries.find(
-            (cs) => normalizeCourseKey(cs.course) === normRc
-          );
+          const shiftMatch = rc.match(/\((Matutina|Vespertina|Nocturna)\)$/i);
+          const targetShift = (
+            shiftMatch ? shiftMatch[1] : uJornada !== "TODAS" && uJornada !== "COMPLETA" ? uJornada : ""
+          )
+            .toUpperCase()
+            .trim();
+
+          const foundSummary = coursesInfo.courseSummaries.find((cs) => {
+            const csShiftMatch = cs.course.match(/\((Matutina|Vespertina|Nocturna)\)$/i);
+            const csShift = (
+              csShiftMatch
+                ? csShiftMatch[1]
+                : cs.jornadas.length === 1
+                ? cs.jornadas[0]
+                : ""
+            )
+              .toUpperCase()
+              .trim();
+            if (targetShift && csShift && targetShift !== csShift) return false;
+            return normalizeCourseKey(cs.course) === normRc;
+          });
           if (foundSummary) return foundSummary.course;
 
-          const foundRow = coursesInfo.detailedRows.find(
-            (dr) => normalizeCourseKey(dr.course) === normRc
-          );
+          const foundRow = coursesInfo.detailedRows.find((dr) => {
+            if (targetShift && (dr.jornada || "").toUpperCase().trim() !== targetShift) return false;
+            return normalizeCourseKey(dr.course) === normRc;
+          });
           if (foundRow) return foundRow.course;
 
           return rc;
         });
         const uniqueCanonicalCourses = Array.from(new Set(canonicalCourses));
+        const rawParallels: string[] = Array.isArray(a.parallels) ? a.parallels : [];
         const uCourses = JSON.stringify(uniqueCanonicalCourses);
-        const uParallels = JSON.stringify(a.parallels || []);
+        const uParallels = JSON.stringify(rawParallels);
 
-        // Recalcular estudiantes reales a partir de los cursos asignados sumando r.student_count
+        // Recalcular estudiantes reales considerando si se seleccionaron paralelos específicos
         let recalculatedCount = 0;
-        for (const cName of uniqueCanonicalCourses) {
-          const shiftMatch = cName.match(/\((Matutina|Vespertina|Nocturna)\)$/i);
-          const normKey = normalizeCourseKey(cName);
-          const targetShift = (shiftMatch ? shiftMatch[1] : (uJornada !== "TODAS" && uJornada !== "COMPLETA" ? uJornada : "")).toUpperCase().trim();
+        const hasStructuredParallels = rawParallels.some((pk) => typeof pk === "string" && pk.includes("::"));
 
-          if (targetShift) {
-            const matchingRows = coursesInfo.detailedRows.filter(
-              (r) => normalizeCourseKey(r.course) === normKey && (r.jornada || "").toUpperCase().trim() === targetShift
+        if (hasStructuredParallels) {
+          // Sumar estudiantes de los paralelos específicos asignados
+          for (const pk of rawParallels) {
+            const parsed = parseParallelKey(pk);
+            if (!parsed) continue;
+            const normCKey = normalizeCourseKey(parsed.course);
+            const matchingRow = coursesInfo.detailedRows.find(
+              (dr) =>
+                normalizeCourseKey(dr.course) === normCKey &&
+                (dr.parallel || "A").toUpperCase() === parsed.parallel.toUpperCase() &&
+                (!parsed.jornada || (dr.jornada || "MATUTINA").toUpperCase() === parsed.jornada.toUpperCase())
             );
-            if (matchingRows.length > 0) {
-              recalculatedCount += matchingRows.reduce((sum, r) => sum + (r.student_count || 0), 0);
-              continue;
+            if (matchingRow) {
+              recalculatedCount += matchingRow.student_count || 0;
             }
           }
 
-          const summary = courseMap.get(cName) || coursesInfo.courseSummaries.find(
-            (s) => normalizeCourseKey(s.course) === normKey
-          );
-          if (summary) {
-            recalculatedCount += summary.totalStudents;
-          } else {
-            const matchingRows = coursesInfo.detailedRows.filter(
-              (r) => normalizeCourseKey(r.course) === normKey
-            );
-            if (matchingRows.length > 0) {
+          // Para cursos que no tengan desglose en rawParallels, sumar completos
+          for (const cName of uniqueCanonicalCourses) {
+            const cleanCName = cName.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim();
+            const normClean = normalizeCourseKey(cleanCName);
+            const hasKeysForThisCourse = rawParallels.some((pk) => {
+              const p = parseParallelKey(pk);
+              return p && normalizeCourseKey(p.course) === normClean;
+            });
+            if (!hasKeysForThisCourse) {
+              const shiftMatch = cName.match(/\((Matutina|Vespertina|Nocturna)\)$/i);
+              const targetShift = (
+                shiftMatch ? shiftMatch[1] : uJornada !== "TODAS" && uJornada !== "COMPLETA" ? uJornada : ""
+              )
+                .toUpperCase()
+                .trim();
+              const matchingRows = coursesInfo.detailedRows.filter(
+                (r) =>
+                  normalizeCourseKey(r.course) === normClean &&
+                  (!targetShift || (r.jornada || "").toUpperCase().trim() === targetShift)
+              );
               recalculatedCount += matchingRows.reduce((sum, r) => sum + (r.student_count || 0), 0);
+            }
+          }
+        } else {
+          // Conteo clásico por cursos completos
+          for (const cName of uniqueCanonicalCourses) {
+            const shiftMatch = cName.match(/\((Matutina|Vespertina|Nocturna)\)$/i);
+            const normKey = normalizeCourseKey(cName);
+            const targetShift = (
+              shiftMatch ? shiftMatch[1] : uJornada !== "TODAS" && uJornada !== "COMPLETA" ? uJornada : ""
+            )
+              .toUpperCase()
+              .trim();
+
+            if (targetShift) {
+              const matchingRows = coursesInfo.detailedRows.filter(
+                (r) => normalizeCourseKey(r.course) === normKey && (r.jornada || "").toUpperCase().trim() === targetShift
+              );
+              if (matchingRows.length > 0) {
+                recalculatedCount += matchingRows.reduce((sum, r) => sum + (r.student_count || 0), 0);
+                continue;
+              }
+            }
+
+            const summary =
+              courseMap.get(cName) ||
+              coursesInfo.courseSummaries.find(
+                (s) => s.course === cName || normalizeCourseKey(s.course) === normKey
+              );
+            if (summary) {
+              recalculatedCount += summary.totalStudents;
+            } else {
+              const matchingRows = coursesInfo.detailedRows.filter(
+                (r) => normalizeCourseKey(r.course) === normKey
+              );
+              if (matchingRows.length > 0) {
+                recalculatedCount += matchingRows.reduce((sum, r) => sum + (r.student_count || 0), 0);
+              }
             }
           }
         }
 
-        const uCount = recalculatedCount > 0
-          ? recalculatedCount
-          : Number(a.estimated_students_count ?? a.estimatedStudentsCount ?? 0);
+        const uCount =
+          recalculatedCount > 0
+            ? recalculatedCount
+            : Number(a.estimated_students_count ?? a.estimatedStudentsCount ?? 0);
 
         const uResp = a.specific_responsibilities || a.specificResponsibilities || null;
         const hasEnlazada = a.has_enlazada ? 1 : a.hasEnlazada ? 1 : 0;

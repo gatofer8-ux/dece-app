@@ -8,6 +8,7 @@ import {
   getInstitutionCoursesWithCounts,
   getInstitutionDeceTeam,
   normalizeCourseKey,
+  parseParallelKey,
 } from "@/lib/distributivo";
 import { compareCoursesDescending, compareCoursesAscending } from "@/lib/courseOrder";
 import { getSelectedSchoolYear } from "@/lib/schoolYear";
@@ -97,6 +98,13 @@ export default async function ImprimirDistributivoPage({
       parsedCourses = [];
     }
 
+    let parsedParallels: string[] = [];
+    try {
+      parsedParallels = JSON.parse(a.parallels || "[]");
+    } catch {
+      parsedParallels = [];
+    }
+
     const assignedColor = a.color || defaultPalette[idx % defaultPalette.length];
 
     // Si viene con 0 de la base de datos, recalcular dinámicamente con los cursos reales
@@ -136,6 +144,7 @@ export default async function ImprimirDistributivoPage({
       index: idx + 1,
       initials,
       parsedCourses,
+      parsedParallels,
       color: assignedColor,
       estimated_students_count: studentCount,
       lunchSchedule: a.lunch_schedule || (idx === 2 ? "12H00 A 13H00" : "13H00 A 14H00"),
@@ -153,12 +162,30 @@ export default async function ImprimirDistributivoPage({
     return (a.parallel || "").localeCompare(b.parallel || "");
   });
 
-  // Función para determinar el profesional asignado a cada fila con precisión por curso y jornada
-  const getAssignedAnalyst = (courseName: string, jornada: string) => {
+  // Función para determinar el profesional asignado a cada fila con precisión por paralelo, curso y jornada
+  const getAssignedAnalyst = (courseName: string, parallel: string | null, jornada: string) => {
     const cleanCourseKey = normalizeCourseKey(courseName);
     const jNorm = (jornada || "").toUpperCase().trim();
+    const pUpper = (parallel || "A").toUpperCase().trim();
 
-    // 1. Prioridad: Coincidencia exacta de curso Y turno asignado
+    // 1. Prioridad Máxima: Asignación específica por Paralelo
+    for (const a of analystMeta) {
+      for (const pk of a.parsedParallels) {
+        if (typeof pk === "string" && pk.includes("::")) {
+          const parsed = parseParallelKey(pk);
+          if (
+            parsed &&
+            normalizeCourseKey(parsed.course) === cleanCourseKey &&
+            parsed.parallel.toUpperCase() === pUpper &&
+            (!parsed.jornada || parsed.jornada.toUpperCase() === jNorm)
+          ) {
+            return a;
+          }
+        }
+      }
+    }
+
+    // 2. Coincidencia por Curso y Turno
     for (const a of analystMeta) {
       for (const pc of a.parsedCourses) {
         const pcLower = pc.toLowerCase();
@@ -181,7 +208,7 @@ export default async function ImprimirDistributivoPage({
       }
     }
 
-    // 2. Si no hubo coincidencia por turno exacto, buscar si algún analista lo tiene asignado directamente por curso
+    // 3. Fallback: Profesional asignado directamente por curso
     for (const a of analystMeta) {
       for (const pc of a.parsedCourses) {
         const pcKey = normalizeCourseKey(pc);
@@ -191,14 +218,14 @@ export default async function ImprimirDistributivoPage({
       }
     }
 
-    // 3. Fallback: Profesional asignado a esa jornada
+    // 4. Fallback: Profesional asignado a esa jornada
     return analystMeta.find((a) => (a.jornada || "").toUpperCase() === jNorm) || null;
   };
 
   // Sincronizar el conteo de estudiantes asignados por profesional con la suma exacta de sus filas
   analystMeta.forEach((a) => {
     const colSum = sortedDetailedRows.reduce((sum, r) => {
-      const assigned = getAssignedAnalyst(r.course, r.jornada);
+      const assigned = getAssignedAnalyst(r.course, r.parallel, r.jornada);
       return (assigned?.user_id === a.user_id || assigned?.id === a.id) ? sum + r.student_count : sum;
     }, 0);
     if (colSum > 0 || a.estimated_students_count === 0) {
@@ -434,7 +461,7 @@ export default async function ImprimirDistributivoPage({
           </thead>
           <tbody>
             {sortedDetailedRows.map((r, idx) => {
-              const assigned = getAssignedAnalyst(r.course, r.jornada);
+              const assigned = getAssignedAnalyst(r.course, r.parallel, r.jornada);
               const rowBg = assigned ? `${assigned.color}40` : "transparent";
 
               return (
@@ -494,7 +521,7 @@ export default async function ImprimirDistributivoPage({
               </td>
               {analystMeta.map((a) => {
                 const colSum = sortedDetailedRows.reduce((sum, r) => {
-                  const assigned = getAssignedAnalyst(r.course, r.jornada);
+                  const assigned = getAssignedAnalyst(r.course, r.parallel, r.jornada);
                   return (assigned?.user_id === a.user_id || assigned?.id === a.id) ? sum + r.student_count : sum;
                 }, 0);
                 const displayTotal = colSum > 0 ? colSum : (a.estimated_students_count || 0);
