@@ -155,7 +155,7 @@ export default function DistributivoForm({
 
   // Estado de asignaciones
   const [assignments, setAssignments] = useState<ProfessionalAssignmentState[]>(() => {
-    return deceTeam.map((user, idx) => {
+    const teamAssignments: ProfessionalAssignmentState[] = deceTeam.map((user, idx) => {
       const existing = existingAssignments?.find((a) => a.user_id === user.id);
       let parsedCourses: string[] = [];
       let parsedParallels: string[] = [];
@@ -192,6 +192,37 @@ export default function DistributivoForm({
         color: existing?.color || defaultColor,
       };
     });
+
+    if (existingAssignments) {
+      for (const ea of existingAssignments) {
+        if (!teamAssignments.some((ta) => ta.userId === ea.user_id || ta.userName.toLowerCase() === ea.user_name.toLowerCase())) {
+          let parsedCourses: string[] = [];
+          let parsedParallels: string[] = [];
+          let parsedSubniveles: string[] = [];
+          try { parsedCourses = JSON.parse(ea.courses || "[]"); } catch {}
+          try { parsedParallels = JSON.parse(ea.parallels || "[]"); } catch {}
+          try { parsedSubniveles = JSON.parse(ea.subniveles || "[]"); } catch {}
+          teamAssignments.push({
+            userId: ea.user_id,
+            userName: ea.user_name,
+            userRoleLabel: ea.user_role_label || "Analista DECE",
+            jornada: ea.jornada || "MATUTINA",
+            subniveles: parsedSubniveles,
+            courses: parsedCourses,
+            parallels: parsedParallels,
+            estimatedStudentsCount: ea.estimated_students_count || 0,
+            specificResponsibilities: ea.specific_responsibilities || "",
+            hasEnlazada: ea.has_enlazada === 1 || Boolean(ea.enlazada_name),
+            enlazadaName: ea.enlazada_name || "",
+            enlazadaDias: ea.enlazada_dias || "",
+            lunchSchedule: ea.lunch_schedule || "13H00 A 14H00",
+            color: ea.color || defaultColors[teamAssignments.length % defaultColors.length],
+          });
+        }
+      }
+    }
+
+    return teamAssignments;
   });
 
   const [saving, setSaving] = useState(false);

@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { logAudit } from "@/lib/audit";
+import { normalizeDocumentId, detectDocumentType, type DocumentType } from "@/lib/documentId";
 
 export type SkippedRow = { row: number; name: string; reason: string };
 export type ImportActionState = {
@@ -77,6 +78,7 @@ export async function importStudents(
   type ParsedRow = {
     row: number;
     full_name: string;
+    document_type: DocumentType;
     document_id: string | null;
     birth_date: string | null;
     gender: string | null;
@@ -98,7 +100,9 @@ export async function importStudents(
     if (!row.hasValues) continue;
 
     const full_name = cellText(row, 1);
-    const document_id = cellText(row, 2);
+    const rawDocId = cellText(row, 2);
+    const document_id = rawDocId ? normalizeDocumentId(rawDocId) : null;
+    const document_type: DocumentType = document_id ? detectDocumentType(document_id) : "CEDULA";
     let birth_date = cellText(row, 3);
     let gender = cellText(row, 4);
     const course = cellText(row, 5);
@@ -142,6 +146,7 @@ export async function importStudents(
     toInsert.push({
       row: r,
       full_name,
+      document_type,
       document_id,
       birth_date,
       gender,
@@ -159,8 +164,8 @@ export async function importStudents(
   }
 
   const insertStmt = db.prepare(
-    `INSERT INTO students (id, institution_id, full_name, document_id, birth_date, gender, course, parallel, representative, rep_phone, rep_email, address)
-     VALUES (@id, @institution_id, @full_name, @document_id, @birth_date, @gender, @course, @parallel, @representative, @rep_phone, @rep_email, @address)`
+    `INSERT INTO students (id, institution_id, full_name, document_type, document_id, birth_date, gender, course, parallel, representative, rep_phone, rep_email, address)
+     VALUES (@id, @institution_id, @full_name, @document_type, @document_id, @birth_date, @gender, @course, @parallel, @representative, @rep_phone, @rep_email, @address)`
   );
 
   const tx = db.transaction((rows: ParsedRow[]) => {
@@ -170,6 +175,7 @@ export async function importStudents(
         id,
         institution_id: institutionId,
         full_name: r.full_name,
+        document_type: r.document_type,
         document_id: r.document_id,
         birth_date: r.birth_date,
         gender: r.gender,

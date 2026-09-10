@@ -15,6 +15,7 @@ import type {
   PreventionProjectRow,
   ManagementReportSignatureItem,
   SchoolYearRow,
+  UserRow,
 } from "@/lib/types";
 import {
   DEFAULT_ANTECEDENTES_LEGAL,
@@ -44,6 +45,7 @@ interface Props {
   currentUserRole: string;
   institutionName: string;
   institutionDistrict?: string;
+  deceTeam?: UserRow[];
 }
 
 export default function AnnualReportForm({
@@ -56,6 +58,7 @@ export default function AnnualReportForm({
   currentUserRole,
   institutionName,
   institutionDistrict,
+  deceTeam,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -109,6 +112,19 @@ export default function AnnualReportForm({
     () => {
       if (report?.professionals_json) {
         try { return JSON.parse(report.professionals_json); } catch {}
+      }
+      if (deceTeam && deceTeam.length > 0) {
+        return deceTeam.map((u) => ({
+          user_id: u.id,
+          name: u.name,
+          cargo: u.role === "ADMIN" ? "COORDINADORA DECE" : "ANALISTA DECE",
+          extension: "",
+          email: u.email || "",
+          coverage_students: 0,
+          coverage_jornadas: "Matutina",
+          coverage_levels: "Inicial, Básica, Bachillerato",
+          tenure_time: `Durante el año lectivo ${schoolYearText}`,
+        }));
       }
       return [
         {

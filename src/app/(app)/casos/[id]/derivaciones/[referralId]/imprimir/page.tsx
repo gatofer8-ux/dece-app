@@ -67,6 +67,12 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
           ← Volver al caso
         </Link>
         <div className="flex items-center gap-2">
+          <Link
+            href={`/casos/${caseFile.id}/derivaciones/${referral.id}/editar`}
+            className="text-xs bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors"
+          >
+            ✏️ Editar
+          </Link>
           <a
             href={`/api/casos/${caseFile.id}/derivaciones/${referral.id}/export-word`}
             className="text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1.5 rounded-md flex items-center gap-1.5 shadow-xs transition-colors"
@@ -214,12 +220,6 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
             <tr>
               <td className={labelCell} colSpan={1}>Observaciones</td>
               <td className={cell} colSpan={5}><p className="whitespace-pre-wrap">{referral.observations || "—"}</p></td>
-            </tr>
-            <tr>
-              <td className={labelCell} colSpan={1}>Consentimiento informado</td>
-              <td className={cell} colSpan={5}>
-                {referral.informed_consent ? `Firmado por ${referral.consent_signed_by || "s/n"}` : "No registrado"}
-              </td>
             </tr>
           </tbody>
         </table>

@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { getAnnualManagementReportById } from "@/lib/informeGestion";
 import { getSignatureDefaults } from "@/lib/caseDocumentDefaults";
+import { getInstitutionDeceTeam } from "@/lib/distributivo";
 import AnnualReportForm from "../../AnnualReportForm";
 import type { SchoolYearRow, InstitutionRow } from "@/lib/types";
 
@@ -36,6 +37,8 @@ export default async function EditAnnualReportPage({
     .prepare("SELECT * FROM school_years WHERE institution_id = ? ORDER BY is_active DESC, created_at DESC")
     .all(institutionId) as SchoolYearRow[];
 
+  const deceTeam = getInstitutionDeceTeam(institutionId);
+
   return (
     <AnnualReportForm
       report={report}
@@ -47,6 +50,7 @@ export default async function EditAnnualReportPage({
       currentUserRole={session.user.role}
       institutionName={institution?.name || "UNIDAD EDUCATIVA"}
       institutionDistrict={institution?.district || ""}
+      deceTeam={deceTeam}
     />
   );
 }

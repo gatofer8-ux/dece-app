@@ -1329,13 +1329,6 @@ export default async function CasoDetallePage({
                 <AIAssistButton targetId={`referral-reason-${caseFile.id}`} caseId={caseFile.id} fieldLabel="Motivo de la derivación" /><VoiceDictationButton targetId={`referral-reason-${caseFile.id}`} />
               </div>
               <textarea id={`referral-reason-${caseFile.id}`} name="reason" required rows={2} placeholder="Motivo de la derivación..." className="textarea" />
-              <div className="flex flex-wrap items-center gap-4">
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" name="informed_consent" className="rounded" />
-                  Consentimiento informado firmado
-                </label>
-                <input name="consent_signed_by" placeholder="Firmado por..." className="input max-w-xs" />
-              </div>
               <button type="submit" className="btn-secondary">+ Registrar derivación</button>
             </form>
             <div className="space-y-3">
@@ -1350,6 +1343,12 @@ export default async function CasoDetallePage({
                       <Badge color={r.status === "CERRADA" ? "green" : r.status === "PENDIENTE" ? "amber" : "blue"}>
                         {REFERRAL_STATUS_LABELS[r.status]}
                       </Badge>
+                      <Link
+                        href={`/casos/${caseFile.id}/derivaciones/${r.id}/editar`}
+                        className="text-xs text-slate-700 hover:underline whitespace-nowrap"
+                      >
+                        ✏️ Editar
+                      </Link>
                       <a
                         href={`/api/casos/${caseFile.id}/derivaciones/${r.id}/export-word`}
                         className="text-xs text-blue-700 hover:underline whitespace-nowrap font-medium"
@@ -1370,7 +1369,7 @@ export default async function CasoDetallePage({
                   </div>
                   <p className="text-slate-600 mt-1">{r.reason}</p>
                   <div className="text-xs text-slate-400 mt-1">
-                    {formatDate(r.referral_date)} · Consentimiento: {r.informed_consent ? `Sí (${r.consent_signed_by || "s/n"})` : "No registrado"}
+                    {formatDate(r.referral_date)}
                   </div>
                   {r.response_notes && <p className="text-xs text-slate-500 mt-1">Respuesta: {r.response_notes}</p>}
                   {r.status !== "CERRADA" && (

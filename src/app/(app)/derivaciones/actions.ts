@@ -33,7 +33,7 @@ function insertReferral(
        destination_detail, background_summary, actions_taken, care_type_required, observations,
        elaborated_by_name, received_by, authority_name,
        student_age, student_disability, student_nationality, representative_document_id, district_office_label)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+     VALUES (?, ?, ?, ?, ?, ?, 0, NULL, ?, 'PENDIENTE', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     caseId,
@@ -41,8 +41,6 @@ function insertReferral(
     str(formData, "scope") || "EXTERNA",
     str(formData, "institution") || "",
     str(formData, "reason") || "",
-    formData.get("informed_consent") ? 1 : 0,
-    str(formData, "consent_signed_by"),
     str(formData, "referral_date") || new Date().toISOString(),
     str(formData, "destination_detail"),
     str(formData, "background_summary"),
@@ -93,6 +91,70 @@ export async function createOfficialReferral(
     return { error: err instanceof Error ? err.message : "Ocurrió un error inesperado al registrar la derivación." };
   }
   revalidatePath(`/casos/${caseId}`);
+  revalidatePath("/derivaciones");
+  redirect(`/casos/${caseId}/derivaciones/${referralId}/imprimir`);
+}
+
+export async function updateOfficialReferral(
+  referralId: string,
+  caseId: string,
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const session = await requireRole(["ADMIN", "DECE"]);
+  const institutionId = requireInstitutionId(session);
+  requireOwnedCase(caseId, institutionId);
+
+  try {
+    db.prepare(
+      `UPDATE referrals SET
+        scope = ?,
+        institution = ?,
+        reason = ?,
+        referral_date = ?,
+        destination_detail = ?,
+        background_summary = ?,
+        actions_taken = ?,
+        care_type_required = ?,
+        observations = ?,
+        elaborated_by_name = ?,
+        received_by = ?,
+        authority_name = ?,
+        student_age = ?,
+        student_disability = ?,
+        student_nationality = ?,
+        representative_document_id = ?,
+        district_office_label = ?,
+        updated_at = datetime('now')
+      WHERE id = ? AND case_file_id = ?`
+    ).run(
+      str(formData, "scope") || "EXTERNA",
+      str(formData, "institution") || "",
+      str(formData, "reason") || "",
+      str(formData, "referral_date") || new Date().toISOString(),
+      str(formData, "destination_detail"),
+      str(formData, "background_summary"),
+      str(formData, "actions_taken"),
+      str(formData, "care_type_required"),
+      str(formData, "observations"),
+      str(formData, "elaborated_by_name") || session.user.name,
+      str(formData, "received_by"),
+      str(formData, "authority_name"),
+      str(formData, "student_age"),
+      str(formData, "student_disability"),
+      str(formData, "student_nationality"),
+      str(formData, "representative_document_id"),
+      str(formData, "district_office_label"),
+      referralId,
+      caseId
+    );
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Error al actualizar la ficha de derivación." };
+  }
+
+  logAudit({ userId: session.user.id, action: "EDITAR", entityType: "Referral", entityId: referralId, details: caseId, institutionId });
+  revalidatePath(`/casos/${caseId}`);
+  revalidatePath(`/casos/${caseId}/derivaciones/${referralId}/imprimir`);
   revalidatePath("/derivaciones");
   redirect(`/casos/${caseId}/derivaciones/${referralId}/imprimir`);
 }

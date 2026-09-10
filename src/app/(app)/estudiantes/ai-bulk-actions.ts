@@ -15,6 +15,7 @@ function getClient(): GoogleGenAI | null {
 }
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { normalizeDocumentId, detectDocumentType } from "@/lib/documentId";
 
 export async function bulkCreateStudentsFromPDF(base64Data: string) {
   const session = await requireRole(["ADMIN", "DECE"]);
@@ -76,16 +77,18 @@ export async function bulkCreateStudentsFromPDF(base64Data: string) {
     let createdCount = 0;
     const insertStmt = db.prepare(`
       INSERT OR IGNORE INTO students (
-        id, institution_id, full_name, document_id, 
+        id, institution_id, full_name, document_type, document_id, 
         course, parallel, jornada, rep_email, created_by_id, bachillerato_specialty
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     db.transaction(() => {
       for (const st of studentsList) {
         const fullName = st.full_name || st.NOMBRES_COMPLETOS || st.nombres || st.nombre || st.Nombres;
         if (!fullName) continue;
-        const docId = st.document_id || st.cedula || st.CEDULA || st.Cédula || null;
+        const rawDoc = st.document_id || st.cedula || st.CEDULA || st.Cédula || null;
+        const docId = rawDoc ? normalizeDocumentId(String(rawDoc)) : null;
+        const docType = docId ? detectDocumentType(docId) : "CEDULA";
         const course = st.course || st.curso || st.Año_Escolar || "SIN ESPECIFICAR";
         const parallel = st.parallel || st.paralelo || "A";
         const repEmail = st.rep_email || st.cuenta || st.CUENTA || null;
@@ -94,6 +97,7 @@ export async function bulkCreateStudentsFromPDF(base64Data: string) {
           newId,
           institutionId,
           fullName.toUpperCase(),
+          docType,
           docId,
           (course).toUpperCase(),
           (parallel).toUpperCase(),
