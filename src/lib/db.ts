@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
 import { runMigrations } from "./migrations";
+import { recodifyExistingCases } from "./recodifyCases";
 
 // Ubicación del archivo de base de datos SQLite.
 // Por defecto se guarda en /data/dece.db (pensado para volumen persistente en Docker);
@@ -835,6 +836,14 @@ CREATE INDEX IF NOT EXISTS idx_rep_gen_hist_inst ON report_generation_history(in
   } catch (err) {
     console.error("[db] Error aplicando migraciones incrementales:", err);
     throw err;
+  }
+
+  // Recodifica una sola vez los casos con el formato antiguo (DECE-AAAA-NNNN)
+  // al nuevo SIGLAS-DOCUMENTO-AÑO-NN. Idempotente.
+  try {
+    recodifyExistingCases(db);
+  } catch (err) {
+    console.error("[db] Error recodificando casos existentes:", err);
   }
 
   return db;

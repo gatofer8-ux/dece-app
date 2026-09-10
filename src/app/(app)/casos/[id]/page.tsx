@@ -278,6 +278,12 @@ export default async function CasoDetallePage({
               {student.full_name}
             </Link>{" "}
             · {student.course} {student.parallel || ""}
+            {caseFile.legacy_code ? (
+              <>
+                {" "}
+                · <span className="text-slate-400">código anterior: {caseFile.legacy_code}</span>
+              </>
+            ) : null}
           </>
         }
         action={

@@ -195,6 +195,21 @@ export default function InstitutionSettingsForm({ institution }: { institution: 
           </div>
 
           <div>
+            <label className="label text-xs">Siglas de la institución</label>
+            <input
+              type="text"
+              name="acronym"
+              defaultValue={(institution as any).acronym || ""}
+              maxLength={8}
+              placeholder="Ej. UESR"
+              className="input text-xs uppercase"
+            />
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              Se usan en el código de cada caso: <span className="font-mono">SIGLAS-CÉDULA-AÑO-Nº</span>. Si se deja vacío, se generan del nombre.
+            </p>
+          </div>
+
+          <div>
             <label className="label text-xs">Dirección Distrital de Educación</label>
             <input
               type="text"

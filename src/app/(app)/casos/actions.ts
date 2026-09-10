@@ -43,10 +43,10 @@ export async function createCase(formData: FormData) {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
   const id = randomUUID();
-  const code = nextCaseCode(institutionId);
   const studentId = str(formData, "student_id");
   if (!studentId) throw new Error("Estudiante requerido");
   requireOwnedStudent(studentId, institutionId);
+  const code = nextCaseCode(institutionId, studentId);
 
   db.prepare(
     `INSERT INTO case_files
