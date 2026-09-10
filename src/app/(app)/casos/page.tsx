@@ -1,22 +1,15 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
-import { PageHeader, Badge, EmptyState, formatDate } from "@/components/ui";
+import { PageHeader, EmptyState, formatDate } from "@/components/ui";
 import {
   CASE_STATUS_LABELS,
   CASE_PRIORITY_LABELS,
   RISK_TYPE_LABELS,
   type CaseFileRow,
 } from "@/lib/types";
+import { priorityStyle, caseStatusStyle, riskTypeStyle } from "@/lib/statusColors";
 import { getUserCoverage } from "@/lib/distributivo";
-
-const STATUS_COLOR: Record<string, string> = {
-  ABIERTO: "amber",
-  EN_SEGUIMIENTO: "blue",
-  DERIVADO: "purple",
-  CERRADO: "green",
-};
-const PRIORITY_COLOR: Record<string, string> = { ALTA: "red", MEDIA: "amber", BAJA: "slate" };
 
 export default async function CasosPage({
   searchParams,
@@ -136,7 +129,11 @@ export default async function CasosPage({
       </form>
 
       {cases.length === 0 ? (
-        <EmptyState title="No hay casos con estos filtros" />
+        <EmptyState
+          icon="📁"
+          title="No hay casos con estos filtros"
+          description="Ajusta los filtros de arriba o registra un nuevo caso desde la ficha de un estudiante."
+        />
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
@@ -162,12 +159,21 @@ export default async function CasosPage({
                     {c.student_name}
                     <div className="text-xs text-slate-400">{c.student_course}</div>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{RISK_TYPE_LABELS[c.risk_type]}</td>
                   <td className="px-4 py-3">
-                    <Badge color={PRIORITY_COLOR[c.priority]}>{CASE_PRIORITY_LABELS[c.priority]}</Badge>
+                    <span className={`badge ${riskTypeStyle(c.risk_type).badge}`}>
+                      <span aria-hidden>{riskTypeStyle(c.risk_type).icon}</span>
+                      {RISK_TYPE_LABELS[c.risk_type] || c.risk_type}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
-                    <Badge color={STATUS_COLOR[c.status]}>{CASE_STATUS_LABELS[c.status]}</Badge>
+                    <span className={`badge ${priorityStyle(c.priority).badge}`}>
+                      {CASE_PRIORITY_LABELS[c.priority] || c.priority}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`badge ${caseStatusStyle(c.status).badge}`}>
+                      {CASE_STATUS_LABELS[c.status] || c.status}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-slate-600">{formatDate(c.detection_date)}</td>
                 </tr>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/Toast";
 
 /**
  * Botón de borrado genérico con confirmación — usado para corregir
@@ -42,6 +43,7 @@ export default function DeleteButton({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const toast = useToast();
 
   async function handleClick() {
     if (!confirm(confirmMessage)) return;
@@ -51,15 +53,19 @@ export default function DeleteButton({
       const result = await onDelete();
       if (result && result.error) {
         setError(result.error);
+        toast.error(result.error);
         return;
       }
+      toast.success("Registro eliminado.");
       if (redirectTo) {
         router.push(redirectTo);
       } else {
         router.refresh();
       }
     } catch (err: any) {
-      setError(err?.message || "No se pudo borrar el registro.");
+      const msg = err?.message || "No se pudo borrar el registro.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setPending(false);
     }
