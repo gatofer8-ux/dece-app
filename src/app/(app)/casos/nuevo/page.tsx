@@ -10,7 +10,7 @@ import VoiceDictationButton from "@/components/VoiceDictationButton";
 export default async function NuevoCasoPage({
   searchParams,
 }: {
-  searchParams: { estudiante?: string; alerta?: string };
+  searchParams?: { estudiante?: string; alerta?: string };
 }) {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
@@ -23,13 +23,13 @@ export default async function NuevoCasoPage({
     .all(institutionId) as UserRow[];
 
   let alert: TeacherAlertRow | undefined;
-  if (searchParams.alerta) {
+  if (searchParams?.alerta) {
     alert = db
       .prepare("SELECT * FROM teacher_alerts WHERE id = ? AND institution_id = ?")
       .get(searchParams.alerta, institutionId) as TeacherAlertRow | undefined;
   }
 
-  const preselectedStudent = alert?.student_id || searchParams.estudiante || "";
+  const preselectedStudent = alert?.student_id || searchParams?.estudiante || "";
 
   return (
     <div>

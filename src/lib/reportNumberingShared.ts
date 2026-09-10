@@ -8,6 +8,8 @@
  * Mineduc-CZ3-18D02-UESR-DECE-MJ-2025/2026-001
  */
 
+import type Database from "better-sqlite3";
+import type { InstitutionRow, UserRow } from "./types";
 import { deriveAcronym } from "./codesShared";
 
 /**
@@ -150,3 +152,45 @@ export function buildReportNumberString(parts: {
     parts.sequence
   )}`;
 }
+
+/**
+ * Obtiene los componentes de configuración para numeración de informes
+ */
+export function getReportConfigParts(
+  dbInstance: Database.Database,
+  institutionId: string,
+  userOrId?: { id?: string; name?: string | null; professional_code?: string | null } | string | null,
+  schoolYearText?: string | null
+): ReportConfigParts {
+  const institution = dbInstance
+    .prepare("SELECT * FROM institutions WHERE id = ?")
+    .get(institutionId) as InstitutionRow | undefined;
+
+  let userObj: { name?: string | null; professional_code?: string | null } | null = null;
+  if (typeof userOrId === "string") {
+    userObj = dbInstance
+      .prepare("SELECT name, professional_code FROM users WHERE id = ?")
+      .get(userOrId) as UserRow | null;
+  } else if (userOrId) {
+    userObj = userOrId;
+  }
+
+  const mineducCode = institution?.mineduc_code?.trim() || "Mineduc";
+  const zoneCode = formatZoneCode(institution?.zona, institution?.zone_code);
+  const districtCode = formatDistrictCode(institution?.district, institution?.district_code);
+  const institutionCode = formatInstitutionAcronym(institution?.name, institution?.acronym);
+  const deceCode = institution?.dece_code?.trim() || "DECE";
+  const professionalCode = getProfessionalReportCode(userObj);
+  const schoolYearCode = normalizeSchoolYearCode(schoolYearText);
+
+  return {
+    mineducCode,
+    zoneCode,
+    districtCode,
+    institutionCode,
+    deceCode,
+    professionalCode,
+    schoolYearCode,
+  };
+}
+

@@ -1,11 +1,9 @@
 import type Database from "better-sqlite3";
+import { db as defaultDb } from "./db";
 import type { CaseFileRow, StudentRow } from "./types";
 
 function getDb(dbInstance?: Database.Database): Database.Database {
-  if (dbInstance) return dbInstance;
-  // eslint-disable-next-line
-  const { db } = require("./db");
-  return db;
+  return dbInstance || defaultDb;
 }
 
 export interface InactiveCaseItem {
@@ -98,11 +96,16 @@ export function getInactiveCases(
      ORDER BY application_date DESC LIMIT 1`
   );
 
-  const stmtEsquela = resolvedDb.prepare(
-    `SELECT citation_date FROM dece_esquelas
-     WHERE case_file_id = ?
-     ORDER BY citation_date DESC LIMIT 1`
-  );
+  let stmtEsquela: Database.Statement | null = null;
+  try {
+    stmtEsquela = resolvedDb.prepare(
+      `SELECT citation_date FROM dece_esquelas
+       WHERE case_file_id = ?
+       ORDER BY citation_date DESC LIMIT 1`
+    );
+  } catch {
+    // Si la tabla dece_esquelas aún no está disponible
+  }
 
   const stmtLastAnyAction = resolvedDb.prepare(
     `SELECT date FROM case_actions
@@ -116,7 +119,7 @@ export function getInactiveCases(
       | { date: string; type: string }
       | undefined;
     const interview = stmtInterview.get(cf.id) as { application_date: string } | undefined;
-    const esquela = stmtEsquela.get(cf.id) as { citation_date: string } | undefined;
+    const esquela = stmtEsquela?.get(cf.id) as { citation_date: string } | undefined;
 
     // Fechas candidatas para contacto directo
     const contactDates: { date: string; type: string }[] = [];
@@ -236,13 +239,18 @@ export function getCaseInactivityInfo(
     )
     .get(caseFileId) as { application_date: string } | undefined;
 
-  const esquela = resolvedDb
-    .prepare(
-      `SELECT citation_date FROM dece_esquelas
-       WHERE case_file_id = ?
-       ORDER BY citation_date DESC LIMIT 1`
-    )
-    .get(caseFileId) as { citation_date: string } | undefined;
+  let esquela: { citation_date: string } | undefined;
+  try {
+    esquela = resolvedDb
+      .prepare(
+        `SELECT citation_date FROM dece_esquelas
+         WHERE case_file_id = ?
+         ORDER BY citation_date DESC LIMIT 1`
+      )
+      .get(caseFileId) as { citation_date: string } | undefined;
+  } catch {
+    // Si la tabla dece_esquelas aún no está disponible
+  }
 
   const contactDates: { date: string; type: string }[] = [];
   if (convAction?.date) contactDates.push({ date: convAction.date.slice(0, 10), type: convAction.type });

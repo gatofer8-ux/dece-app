@@ -101,7 +101,7 @@ export default async function CasoDetallePage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { checklist_guardado?: string; checklist_error?: string };
+  searchParams?: { checklist_guardado?: string; checklist_error?: string };
 }) {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
@@ -245,7 +245,19 @@ export default async function CasoDetallePage({
   } catch {
     // Si la tabla no existe aún
   }
-  const inactivityInfo = getCaseInactivityInfo(caseFile.id, institutionId);
+
+  let inactivityInfo = {
+    daysWithoutConversation: 0,
+    lastConversationDate: "",
+    lastConversationType: "",
+    isAlert: false,
+    isUrgent: false,
+  };
+  try {
+    inactivityInfo = getCaseInactivityInfo(caseFile.id, institutionId);
+  } catch (err) {
+    console.error("[casos] Error consultando inactividad:", err);
+  }
 
   return (
     <div>
@@ -1407,13 +1419,13 @@ export default async function CasoDetallePage({
           <section id="checklist" className="card p-5">
             <h2 className="text-sm font-semibold text-slate-700 mb-3">Checklist del expediente</h2>
 
-            {searchParams.checklist_guardado === "1" && (
+            {searchParams?.checklist_guardado === "1" && (
               <p className="mb-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700">
                 ✓ Checklist guardado correctamente.
               </p>
             )}
 
-            {searchParams.checklist_error && (
+            {searchParams?.checklist_error && (
               <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                 ⚠️ {searchParams.checklist_error}
               </p>
