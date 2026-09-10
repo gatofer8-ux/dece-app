@@ -36,15 +36,29 @@ import {
   PSYCHOSOCIAL_REFERRAL_OPTIONS,
 } from "./accompanimentReport";
 
+// Calca del formato oficial: una sola tabla continua, todo el cuerpo con
+// relleno gris claro (F2F2F2), franjas de sección en gris medio (BFBFBF /
+// D9D9D9), título en A6A6A6, bordes negros finos (estilo "Tabla con cuadrícula"
+// de Word).
 const FONT = "Calibri";
-const LABEL_FILL = "F2F2F2";
-const HEAD_FILL = "BFBFBF";
-const BORDER = "808080";
+const FILL_BODY = "F2F2F2";
+const FILL_SEC = "BFBFBF";
+const FILL_SEC2 = "D9D9D9";
+const FILL_TITLE = "A6A6A6";
+const FILL_MARK = "FFFFFF";
 const BODY = 22; // 11pt
 const SMALL = 20; // 10pt
-const W = 9600;
+const TINY = 16; // 8pt
 
-function img(fileName: string): Buffer | null {
+const PAGE_W = 11900;
+const PAGE_H = 15874;
+const MARGIN = { top: 1700, right: 1130, bottom: 1280, left: 1420, header: 460, footer: 320 };
+const W = PAGE_W - MARGIN.left - MARGIN.right; // ≈ 9350
+const NCOLS = 12;
+const COL = Math.floor(W / NCOLS);
+const GRID = Array.from({ length: NCOLS }, (_, i) => (i === NCOLS - 1 ? W - COL * (NCOLS - 1) : COL));
+
+function imgBuf(fileName: string): Buffer | null {
   try {
     for (const p of [
       path.join(process.cwd(), "public", "situational_media", fileName),
@@ -58,232 +72,205 @@ function img(fileName: string): Buffer | null {
   return null;
 }
 
-const borders = {
-  top: { style: BorderStyle.SINGLE, size: 4, color: BORDER },
-  bottom: { style: BorderStyle.SINGLE, size: 4, color: BORDER },
-  left: { style: BorderStyle.SINGLE, size: 4, color: BORDER },
-  right: { style: BorderStyle.SINGLE, size: 4, color: BORDER },
-};
+const B = { style: BorderStyle.SINGLE, size: 4, color: "000000" };
+const borders = { top: B, bottom: B, left: B, right: B, insideHorizontal: B, insideVertical: B };
 
-function r(text: string, o: { bold?: boolean; size?: number } = {}) {
-  return new TextRun({ text, bold: o.bold ?? false, size: o.size ?? BODY, font: FONT });
+function run(text: string, o: { bold?: boolean; size?: number } = {}) {
+  return new TextRun({ text, bold: o.bold ?? false, size: o.size ?? SMALL, font: FONT });
 }
-function p(text: string, o: { bold?: boolean; size?: number; align?: (typeof AlignmentType)[keyof typeof AlignmentType] } = {}) {
-  return new Paragraph({
-    alignment: o.align ?? AlignmentType.JUSTIFIED,
-    spacing: { after: 60, line: 264 },
-    children: [r(text, o)],
-  });
+function pJust(text: string, size = SMALL) {
+  return new Paragraph({ alignment: AlignmentType.JUSTIFIED, spacing: { after: 0, line: 248 }, children: [run(text, { size })] });
 }
-function multi(text: string | null | undefined, o: { size?: number } = {}): Paragraph[] {
+function pLines(text: string | null | undefined, size = SMALL): Paragraph[] {
   const t = (text || "").trim();
-  if (!t) return [p("—", o)];
-  return t.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => p(l, o));
+  if (!t) return [pJust("—", size)];
+  return t.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => pJust(l, size));
 }
 
 type VAlign = typeof VerticalAlign.TOP | typeof VerticalAlign.CENTER | typeof VerticalAlign.BOTTOM;
-function cell(children: Paragraph[], o: { fill?: string; colSpan?: number; width?: number; valign?: VAlign } = {}) {
+function cell(
+  children: Paragraph[],
+  o: { span?: number; fill?: string; valign?: VAlign; align?: (typeof AlignmentType)[keyof typeof AlignmentType] } = {}
+) {
   return new TableCell({
-    columnSpan: o.colSpan,
-    width: o.width ? { size: o.width, type: WidthType.DXA } : undefined,
-    shading: o.fill ? { fill: o.fill } : undefined,
+    columnSpan: o.span ?? NCOLS,
+    shading: { fill: o.fill ?? FILL_BODY },
     verticalAlign: o.valign ?? VerticalAlign.CENTER,
-    margins: { top: 40, bottom: 40, left: 90, right: 90 },
+    margins: { top: 30, bottom: 30, left: 80, right: 80 },
     children,
   });
 }
-const lbl = (t: string, o: { colSpan?: number; width?: number } = {}) =>
-  cell([new Paragraph({ spacing: { after: 0, line: 240 }, children: [r(t, { bold: true, size: SMALL })] })], { fill: LABEL_FILL, ...o });
-const val = (t: string, o: { colSpan?: number; width?: number } = {}) =>
-  cell([new Paragraph({ spacing: { after: 0, line: 240 }, children: [r(t || " ", { size: SMALL })] })], o);
+const R = (cells: TableCell[]) => new TableRow({ children: cells });
 
-function sectionBar(text: string) {
-  return new Table({
-    width: { size: W, type: WidthType.DXA },
-    layout: TableLayoutType.FIXED,
-    borders,
-    rows: [
-      new TableRow({
-        children: [
-          cell([new Paragraph({ spacing: { after: 0 }, children: [r(text, { bold: true, size: SMALL })] })], {
-            fill: HEAD_FILL,
-            colSpan: 1,
-            width: W,
-          }),
-        ],
+// Fila a todo el ancho con etiqueta en negrita seguida de valor normal.
+function fieldRow(label: string, value: string) {
+  return R([
+    cell([
+      new Paragraph({
+        spacing: { after: 0, line: 248 },
+        children: [run(label + " ", { bold: true }), run(value || "", {})],
       }),
-    ],
-  });
+    ]),
+  ]);
 }
-
-function checklist(title: string, options: string[], selected: string[], otros: string): Paragraph[] {
-  const out: Paragraph[] = [new Paragraph({ spacing: { after: 40 }, children: [r(title, { bold: true, size: SMALL })] })];
+function sectionRow(text: string, fill = FILL_SEC) {
+  return R([cell([new Paragraph({ spacing: { after: 0 }, children: [run(text, { bold: true })] })], { fill })]);
+}
+function textBlockRow(text: string | null | undefined) {
+  return R([cell(pLines(text), { valign: VerticalAlign.TOP })]);
+}
+function checklistParas(prefix: string, options: string[], selected: string[], otros: string): Paragraph[] {
+  const out: Paragraph[] = [];
+  if (prefix) out.push(new Paragraph({ spacing: { after: 30 }, children: [run(prefix, { bold: true, size: TINY })] }));
   for (const opt of options) {
-    const mark = selected.includes(opt) ? "☑ " : "☐ ";
-    out.push(new Paragraph({ spacing: { after: 20, line: 232 }, children: [r(mark + opt, { size: 18 })] }));
+    out.push(new Paragraph({ spacing: { after: 14, line: 216 }, children: [run(`${selected.includes(opt) ? "☑" : "☐"} ${opt}`, { size: TINY })] }));
   }
-  out.push(new Paragraph({ spacing: { after: 0, line: 232 }, children: [r(`Otros: ${otros || ""}`, { size: 18 })] }));
+  out.push(new Paragraph({ spacing: { after: 0, line: 216 }, children: [run(`Otros: ${otros || ""}`, { size: TINY })] }));
   return out;
 }
+function markRow(marked: boolean, label: string) {
+  return R([
+    cell([new Paragraph({ spacing: { after: 0 }, children: [] })], { span: 1 }),
+    cell([new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [run(marked ? "X" : "", { bold: true })] })], { span: 1, fill: FILL_MARK }),
+    cell([new Paragraph({ spacing: { after: 0, line: 248 }, children: [run(label, {})] })], { span: NCOLS - 2 }),
+  ]);
+}
+const spacerRow = () => R([cell([new Paragraph({ spacing: { after: 0 }, children: [] })])]);
 
 function fmtD(d: string | null | undefined) {
-  if (!d) return "";
-  const m = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : d;
+  const m = (d || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : d || "";
 }
 
-export async function generateAccompanimentReportDocx(report: CaseAccompanimentReportRow): Promise<Buffer> {
+export async function generateAccompanimentReportDocx(
+  report: CaseAccompanimentReportRow,
+  institution?: { name?: string | null; amie_code?: string | null } | null
+): Promise<Buffer> {
   const ind = parseIndicators(report.indicators_json);
   const rp = parseRiskProtection(report.risk_protection_json);
   const ext = parseExtReferral(report.ext_referral_json);
   const psy = parsePsychosocialReferral(report.psychosocial_referral_json);
   const psyByOption = new Map(psy.entries.map((e) => [e.option, e.name]));
+  const S4 = NCOLS / 4; // 3
+  const S3 = NCOLS / 3; // 4
 
-  const t3 = (cells: TableCell[]) => new TableRow({ children: cells });
-
-  const children: (Paragraph | Table)[] = [
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 160 },
-      children: [
-        r(
-          "INFORME DE ACOMPAÑAMIENTO A VÍCTIMAS FRENTE A SITUACIONES DE VIOLENCIA DETECTADAS EN EL ÁMBITO EDUCATIVO",
-          { bold: true, size: BODY }
-        ),
-      ],
-    }),
+  const rows: TableRow[] = [
+    // Título
+    R([cell([new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [run("INFORME DE ACOMPAÑAMIENTO A VÍCTIMAS FRENTE A SITUACIONES DE VIOLENCIA DETECTADAS EN EL ÁMBITO EDUCATIVO", { bold: true, size: BODY })] })], { fill: FILL_TITLE })]),
 
     // Cabecera
-    new Table({
-      width: { size: W, type: WidthType.DXA },
-      layout: TableLayoutType.FIXED,
-      borders,
-      rows: [
-        t3([lbl("Institución educativa:", { width: W * 0.3 }), val("", { width: W * 0.4 }), lbl("Código AMIE:", { width: W * 0.15 }), val("", { width: W * 0.15 })]),
-        t3([lbl("Informe N°:", { width: W * 0.2 }), val(report.report_number || "", { width: W * 0.3 }), lbl("Fecha de elaboración del informe:", { width: W * 0.3 }), val(fmtD(report.report_date), { width: W * 0.2 })]),
-        t3([lbl("Nombre de profesional DECE que maneja el caso:", { width: W * 0.5 }), val(report.professional_managing || "", { colSpan: 3, width: W * 0.5 })]),
-      ],
-    }),
-    p("", { size: 8 }),
+    fieldRow("Institución educativa:", institution?.name || ""),
+    fieldRow("Código AMIE:", institution?.amie_code || ""),
+    R([
+      cell([new Paragraph({ spacing: { after: 0 }, children: [run("Informe N°: ", { bold: true }), run(report.report_number || "", {})] })], { span: NCOLS / 2 }),
+      cell([new Paragraph({ spacing: { after: 0 }, children: [run("Fecha de elaboración del informe: ", { bold: true }), run(fmtD(report.report_date), {})] })], { span: NCOLS / 2 }),
+    ]),
+    fieldRow("Nombre de profesional DECE que maneja el caso:", report.professional_managing || ""),
 
-    sectionBar("1. DATOS GENERALES DE IDENTIFICACIÓN DEL ESTUDIANTE O DE LA ESTUDIANTE"),
-    new Table({
-      width: { size: W, type: WidthType.DXA }, layout: TableLayoutType.FIXED, borders,
-      rows: [
-        t3([lbl("Apellidos y nombres:", { width: W * 0.3 }), val(report.student_full_name || "", { colSpan: 3, width: W * 0.7 })]),
-        t3([
-          lbl("Fecha de nacimiento:", { width: W * 0.3 }),
-          val(`Día: ${report.student_birth_day || "__"}`, { width: W * 0.23 }),
-          val(`Mes: ${report.student_birth_month || "__"}`, { width: W * 0.23 }),
-          val(`Año: ${report.student_birth_year || "____"}`, { width: W * 0.24 }),
-        ]),
-        t3([lbl("Edad:", { width: W * 0.3 }), val(report.student_age || "", { colSpan: 3 })]),
-        t3([lbl("Nacionalidad:", { width: W * 0.3 }), val(report.student_nationality || "", { colSpan: 3 })]),
-        t3([lbl("Número de cédula o pasaporte:", { width: W * 0.3 }), val(report.student_document_id || "", { colSpan: 3 })]),
-        t3([lbl("Grado o curso:", { width: W * 0.3 }), val(report.student_grade || "", { width: W * 0.35 }), lbl("Jornada:", { width: W * 0.15 }), val(report.student_jornada || "", { width: W * 0.2 })]),
-      ],
-    }),
-    p("", { size: 8 }),
+    // 1. Datos del estudiante
+    sectionRow("1. DATOS GENERALES DE IDENTIFICACIÓN DEL ESTUDIANTE O DE LA ESTUDIANTE"),
+    fieldRow("Apellidos y nombres:", report.student_full_name || ""),
+    R([
+      cell([new Paragraph({ spacing: { after: 0 }, children: [run("Fecha de nacimiento:", { bold: true })] })], { span: S4 }),
+      cell([new Paragraph({ spacing: { after: 0 }, children: [run(`Día: ${report.student_birth_day || "__"}`, {})] })], { span: S4 }),
+      cell([new Paragraph({ spacing: { after: 0 }, children: [run(`Mes: ${report.student_birth_month || "__"}`, {})] })], { span: S4 }),
+      cell([new Paragraph({ spacing: { after: 0 }, children: [run(`Año: ${report.student_birth_year || "____"}`, {})] })], { span: NCOLS - 3 * S4 }),
+    ]),
+    fieldRow("Edad:", report.student_age || ""),
+    fieldRow("Nacionalidad:", report.student_nationality || ""),
+    fieldRow("Número de cédula o pasaporte:", report.student_document_id || ""),
+    R([
+      cell([new Paragraph({ spacing: { after: 0 }, children: [run("Grado o curso: ", { bold: true }), run(report.student_grade || "", {})] })], { span: NCOLS / 2 }),
+      cell([new Paragraph({ spacing: { after: 0 }, children: [run("Jornada: ", { bold: true }), run(report.student_jornada || "", {})] })], { span: NCOLS / 2 }),
+    ]),
 
-    sectionBar("2. DATOS GENERALES DE LA MADRE, PADRE Y/O REPRESENTANTE LEGAL"),
-    new Table({
-      width: { size: W, type: WidthType.DXA }, layout: TableLayoutType.FIXED, borders,
-      rows: [
-        t3([lbl("Nombres y apellidos:", { width: W * 0.32 }), val(report.rep_full_name || "", { colSpan: 3, width: W * 0.68 })]),
-        t3([lbl("Número de cédula:", { width: W * 0.32 }), val(report.rep_document_id || "", { colSpan: 3 })]),
-        t3([lbl("Vínculo entre la persona y el estudiante o la estudiante:", { width: W * 0.32 }), val(report.rep_relationship || "", { colSpan: 3 })]),
-        t3([lbl("Dirección del domicilio:", { width: W * 0.32 }), val(report.rep_address || "", { colSpan: 3 })]),
-        t3([
-          lbl("Teléfono de contacto:", { width: W * 0.32 }),
-          val(`Celular: ${report.rep_phone_cell || ""}`, { width: W * 0.34 }),
-          val(`Convencional: ${report.rep_phone_landline || ""}`, { colSpan: 2, width: W * 0.34 }),
-        ]),
-      ],
-    }),
-    p("", { size: 8 }),
+    // 2. Representante
+    sectionRow("2. DATOS GENERALES DE LA MADRE, PADRE Y/O REPRESENTANTE LEGAL"),
+    fieldRow("Nombres y apellidos:", report.rep_full_name || ""),
+    fieldRow("Número de cédula:", report.rep_document_id || ""),
+    fieldRow("Vínculo entre la persona y el estudiante o la estudiante:", report.rep_relationship || ""),
+    fieldRow("Dirección del domicilio:", report.rep_address || ""),
+    R([
+      cell([new Paragraph({ spacing: { after: 0 }, children: [run("Teléfono de contacto: ", { bold: true }), run(`Celular: ${report.rep_phone_cell || ""}`, {})] })], { span: NCOLS / 2 }),
+      cell([new Paragraph({ spacing: { after: 0 }, children: [run(`Convencional: ${report.rep_phone_landline || ""}`, {})] })], { span: NCOLS / 2 }),
+    ]),
 
-    sectionBar("3. CONTEXTO PSICOSOCIAL Y PEDAGÓGICO"),
-    new Table({
-      width: { size: W, type: WidthType.DXA }, layout: TableLayoutType.FIXED, borders,
-      rows: [
-        t3([lbl("SITUACIÓN FAMILIAR. (Breve explicación de con quién vive el NNA, su configuración familiar, su situación familiar, etc.)", { colSpan: 1, width: W })]),
-        t3([cell(multi(report.family_situation), { width: W, colSpan: 1, valign: VerticalAlign.TOP })]),
-        t3([lbl("INDICADORES (LLENAR DE ACUERDO CON LINEAMIENTOS DE LA SECCIÓN 3.2.1 A. PROTOCOLOS Y RUTAS):", { width: W })]),
-        t3([lbl("Signos físicos", { width: W / 3 }), lbl("Signos de comportamiento", { width: W / 3 }), lbl("Comportamientos o conductas que se pueden identificar en la institución educativa", { width: W / 3 })]),
-        t3([
-          cell(checklist("Signos físicos", INDICATOR_SIGNOS_FISICOS, ind.signos_fisicos, ind.signos_fisicos_otros), { width: W / 3, valign: VerticalAlign.TOP }),
-          cell(checklist("Signos de comportamiento", INDICATOR_SIGNOS_COMPORTAMIENTO, ind.signos_comportamiento, ind.signos_comportamiento_otros), { width: W / 3, valign: VerticalAlign.TOP }),
-          cell(checklist("Conductas en la IE", INDICATOR_CONDUCTAS_IE, ind.conductas_ie, ind.conductas_ie_otros), { width: W / 3, valign: VerticalAlign.TOP }),
-        ]),
-        t3([lbl("FACTORES DE RIESGO Y PROTECCIÓN (LLENAR DE ACUERDO CON LINEAMIENTOS SECCIÓN 3.2.1 B. PROTOCOLOS Y RUTAS):", { width: W })]),
-        t3([lbl("PERSONALES (del NNA)", { width: W / 3 }), lbl("FAMILIARES", { width: W / 3 }), lbl("SITUACIONALES Y SOCIALES", { width: W / 3 })]),
-        t3([
-          cell([
-            ...checklist("Factores de riesgo:", FACTOR_PERSONALES_RIESGO, rp.personales_riesgo, rp.personales_riesgo_otros),
-            ...checklist("Factores protector:", FACTOR_PERSONALES_PROTECCION, rp.personales_proteccion, rp.personales_proteccion_otros),
-          ], { width: W / 3, valign: VerticalAlign.TOP }),
-          cell([
-            ...checklist("Factores de riesgo:", FACTOR_FAMILIARES_RIESGO, rp.familiares_riesgo, rp.familiares_riesgo_otros),
-            ...checklist("Factores protector:", FACTOR_FAMILIARES_PROTECCION, rp.familiares_proteccion, rp.familiares_proteccion_otros),
-          ], { width: W / 3, valign: VerticalAlign.TOP }),
-          cell([
-            ...checklist("Factores de riesgo:", FACTOR_SITUACIONALES_RIESGO, rp.situacionales_riesgo, rp.situacionales_riesgo_otros),
-            ...checklist("Factores protector:", FACTOR_SITUACIONALES_PROTECCION, rp.situacionales_proteccion, rp.situacionales_proteccion_otros),
-          ], { width: W / 3, valign: VerticalAlign.TOP }),
-        ]),
-        t3([lbl("RENDIMIENTO ACADÉMICO (Explicar de manera breve y concisa el rendimiento académico del niño, niña o adolescente, identificando si ha presentado dificultades o cambios dentro y fuera del aula —si aplica el caso—):", { width: W })]),
-        t3([cell(multi(report.academic_performance), { width: W, valign: VerticalAlign.TOP })]),
-      ],
-    }),
-    p("", { size: 8 }),
+    // 3. Contexto
+    sectionRow("3. CONTEXTO PSICOSOCIAL Y PEDAGÓGICO"),
+    sectionRow("SITUACIÓN FAMILIAR. (Breve explicación de con quién vive el NNA, su configuración familiar, su situación familiar, etc.)"),
+    textBlockRow(report.family_situation),
+    sectionRow("INDICADORES (LLENAR DE ACUERDO CON LINEAMIENTOS DE LA SECCIÓN 3.2.1 A. PROTOCOLOS Y RUTAS):"),
+    R([
+      cell([new Paragraph({ spacing: { after: 0 }, children: [run("Signos físicos", { bold: true, size: TINY })] })], { span: S3 }),
+      cell([new Paragraph({ spacing: { after: 0 }, children: [run("Signos de comportamiento", { bold: true, size: TINY })] })], { span: S3 }),
+      cell([new Paragraph({ spacing: { after: 0 }, children: [run("Comportamientos o conductas que se pueden identificar en la institución educativa", { bold: true, size: TINY })] })], { span: NCOLS - 2 * S3 }),
+    ]),
+    R([
+      cell(checklistParas("", INDICATOR_SIGNOS_FISICOS, ind.signos_fisicos, ind.signos_fisicos_otros), { span: S3, valign: VerticalAlign.TOP }),
+      cell(checklistParas("", INDICATOR_SIGNOS_COMPORTAMIENTO, ind.signos_comportamiento, ind.signos_comportamiento_otros), { span: S3, valign: VerticalAlign.TOP }),
+      cell(checklistParas("", INDICATOR_CONDUCTAS_IE, ind.conductas_ie, ind.conductas_ie_otros), { span: NCOLS - 2 * S3, valign: VerticalAlign.TOP }),
+    ]),
+    sectionRow("FACTORES DE RIESGO Y PROTECCIÓN (LLENAR DE ACUERDO CON LINEAMIENTOS SECCIÓN 3.2.1 B. PROTOCOLOS Y RUTAS):", FILL_SEC2),
+    R([
+      cell([new Paragraph({ spacing: { after: 0 }, children: [run("PERSONALES (del NNA)", { bold: true, size: TINY })] })], { span: S3 }),
+      cell([new Paragraph({ spacing: { after: 0 }, children: [run("FAMILIARES", { bold: true, size: TINY })] })], { span: S3 }),
+      cell([new Paragraph({ spacing: { after: 0 }, children: [run("SITUACIONALES Y SOCIALES", { bold: true, size: TINY })] })], { span: NCOLS - 2 * S3 }),
+    ]),
+    R([
+      cell([...checklistParas("Factores de riesgo:", FACTOR_PERSONALES_RIESGO, rp.personales_riesgo, rp.personales_riesgo_otros), ...checklistParas("Factores protector:", FACTOR_PERSONALES_PROTECCION, rp.personales_proteccion, rp.personales_proteccion_otros)], { span: S3, valign: VerticalAlign.TOP }),
+      cell([...checklistParas("Factores de riesgo:", FACTOR_FAMILIARES_RIESGO, rp.familiares_riesgo, rp.familiares_riesgo_otros), ...checklistParas("Factores protector:", FACTOR_FAMILIARES_PROTECCION, rp.familiares_proteccion, rp.familiares_proteccion_otros)], { span: S3, valign: VerticalAlign.TOP }),
+      cell([...checklistParas("Factores de riesgo:", FACTOR_SITUACIONALES_RIESGO, rp.situacionales_riesgo, rp.situacionales_riesgo_otros), ...checklistParas("Factores protector:", FACTOR_SITUACIONALES_PROTECCION, rp.situacionales_proteccion, rp.situacionales_proteccion_otros)], { span: NCOLS - 2 * S3, valign: VerticalAlign.TOP }),
+    ]),
+    sectionRow("RENDIMIENTO ACADÉMICO (Explicar de manera breve y concisa el rendimiento académico del niño, niña o adolescente, identificando si ha presentado dificultades o cambios dentro y fuera del aula —si aplica el caso—):", FILL_SEC2),
+    textBlockRow(report.academic_performance),
 
-    sectionBar("4. ACCIONES DE ACOMPAÑAMIENTO"),
-    p("(Resuma brevemente las acciones inmediatas de acompañamiento, por ejemplo: entrevistas con padres y madres de familia, entrevista con docentes, seguimiento académico, derivaciones a centros de salud y atención psicológica, talleres preventivos, entre otras)", { size: 16 }),
-    new Table({
-      width: { size: W, type: WidthType.DXA }, layout: TableLayoutType.FIXED, borders,
-      rows: [t3([cell(multi(report.accompaniment_actions), { width: W, valign: VerticalAlign.TOP })])],
-    }),
-    p("", { size: 8 }),
+    // 4. Acciones
+    sectionRow("4. ACCIONES DE ACOMPAÑAMIENTO *(Resuma brevemente las acciones inmediatas de acompañamiento, por ejemplo: entrevistas con padres y madres de familia, entrevista con docentes, seguimiento académico, derivaciones a centros de salud y atención psicológica, talleres preventivos, entre otras)"),
+    textBlockRow(report.accompaniment_actions),
 
-    sectionBar("REFERENCIA EXTERNA"),
-    p("Procedimiento de referencia a instancias externas (marcar uno o más círculos según corresponda):", { bold: true, size: SMALL }),
-    new Table({
-      width: { size: W, type: WidthType.DXA }, layout: TableLayoutType.FIXED, borders,
-      rows: EXT_REFERRAL_INSTANCES.map((inst) =>
-        t3([val(ext.selected.includes(inst) ? "X" : "", { width: W * 0.1 }), val(inst, { colSpan: 3, width: W * 0.9 })])
-      ),
-    }),
-    p("Procedimiento recomendado de referencia externa para tratamiento psicológico-social (marcar uno o más círculos según corresponda):", { bold: true, size: SMALL }),
-    new Table({
-      width: { size: W, type: WidthType.DXA }, layout: TableLayoutType.FIXED, borders,
-      rows: PSYCHOSOCIAL_REFERRAL_OPTIONS.map((opt) => {
-        const name = psyByOption.get(opt);
-        return t3([
-          val(name != null ? "X" : "", { width: W * 0.1 }),
-          val(`${opt}. Indicar nombre: ${name || ""}`, { colSpan: 3, width: W * 0.9 }),
-        ]);
-      }),
-    }),
-    p("", { size: 8 }),
-
-    p(`Fecha de elaboración del Informe técnico de acompañamiento a víctimas de violencia (${fmtD(report.signing_date || report.report_date)}):`, { size: SMALL }),
-    p(`Nombre del profesional o la profesional DECE que elaboró el Informe técnico de acompañamiento a víctimas de violencia: ${report.professional_signing || ""}`, { size: SMALL }),
-    new Paragraph({ spacing: { before: 300 }, children: [r("_______________________________", { size: SMALL })] }),
-    new Paragraph({ children: [r("FIRMA", { size: SMALL })] }),
+    // Referencia externa
+    R([cell([new Paragraph({ spacing: { after: 0 }, children: [run("REFERENCIA EXTERNA:", { bold: true })] })])]),
+    R([cell([new Paragraph({ spacing: { after: 0 }, children: [run("Procedimiento de referencia a instancias externas (marcar uno o más círculos según corresponda):", { bold: true, size: TINY })] })])]),
   ];
+
+  for (const inst of EXT_REFERRAL_INSTANCES) {
+    rows.push(markRow(ext.selected.includes(inst), inst));
+    rows.push(spacerRow());
+  }
+  rows.push(R([cell([new Paragraph({ spacing: { after: 0 }, children: [run("Procedimiento recomendado de referencia externa para tratamiento psicológico-social (marcar uno o más círculos según corresponda):", { bold: true, size: TINY })] })])]));
+  for (const opt of PSYCHOSOCIAL_REFERRAL_OPTIONS) {
+    const name = psyByOption.get(opt);
+    rows.push(markRow(name != null, `${opt}. Indicar nombre: ${name || ""}`));
+    rows.push(spacerRow());
+  }
+
+  rows.push(fieldRow("Fecha de elaboración del Informe técnico de acompañamiento a víctimas de violencia", `(${fmtD(report.signing_date || report.report_date)}):`));
+  rows.push(fieldRow("Nombre del profesional o la profesional DECE que elaboró el Informe técnico de acompañamiento a víctimas de violencia:", report.professional_signing || ""));
+  rows.push(
+    R([
+      cell([
+        new Paragraph({ spacing: { before: 260, after: 0 }, children: [run("_______________________________", {})] }),
+        new Paragraph({ spacing: { after: 0 }, children: [run("FIRMA", {})] }),
+      ], { valign: VerticalAlign.TOP }),
+    ])
+  );
+
+  const table = new Table({
+    width: { size: W, type: WidthType.DXA },
+    layout: TableLayoutType.FIXED,
+    columnWidths: GRID,
+    alignment: AlignmentType.CENTER,
+    borders,
+    rows,
+  });
 
   const doc = new Document({
     creator: "DECE App",
     title: `Informe Técnico de Acompañamiento - ${report.student_full_name || ""}`,
-    styles: { default: { document: { run: { font: FONT, size: BODY } } } },
+    styles: { default: { document: { run: { font: FONT, size: SMALL } } } },
     sections: [
       {
-        properties: {
-          page: {
-            size: { width: 11906, height: 16838 },
-            margin: { top: 1100, right: 1000, bottom: 1100, left: 1000, header: 480, footer: 340 },
-          },
-        },
+        properties: { page: { size: { width: PAGE_W, height: PAGE_H }, margin: MARGIN } },
         headers: {
           default: new Header({
             children: [
@@ -291,8 +278,8 @@ export async function generateAccompanimentReportDocx(report: CaseAccompanimentR
                 alignment: AlignmentType.CENTER,
                 indent: { left: -900, right: -900 },
                 spacing: { after: 0 },
-                children: img("header_4k.png")
-                  ? [new ImageRun({ data: img("header_4k.png")!, transformation: { width: 596, height: 60 }, type: "png" })]
+                children: imgBuf("header_4k.png")
+                  ? [new ImageRun({ data: imgBuf("header_4k.png")!, transformation: { width: 596, height: 60 }, type: "png" })]
                   : [],
               }),
             ],
@@ -305,14 +292,14 @@ export async function generateAccompanimentReportDocx(report: CaseAccompanimentR
                 alignment: AlignmentType.CENTER,
                 indent: { left: -900, right: -900 },
                 spacing: { before: 0 },
-                children: img("footer_nuevo_ecuador.png")
-                  ? [new ImageRun({ data: img("footer_nuevo_ecuador.png")!, transformation: { width: 596, height: 100 }, type: "png" })]
+                children: imgBuf("footer_nuevo_ecuador.png")
+                  ? [new ImageRun({ data: imgBuf("footer_nuevo_ecuador.png")!, transformation: { width: 596, height: 100 }, type: "png" })]
                   : [],
               }),
             ],
           }),
         },
-        children,
+        children: [table],
       },
     ],
   });
