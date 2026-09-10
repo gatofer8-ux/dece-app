@@ -765,6 +765,30 @@ export interface ActivityRow {
   updated_at: string;
 }
 
+export interface MeetingMinutesRow {
+  id: string;
+  institution_id: string;
+  created_by_id: string | null;
+  meeting_code: string | null;
+  meeting_date: string | null;
+  next_meeting_date: string | null;
+  responsible_name: string | null;
+  responsible_email: string | null;
+  responsible_phone_ext: string | null;
+  responsible_role: string | null;
+  meeting_topic: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  location: string | null;
+  thematic_background: string | null;
+  attendees_json: string;
+  agenda_json: string;
+  signatories_json: string;
+  additional_comments: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ActivityReportRow {
   id: string;
   institution_id: string;
