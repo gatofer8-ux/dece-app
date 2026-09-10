@@ -124,6 +124,7 @@ export async function updateOwnInstitutionDetails(_prevState: ActionState, formD
     `UPDATE institutions SET
        name = @name,
        amie_code = @amie_code,
+       acronym = @acronym,
        district = @district,
        circuit = @circuit,
        zona = @zona,
@@ -141,6 +142,7 @@ export async function updateOwnInstitutionDetails(_prevState: ActionState, formD
     id: institutionId,
     name,
     amie_code: str(formData, "amie_code"),
+    acronym: str(formData, "acronym"),
     district: str(formData, "district"),
     circuit: str(formData, "circuit"),
     zona: str(formData, "zona"),

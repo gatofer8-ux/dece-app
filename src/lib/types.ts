@@ -138,6 +138,7 @@ export interface InstitutionRow {
   id: string;
   name: string;
   amie_code: string | null;
+  acronym?: string | null;
   district: string | null;
   circuit: string | null;
   zona: string | null;
@@ -246,6 +247,7 @@ export interface CaseFileRow {
   id: string;
   institution_id: string;
   code: string;
+  legacy_code?: string | null;
   student_id: string;
   opened_by_id: string;
   assigned_to_id: string | null;
