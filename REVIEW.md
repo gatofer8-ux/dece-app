@@ -247,11 +247,29 @@ documentación (`SECURITY.md`, `CONTRIBUTING.md`, este archivo).
 - Precarga cableada en 15+ formularios; `getSignatureDefaults()` para los que
   no tienen caso.
 
+**[hecho] — cuarta tanda**
+- **docx: justificación inteligente** (`src/lib/wordJustify.ts` → `smartAlign`).
+  Antes, un texto corto justificado que se partía en 2 líneas quedaba con
+  huecos enormes. Ahora se justifica solo el texto largo. Aplicado en los 5
+  exportadores.
+- Precarga en distributivo y círculos restaurativos.
+
 **Pendiente**
 - Adoptar `useToast()` en las server actions (hoy solo `DeleteButton`).
 - Formularios oficiales por pasos/pestañas (son muy largos).
 - Buscador global más visible; modo oscuro; auditoría de accesibilidad.
-- Precarga en los formularios de edición y en los ~5 restantes menores.
+- Precarga en los formularios de edición.
+- Las plantillas .docx externas (`templates/*.docx`) rellenadas con
+  docxtemplater: si tienen párrafos justificados, hay que ajustarlas en Word
+  (no es código).
+
+## 9. Despliegue
+
+⚠️ Los commits de este repositorio local **no llegan solos a producción**.
+Render/Railway despliegan desde un repositorio de GitHub. Hay que conectar
+este repo local a ese remoto y hacer `git push` (o `git push --force` si las
+historias divergen — ver con cuidado). Sin eso, los cambios no se ven en la
+app en vivo.
 
 ## 8. Privacidad de la IA — configuración
 
