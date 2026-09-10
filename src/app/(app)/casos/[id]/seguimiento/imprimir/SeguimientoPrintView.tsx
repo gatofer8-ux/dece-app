@@ -40,13 +40,13 @@ export default function SeguimientoPrintView({
   userMap: Record<string, string>;
   representative: RepresentativeData;
 }) {
-  // Opciones de optimización de hojas
-  const [showPerRowSign, setShowPerRowSign] = useState(true);
-  const [blankRowsCount, setBlankRowsCount] = useState<number>(3);
+  // Opciones de visualización y optimización
+  const [showPerRowSign, setShowPerRowSign] = useState(false);
+  const [blankRowsCount, setBlankRowsCount] = useState<number>(0);
   const [includeStudentSignature, setIncludeStudentSignature] = useState(false);
   const [folioNumber, setFolioNumber] = useState<number>(1);
 
-  // Selección de acciones a imprimir (resuelve el problema de cuando el padre regresa después de un mes)
+  // Selección de acciones a imprimir (para imprimir hojas de continuación si el padre regresa después de semanas)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     () => new Set(actions.map((a) => a.id))
   );
@@ -91,16 +91,16 @@ export default function SeguimientoPrintView({
 
   return (
     <div className="max-w-4xl mx-auto bg-white">
-      {/* Barra de Controles para Ahorro de Hojas (Oculta al Imprimir) */}
+      {/* Barra de Controles y Opciones (Oculta al Imprimir) */}
       <div className="no-print p-4 bg-slate-50 border-b border-slate-200 rounded-t-lg space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <span className="font-semibold text-xs text-slate-800 flex items-center gap-1.5">
-              <span>🌱</span>
-              <span>Herramientas de Optimización y Ahorro de Hojas</span>
+              <span>📄</span>
+              <span>Formato Oficial de Seguimiento — Opciones de Impresión</span>
             </span>
             <p className="text-[11px] text-slate-500 mt-0.5">
-              Si el padre regresa tras semanas o meses, puedes desmarcar lo ya firmado anteriormente para imprimir solo las acciones nuevas como hoja de continuación.
+              El apartado de firmas siempre consta al final para conservar la armonía institucional del formato.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -123,9 +123,23 @@ export default function SeguimientoPrintView({
           </div>
         </div>
 
-        {/* Panel de Opciones */}
+        {/* Panel de Ajustes */}
         <div className="bg-white p-3 rounded border border-slate-200 space-y-2.5 text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div className="flex items-center gap-2">
+              <label className="text-slate-700 font-medium whitespace-nowrap">Folio / Hoja N°:</label>
+              <select
+                value={folioNumber}
+                onChange={(e) => setFolioNumber(Number(e.target.value))}
+                className="select !py-1 !px-2 text-xs flex-1 font-semibold text-blue-900"
+              >
+                <option value={1}>Hoja 1 (Apertura)</option>
+                <option value={2}>Hoja 2 (Continuación)</option>
+                <option value={3}>Hoja 3 (Continuación)</option>
+                <option value={4}>Hoja 4 (Continuación)</option>
+              </select>
+            </div>
+
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -153,20 +167,6 @@ export default function SeguimientoPrintView({
               </select>
             </div>
 
-            <div className="flex items-center gap-2">
-              <label className="text-slate-700 font-medium whitespace-nowrap">Folio / Hoja N°:</label>
-              <select
-                value={folioNumber}
-                onChange={(e) => setFolioNumber(Number(e.target.value))}
-                className="select !py-1 !px-2 text-xs flex-1 font-semibold text-blue-800"
-              >
-                <option value={1}>Hoja 1 (Apertura)</option>
-                <option value={2}>Hoja 2 (Continuación)</option>
-                <option value={3}>Hoja 3 (Continuación)</option>
-                <option value={4}>Hoja 4 (Continuación)</option>
-              </select>
-            </div>
-
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -176,18 +176,21 @@ export default function SeguimientoPrintView({
               />
               <div>
                 <span className="font-medium text-slate-700">Firma del estudiante</span>
-                <p className="text-[10px] text-slate-400">Al pie del documento</p>
+                <p className="text-[10px] text-slate-400">Al pie con el representante</p>
               </div>
             </label>
           </div>
 
-          {/* Filtro rápido de acciones (para cuando el padre regresa después de un tiempo) */}
+          {/* Filtro rápido de acciones si hay más de 1 acción */}
           {actions.length > 1 && (
             <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className="font-medium text-slate-600">Acciones a imprimir:</span>
+                <span className="font-medium text-slate-600">Acciones visibles:</span>
                 <span className="bg-blue-100 text-blue-800 font-bold px-1.5 py-0.5 rounded text-[11px]">
                   {displayedActions.length} de {actions.length}
+                </span>
+                <span className="text-[10px] text-slate-400 no-print">
+                  (Desmarca las acciones ya firmadas si estás imprimiendo una hoja de continuación)
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -234,9 +237,9 @@ export default function SeguimientoPrintView({
           <div><strong>Teléfono contacto:</strong> {representative.phone || student.rep_phone || "No registra"}</div>
           <div><strong>Profesional DECE responsable:</strong> {professional.name}</div>
           <div>
-            <strong>Folio / Página del expediente:</strong>{" "}
+            <strong>Folio del expediente:</strong>{" "}
             <span className="font-semibold text-slate-800">
-              {folioNumber === 1 ? "Hoja 1 (Apertura de seguimiento)" : `Hoja N° ${folioNumber} (Continuación de seguimiento)`}
+              {folioNumber === 1 ? "Hoja 1 (Apertura de seguimiento)" : `Hoja N° ${folioNumber} (Continuación)`}
             </span>
           </div>
         </section>
@@ -304,21 +307,21 @@ export default function SeguimientoPrintView({
             {displayedActions.length === 0 && blankRowsCount === 0 && (
               <tr>
                 <td colSpan={showPerRowSign ? 6 : 5} className="border border-slate-400 p-4 text-center text-slate-400 italic">
-                  No hay acciones seleccionadas para imprimir. Marca las casillas de las acciones deseadas.
+                  No hay acciones seleccionadas para imprimir. Marca las casillas de las acciones deseadas en el panel superior.
                 </td>
               </tr>
             )}
 
-            {/* Filas en blanco adicionales para registro manuscrito continuo en carpeta física */}
+            {/* Filas en blanco adicionales si se seleccionaron */}
             {Array.from({ length: blankRowsCount }).map((_, idx) => (
               <tr key={`blank-${idx}`} className="align-top">
-                <td className="border border-slate-400 p-1.5 h-16 text-[10px] text-slate-300">
-                  <span className="no-print italic">Reg. físico #{displayedActions.length + idx + 1}</span>
+                <td className="border border-slate-400 p-1.5 h-14 text-[10px] text-slate-300">
+                  <span className="no-print italic">Reg. #{displayedActions.length + idx + 1}</span>
                 </td>
-                <td className="border border-slate-400 p-1.5 h-16" />
-                <td className="border border-slate-400 p-1.5 h-16" />
-                <td className="border border-slate-400 p-1.5 h-16" />
-                <td className="border border-slate-400 p-1.5 h-16" />
+                <td className="border border-slate-400 p-1.5 h-14" />
+                <td className="border border-slate-400 p-1.5 h-14" />
+                <td className="border border-slate-400 p-1.5 h-14" />
+                <td className="border border-slate-400 p-1.5 h-14" />
                 {showPerRowSign && (
                   <td className="border border-slate-400 p-1.5 text-center align-bottom bg-blue-50/10">
                     <div className="h-10 border-b border-dotted border-slate-400 mb-1" />
@@ -330,10 +333,10 @@ export default function SeguimientoPrintView({
           </tbody>
         </table>
 
-        {/* Apartado de Firmas de Responsabilidad al Final */}
-        <section className="mt-8 pt-4 border-t border-slate-300 page-break-inside-avoid" style={{ pageBreakInside: "avoid" }}>
+        {/* Apartado de Firmas de Responsabilidad al Final — Siempre presente para preservar la armonía institucional */}
+        <section className="mt-10 pt-4 border-t border-slate-300 page-break-inside-avoid" style={{ pageBreakInside: "avoid" }}>
           <p className="text-[11px] text-slate-600 mb-6 text-justify leading-relaxed">
-            <strong>CONSTANCIA DE SEGUIMIENTO Y ACOMPAÑAMIENTO:</strong> Para debida constancia de las atenciones psicosociales ejecutadas, así como de las orientaciones, acuerdos y compromisos asumidos para garantizar el bienestar integral, desarrollo socioemocional y permanencia escolar del/la estudiante, suscriben los comparecientes:
+            <strong>CONSTANCIA DE SEGUIMIENTO Y ACOMPAÑAMIENTO:</strong> Para debida constancia de las atenciones psicosociales implementadas, así como de las orientaciones, acuerdos y compromisos asumidos para garantizar el bienestar integral, desarrollo socioemocional y permanencia escolar del/la estudiante, suscriben los comparecientes:
           </p>
 
           <div
@@ -343,7 +346,7 @@ export default function SeguimientoPrintView({
           >
             {/* Firma Profesional DECE */}
             <div className="flex flex-col items-center">
-              <div className="w-48 sm:w-60 border-t border-slate-800 pt-1.5 mt-12">
+              <div className="w-56 sm:w-64 border-t border-slate-800 pt-2 mt-14">
                 <p className="font-bold text-slate-800 uppercase">{professional.name}</p>
                 <p className="text-[11px] text-slate-600 uppercase font-medium">{professional.role || "PROFESIONAL DECE"}</p>
                 {professional.documentId && (
@@ -352,43 +355,28 @@ export default function SeguimientoPrintView({
               </div>
             </div>
 
-            {/* Firma Representante Legal */}
+            {/* Firma Representante Legal — Diseño armónico y perfectamente alineado */}
             <div className="flex flex-col items-center">
-              <div className="w-48 sm:w-60 border-t border-slate-800 pt-1.5 mt-12 text-left">
-                <p className="font-bold text-slate-800 text-center uppercase">REPRESENTANTE LEGAL</p>
-                <div className="mt-2 space-y-1 text-[11px] text-slate-700">
-                  <p>
-                    <span className="font-medium">Nombres:</span>{" "}
-                    <span className="border-b border-dotted border-slate-500 inline-block min-w-[140px]">
-                      {representative.name || " "}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="font-medium">C.I.:</span>{" "}
-                    <span className="border-b border-dotted border-slate-500 inline-block min-w-[100px]">
-                      {representative.documentId || " "}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="font-medium">Vínculo:</span>{" "}
-                    <span className="border-b border-dotted border-slate-500 inline-block min-w-[100px]">
-                      {representative.relationship || "Madre / Padre / Rep."}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="font-medium">Fecha:</span>{" "}
-                    <span className="border-b border-dotted border-slate-500 inline-block min-w-[100px]">
-                      {new Date().toISOString().slice(0, 10)}
-                    </span>
-                  </p>
-                </div>
+              <div className="w-56 sm:w-64 border-t border-slate-800 pt-2 mt-14">
+                <p className="font-bold text-slate-800 uppercase">
+                  {representative.name || "REPRESENTANTE LEGAL"}
+                </p>
+                <p className="text-[11px] text-slate-600 uppercase font-medium">
+                  {representative.relationship || "MADRE / PADRE / REPRESENTANTE LEGAL"}
+                </p>
+                <p className="text-[10px] text-slate-500">
+                  C.I.: {representative.documentId || "______________________"}
+                </p>
+                {representative.phone && (
+                  <p className="text-[10px] text-slate-400">Tel: {representative.phone}</p>
+                )}
               </div>
             </div>
 
             {/* Firma Estudiante (Opcional) */}
             {includeStudentSignature && (
               <div className="flex flex-col items-center">
-                <div className="w-48 sm:w-60 border-t border-slate-800 pt-1.5 mt-12">
+                <div className="w-56 sm:w-64 border-t border-slate-800 pt-2 mt-14">
                   <p className="font-bold text-slate-800 uppercase">{student.full_name}</p>
                   <p className="text-[11px] text-slate-600 uppercase font-medium">ESTUDIANTE</p>
                   {student.document_id && (
