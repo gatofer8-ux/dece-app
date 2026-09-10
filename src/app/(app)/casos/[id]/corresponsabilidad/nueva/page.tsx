@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { studentGradeLabel } from "@/lib/studentCourse";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
@@ -37,8 +38,8 @@ export default async function NuevaActaCorresponsabilidadPage({
         caseId={caseFile.id}
         caseCode={caseFile.code}
         studentName={student.full_name}
-        studentGrade={student.course}
-        studentParallel={student.parallel || ""}
+        studentGrade={studentGradeLabel(student)}
+        studentParallel=""
         studentJornada={student.jornada || "MATUTINA"}
         representativeName={student.representative || student.mother_name || student.father_name || ""}
         representativeIdNum={student.representative_document_id || student.mother_document_id || student.father_document_id || ""}

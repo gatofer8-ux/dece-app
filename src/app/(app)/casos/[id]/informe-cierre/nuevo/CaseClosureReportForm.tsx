@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { studentGradeLabel } from "@/lib/studentCourse";
 import { useFormState, useFormStatus } from "react-dom";
 import { useToastOnChange } from "@/components/Toast";
 import Link from "next/link";
@@ -564,7 +565,7 @@ export default function CaseClosureReportForm({
             <input
               type="text"
               name="student_grade"
-              defaultValue={report?.student_grade || student.course}
+              defaultValue={report?.student_grade || studentGradeLabel(student)}
               required
               className="input text-xs"
             />

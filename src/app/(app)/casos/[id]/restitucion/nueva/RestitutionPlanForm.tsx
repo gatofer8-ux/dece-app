@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { studentGradeLabel } from "@/lib/studentCourse";
 import { useFormState, useFormStatus } from "react-dom";
 import { useToastOnChange } from "@/components/Toast";
 import Link from "next/link";
@@ -112,7 +113,7 @@ export default function RestitutionPlanForm({
           edad: calculateAge(student?.birth_date),
           genero: student?.gender || "",
           nivel_instruccion: student
-            ? `${student.course || ""} ${student.parallel || ""} - Jornada ${student.jornada || "Matutina"}`.trim()
+            ? `${studentGradeLabel(student)} - Jornada ${student.jornada || "Matutina"}`.trim()
             : "",
         },
       ];

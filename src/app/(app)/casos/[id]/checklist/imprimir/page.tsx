@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { studentGradeLabel } from "@/lib/studentCourse";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { formatDate, formatDateTime } from "@/components/ui";
@@ -67,7 +68,7 @@ export default async function ImprimirChecklistPage({
           <div><strong>Institución educativa:</strong> {institution.name}</div>
           <div><strong>Código AMIE:</strong> {institution.amie_code || "—"}</div>
           <div><strong>Nombres y apellidos del estudiante:</strong> {student.full_name}</div>
-          <div><strong>Grado o curso/paralelo:</strong> {student.course} {student.parallel || ""}</div>
+          <div><strong>Grado o curso/paralelo:</strong> {studentGradeLabel(student)}</div>
           <div><strong>Profesional DECE responsable:</strong> {caseFile.assigned_to_id ? "" : "—"}</div>
           <div><strong>Fecha de revisión del expediente:</strong> {formatDate(new Date().toISOString())}</div>
         </section>

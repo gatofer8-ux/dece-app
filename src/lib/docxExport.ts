@@ -49,7 +49,7 @@ import { parseProcessesData } from "./bimonthlyReport";
 import { formatDate } from "@/components/ui";
 import { parseOfficialObservationData } from "./observationSheet";
 import { parseJsonArray } from "./violenceReport";
-import { formatStudentCourseFull } from "./studentCourse";
+import { formatStudentCourseFull, studentGradeLabel } from "./studentCourse";
 import { buildCorresponsibilityAppearanceText, STANDARD_CLOSING_CLAUSE_1, STANDARD_CLOSING_CLAUSE_2 } from "./corresponsibilityCatalog";
 
 const NAVY = "1E3A8A";
@@ -755,7 +755,7 @@ export async function generateCaseDocx(opts: {
               new TextRun({ text: "Estudiante: ", bold: true }),
               new TextRun({ text: student.full_name }),
               new TextRun({ text: " | Curso: ", bold: true }),
-              new TextRun({ text: `${student.course} ${student.parallel || ""}` }),
+              new TextRun({ text: formatStudentCourseFull(student) || `${student.course} ${student.parallel || ""}` }),
             ],
             spacing: { after: 120 },
           }),
@@ -2840,10 +2840,13 @@ export async function generateReferralDocx(opts: {
   }
 
   function formatCourseForReferral(st: StudentRow): string {
+    const full = studentGradeLabel(st);
+    const jornada = (st.jornada || "").trim().toLowerCase();
+    if (full) return jornada ? `${full} ${jornada}` : full;
     const parts: string[] = [];
     if (st.course) parts.push(st.course.trim());
     if (st.parallel) parts.push(`"${st.parallel.trim().toLowerCase()}"`);
-    if (st.jornada) parts.push(st.jornada.trim().toLowerCase());
+    if (jornada) parts.push(jornada);
     return parts.join(" ") || "—";
   }
 

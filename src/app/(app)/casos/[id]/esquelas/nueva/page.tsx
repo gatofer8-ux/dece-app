@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { studentGradeOnly } from "@/lib/studentCourse";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { db } from "@/lib/db";
 import { getSelectedSchoolYear } from "@/lib/schoolYear";
@@ -53,7 +54,7 @@ export default async function NuevaEsquelaCasoPage({
           student_id: student.id,
           student_name: student.full_name,
           student_id_number: student.document_id || "",
-          course: student.course || "",
+          course: studentGradeOnly(student) || student.course || "",
           parallel: student.parallel || "",
           representative_name: student.representative || "",
           representative_phone: student.rep_phone || "",

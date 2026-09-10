@@ -18,8 +18,12 @@ export interface StudentCourseInput {
  * - "2.° de Bachillerato General Unificado “C”"
  * - "10.° de EGB “A” — Matutina"
  */
-export function formatStudentCourseFull(student?: StudentCourseInput | null): string {
+export function formatStudentCourseFull(
+  student?: StudentCourseInput | null,
+  opts?: { includeJornada?: boolean }
+): string {
   if (!student) return "";
+  const includeJornada = opts?.includeJornada ?? true;
 
   const rawCourse = (student.course || "").trim();
   const rawParallel = (student.parallel || "").trim();
@@ -58,10 +62,16 @@ export function formatStudentCourseFull(student?: StudentCourseInput | null): st
         formattedSpecialty = " Técnico en Informática";
       } else if (lowerSpec === "contabilidad") {
         formattedSpecialty = " Técnico en Contabilidad";
+      } else if (/^(general|unificado|bgu|general unificado)$/i.test(lowerSpec)) {
+        formattedSpecialty = " General Unificado";
       } else if (lowerSpec.startsWith("en ")) {
         formattedSpecialty = ` ${rawSpecialty}`;
+      } else if (/t[eé]cnic/i.test(lowerSpec)) {
+        // La figura profesional ya contiene "Técnico" (p.ej. "Soporte Técnico
+        // de Equipos Informáticos"): se evita el doble "Técnico en Técnico".
+        formattedSpecialty = ` Técnico, figura profesional “${rawSpecialty}”`;
       } else {
-        formattedSpecialty = ` en ${rawSpecialty}`;
+        formattedSpecialty = ` Técnico en ${rawSpecialty}`;
       }
     } else {
       if (/ciencias/i.test(rawCourse)) {
@@ -100,9 +110,26 @@ export function formatStudentCourseFull(student?: StudentCourseInput | null): st
   if (rawParallel) {
     parts.push(`“${rawParallel}”`);
   }
-  if (rawJornada) {
+  if (rawJornada && includeJornada) {
     parts.push(`— ${rawJornada}`);
   }
 
   return parts.join(" ");
+}
+
+/**
+ * Etiqueta de grado/curso para campos de formulario y contexto de la IA:
+ * incluye SIEMPRE el nivel (Bachillerato + especialidad, EGB) y el paralelo,
+ * sin la jornada (que suele ser un campo aparte).
+ */
+export function studentGradeLabel(student?: StudentCourseInput | null): string {
+  return formatStudentCourseFull(student, { includeJornada: false });
+}
+
+/**
+ * Solo el grado/curso con su nivel (Bachillerato + especialidad, EGB), SIN
+ * paralelo ni jornada — para formatos que tienen celdas separadas de paralelo.
+ */
+export function studentGradeOnly(student?: StudentCourseInput | null): string {
+  return formatStudentCourseFull({ ...(student || {}), parallel: null, jornada: null }, { includeJornada: false });
 }
