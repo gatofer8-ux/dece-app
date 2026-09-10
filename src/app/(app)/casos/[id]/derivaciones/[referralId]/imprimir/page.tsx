@@ -7,6 +7,7 @@ import type { CaseFileRow, StudentRow, ReferralRow, InstitutionRow, UserRow } fr
 import PrintButton from "@/components/PrintButton";
 import DocumentHeader from "@/components/DocumentHeader";
 import DocumentFooter from "@/components/DocumentFooter";
+import { estimateReferralOverflow, REFERRAL_OVERFLOW_MESSAGE } from "@/lib/referralOverflow";
 
 function formatStudentAge(studentAge: string | null | undefined, birthDate: string | null | undefined, refDate?: string | null): string {
   if (studentAge && studentAge.trim()) {
@@ -114,6 +115,15 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
         .map((l) => (l.startsWith("•") ? l : `• ${l.replace(/^(\d+[\.\)]|[\*\-\+])\s*/, "")}`))
     : [];
 
+  const overflow = estimateReferralOverflow({
+    current_situation_history: referral.current_situation_history,
+    background_summary: referral.background_summary,
+    actions_taken: referral.actions_taken,
+    care_type_required: referral.care_type_required,
+    observations: referral.observations,
+    student_address: student.address,
+  });
+
   return (
     <div className="w-[27.7cm] max-w-full mx-auto bg-white">
       {/* Orientación horizontal oficial A4 apaisada */}
@@ -146,6 +156,19 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
           <PrintButton hideWordButton={true} className="p-0 bg-transparent border-none" />
         </div>
       </div>
+
+      {overflow.overflow && (
+        <div className="no-print mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900 flex items-start gap-2">
+          <span className="text-base leading-none">⚠️</span>
+          <div>
+            <p className="font-semibold">{REFERRAL_OVERFLOW_MESSAGE}</p>
+            <p className="mt-0.5 text-amber-700">
+              Estimado: ~{overflow.linesOver} línea(s) de más. Usa el botón ✏️ Editar para acortar los textos.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div id="printable-content" className="p-4 print:p-0 text-[9pt] leading-tight text-black">
         <DocumentHeader
           title="Ficha de Derivación"
@@ -362,13 +385,10 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
             <tr>
               <td colSpan={14} className={cell}>
                 <span className="font-bold">Observaciones: </span>
-                <div className="font-normal whitespace-pre-wrap">
-                  {obsLines.length > 0 ? (
-                    obsLines.map((line, idx) => <div key={idx}>{line}</div>)
-                  ) : (
-                    <span>—</span>
-                  )}
-                </div>
+                {/* En línea seguida (no una debajo de otra) para ahorrar alto */}
+                <span className="font-normal whitespace-pre-wrap">
+                  {obsLines.length > 0 ? obsLines.join("     ") : "—"}
+                </span>
               </td>
             </tr>
 

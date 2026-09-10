@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { useToastOnChange } from "@/components/Toast";
 import { createOfficialReferral, updateOfficialReferral, type ActionState } from "../../../../derivaciones/actions";
@@ -7,6 +8,7 @@ import { DESTINATION_OPTIONS, DESTINATION_GROUP_LABELS } from "@/lib/referral";
 import type { ReferralRow } from "@/lib/types";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
 import AIAssistButton from "@/components/AIAssistButton";
+import { estimateReferralOverflow, REFERRAL_OVERFLOW_MESSAGE } from "@/lib/referralOverflow";
 
 const initialState: ActionState = { error: null };
 const GROUPS: Array<keyof typeof DESTINATION_GROUP_LABELS> = ["INTERNA_IE", "INTERNA_MINEDUC", "EXTERNA"];
@@ -40,6 +42,23 @@ export default function ReferralForm({
 
   const [state, formAction] = useFormState(formHandler, initialState);
   useToastOnChange(state.error, "error");
+
+  // Aviso en vivo: si el texto libre va a hacer que la ficha se pase de 1 hoja.
+  const [overflowOver, setOverflowOver] = useState(0);
+  const recalcOverflow = useCallback(() => {
+    if (typeof document === "undefined") return;
+    const val = (id: string) => (document.getElementById(id) as HTMLTextAreaElement | HTMLInputElement | null)?.value || "";
+    const est = estimateReferralOverflow({
+      current_situation_history: val("referral-background"),
+      actions_taken: val("referral-actions"),
+      observations: val("referral-observations"),
+      care_type_required: val("referral-care-type"),
+    });
+    setOverflowOver(est.overflow ? est.linesOver : 0);
+  }, []);
+  useEffect(() => {
+    recalcOverflow();
+  }, [recalcOverflow]);
 
   const defaultDate = initialData?.referral_date
     ? initialData.referral_date.slice(0, 10)
@@ -136,6 +155,7 @@ export default function ReferralForm({
         <textarea
           id="referral-background"
           name="current_situation_history"
+          onInput={recalcOverflow}
           defaultValue={initialData?.current_situation_history || initialData?.background_summary || ""}
           placeholder="Resumen clínico y psicosocial conciso (4 a 6 oraciones en tercera persona) describiendo el motivo de seguimiento, conducta o sintomatología observada, dinámica familiar y factores identificados."
           rows={4}
@@ -155,6 +175,7 @@ export default function ReferralForm({
         <textarea
           id="referral-actions"
           name="actions_taken"
+          onInput={recalcOverflow}
           defaultValue={initialData?.actions_taken || ""}
           placeholder="- Diálogo con la madre de familia&#10;- Acta de consentimiento informado&#10;- Intervención con el estudiante&#10;- Agendamiento de cita"
           rows={3}
@@ -165,7 +186,9 @@ export default function ReferralForm({
       <div>
         <label className="label text-xs">Tipo de atención que se requiere</label>
         <input
+          id="referral-care-type"
           name="care_type_required"
+          onInput={recalcOverflow}
           defaultValue={initialData?.care_type_required || ""}
           placeholder="Tipo de atención requerida de la entidad interna/externa"
           className="input"
@@ -184,6 +207,7 @@ export default function ReferralForm({
         <textarea
           id="referral-observations"
           name="observations"
+          onInput={recalcOverflow}
           defaultValue={initialData?.observations || ""}
           placeholder="• Brindar atención psicológica al estudiante.&#10;• Favor enviar certificado de asistencia.&#10;• N° cita: 91665562; Fecha: 22/10/2024; Hora: 10h00"
           rows={3}
@@ -220,6 +244,16 @@ export default function ReferralForm({
           </div>
         </div>
       </div>
+
+      {overflowOver > 0 && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900 flex items-start gap-2">
+          <span className="text-base leading-none">⚠️</span>
+          <div>
+            <p className="font-semibold">{REFERRAL_OVERFLOW_MESSAGE}</p>
+            <p className="mt-0.5 text-amber-700">Estimado: ~{overflowOver} línea(s) de más para una sola hoja.</p>
+          </div>
+        </div>
+      )}
 
       <div className="flex justify-end">
         <SubmitButton isEditing={isEditing} />
