@@ -35,8 +35,10 @@ export const NAV_ITEMS: NavItem[] = [
 
   // Informes
   { href: "/reportes", label: "Reportes", icon: "📈", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Informes" },
+  { href: "/reportes/estadisticas", label: "Cuadros estadísticos", icon: "📊", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Informes" },
   { href: "/juntas-curso", label: "Juntas de curso", icon: "📑", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Informes" },
-  { href: "/informe-gestion", label: "Informe de fin de gestión", icon: "📊", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD", "DISTRITO"], group: "Informes" },
+  { href: "/informe-gestion", label: "Informe de fin de gestión", icon: "📋", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD", "DISTRITO"], group: "Informes" },
+
 
   // Administración
   { href: "/distributivo", label: "Distributivo DECE", icon: "👥", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Administración" },
