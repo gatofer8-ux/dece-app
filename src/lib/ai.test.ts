@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { isAiConfigured, generateWithFallback, GROQ_FALLBACK_CHAIN, draftText } from "./ai";
+import { isAiConfigured, generateWithFallback, GROQ_FALLBACK_CHAIN, draftText, generateRestorativeCircleQuestions } from "./ai";
 
 describe("isAiConfigured", () => {
   const origEnv = process.env;
@@ -287,6 +287,42 @@ describe("draftText con generateWithFallback", () => {
     expect("text" in res).toBe(true);
     if ("text" in res) {
       expect(res.text).toContain("NOTA DE CONOCIMIENTO Y CORRESPONSABILIDAD");
+    }
+  });
+
+  it("genera preguntas de círculo restaurativo correctamente usando Groq", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                q_icebreaker: ["¿Cómo te sientes hoy?"],
+                q_intro: ["¿Qué sucedió en el recreo?"],
+                q_develop: ["¿Cómo te afectó lo ocurrido?"],
+                q_actions: ["¿Qué podemos hacer para solucionar esto?"],
+              }),
+            },
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const res = await generateRestorativeCircleQuestions({
+      problematica: "Discusión en el recreo",
+      modality: "grupal",
+      participantsCount: 3,
+    });
+
+    expect("questions" in res).toBe(true);
+    if ("questions" in res) {
+      expect(res.questions.q_icebreaker).toEqual(["¿Cómo te sientes hoy?"]);
+      expect(res.questions.q_intro).toEqual(["¿Qué sucedió en el recreo?"]);
+      expect(res.questions.q_develop).toEqual(["¿Cómo te afectó lo ocurrido?"]);
+      expect(res.questions.q_actions).toEqual(["¿Qué podemos hacer para solucionar esto?"]);
     }
   });
 });
