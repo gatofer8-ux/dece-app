@@ -87,7 +87,17 @@ export default async function DashboardPage() {
   ).n;
 
   // 6.b Casos sin contacto con estudiante o representante (>30 días)
-  const inactivitySummary = getInactiveCases(institutionId, 30);
+  let inactivitySummary = {
+    totalOpenCases: 0,
+    alertCasesCount: 0,
+    urgentAlertCasesCount: 0,
+    cases: [] as import("@/lib/caseAlerts").InactiveCaseItem[],
+  };
+  try {
+    inactivitySummary = getInactiveCases(institutionId, 30);
+  } catch (err) {
+    console.error("[dashboard] Error consultando casos inactivos:", err);
+  }
 
   // 7. Estadísticas por Tipo de Riesgo
   const riskStats = db

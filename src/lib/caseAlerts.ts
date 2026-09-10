@@ -64,9 +64,11 @@ export function getInactiveCases(
   const openCases = resolvedDb
     .prepare(
       `SELECT cf.*, s.full_name as student_name, s.course as student_course,
-              s.parallel as student_parallel, s.representative_name, s.representative_phone
+              s.parallel as student_parallel,
+              s.representative as representative_name,
+              s.rep_phone as representative_phone
        FROM case_files cf
-       JOIN students s ON s.id = cf.student_id
+       LEFT JOIN students s ON s.id = cf.student_id
        WHERE cf.institution_id = ? AND cf.status != 'CERRADO'`
     )
     .all(institutionId) as (CaseFileRow & {
