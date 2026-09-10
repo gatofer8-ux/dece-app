@@ -5,6 +5,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader, Badge, EmptyState } from "@/components/ui";
 import type { StudentRow } from "@/lib/types";
 import { getUserCoverage } from "@/lib/distributivo";
+import { formatDocumentId } from "@/lib/documentId";
 
 export default async function EstudiantesPage({
   searchParams,
@@ -124,7 +125,7 @@ export default async function EstudiantesPage({
           type="text"
           name="q"
           defaultValue={q}
-          placeholder="Buscar por nombre, cédula o curso..."
+          placeholder="Buscar por nombre, documento o curso..."
           className="input sm:max-w-xs"
         />
         <select name="estado" defaultValue={estado} className="select sm:max-w-[120px]">
@@ -166,7 +167,7 @@ export default async function EstudiantesPage({
               <tr>
                 <th className="text-left px-4 py-3">Nombre</th>
                 <th className="text-left px-4 py-3">Curso</th>
-                <th className="text-left px-4 py-3">Cédula</th>
+                <th className="text-left px-4 py-3">Documento</th>
                 <th className="text-left px-4 py-3">Representante</th>
                 <th className="text-left px-4 py-3">Casos activos</th>
                 <th className="text-left px-4 py-3">Estado</th>
@@ -183,7 +184,9 @@ export default async function EstudiantesPage({
                   <td className="px-4 py-3 text-slate-600">
                     {s.course} {s.parallel || ""}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{s.document_id || "—"}</td>
+                  <td className="px-4 py-3 text-slate-600 font-mono text-xs">
+                    {formatDocumentId(s.document_type, s.document_id)}
+                  </td>
                   <td className="px-4 py-3 text-slate-600">{s.representative || "—"}</td>
                   <td className="px-4 py-3">
                     {caseCountMap.get(s.id) ? (

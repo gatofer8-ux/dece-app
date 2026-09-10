@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { RISK_TYPE_LABELS, type RiskType } from "@/lib/types";
+import { formatDocumentId } from "@/lib/documentId";
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
   if (role !== "DISTRITO") {
     const students = db
       .prepare(
-        `SELECT id, full_name, document_id, course, parallel 
+        `SELECT id, full_name, document_type, document_id, course, parallel 
          FROM students 
          WHERE institution_id = ? AND (full_name LIKE ? OR document_id LIKE ? OR course LIKE ?)
          LIMIT 6`
@@ -41,6 +42,7 @@ export async function GET(req: NextRequest) {
       .all(institutionId, pattern, pattern, pattern) as Array<{
       id: string;
       full_name: string;
+      document_type: string | null;
       document_id: string | null;
       course: string;
       parallel: string | null;
@@ -51,7 +53,7 @@ export async function GET(req: NextRequest) {
         type: "student",
         id: s.id,
         title: s.full_name,
-        subtitle: `${s.course} ${s.parallel || ""} · Cédula: ${s.document_id || "S/N"}`,
+        subtitle: `${s.course} ${s.parallel || ""} · ${formatDocumentId(s.document_type, s.document_id, "short")}`,
         href: `/estudiantes/${s.id}`,
         badge: "Estudiante",
       });

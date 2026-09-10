@@ -145,7 +145,13 @@ export default async function ImprimirFichaEstudiantePage({ params }: { params: 
             <tr>
               <td className={labelCell}>Fecha de nacimiento</td>
               <td className={cell}>{day && month && year ? `${day}/${month}/${year}` : "—"}</td>
-              <td className={labelCell}>N° de cédula</td>
+              <td className={labelCell}>
+                {student.document_type === "PASAPORTE"
+                  ? "N° de pasaporte"
+                  : student.document_type === "OTRO"
+                  ? "N° de documento"
+                  : "N° de cédula"}
+              </td>
               <td className={cell}>{student.document_id || "—"}</td>
             </tr>
             <tr>

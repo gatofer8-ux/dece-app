@@ -19,6 +19,7 @@ import { toggleStudentActive, deleteStudent, enrollStudentInYearAction } from ".
 import { NEE_TYPE_LABELS, LIVES_WITH_LABELS, LEGAL_GUARDIAN_LABELS, EDUCATION_LEVEL_LABELS, parseJsonArray } from "@/lib/student";
 import { listSchoolYears, getStudentEnrollmentHistory } from "@/lib/schoolYear";
 import DeleteButton from "@/components/DeleteButton";
+import { formatDocumentId, getDocumentTypeLabel } from "@/lib/documentId";
 
 const STATUS_COLOR: Record<string, string> = {
   ABIERTO: "amber",
@@ -84,7 +85,7 @@ export default async function EstudianteDetallePage({ params }: { params: { id: 
         title={student.full_name}
         description={`${student.course} ${student.parallel || ""}${
           student.education_level ? ` · ${EDUCATION_LEVEL_LABELS[student.education_level] || student.education_level}` : ""
-        }${student.bachillerato_specialty ? ` (${student.bachillerato_specialty})` : ""} · ${student.document_id || "sin documento"}`}
+        }${student.bachillerato_specialty ? ` (${student.bachillerato_specialty})` : ""} · ${formatDocumentId(student.document_type, student.document_id, "short")}`}
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Link href={`/estudiantes/${student.id}/imprimir`} className="btn-secondary text-xs">
@@ -144,7 +145,14 @@ export default async function EstudianteDetallePage({ params }: { params: { id: 
       </div>
 
       {/* Datos del estudiante */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="card p-4">
+          <div className="text-xs font-medium text-slate-500 uppercase">Documento de identidad</div>
+          <div className="text-sm font-semibold text-slate-800 mt-1">
+            {formatDocumentId(student.document_type, student.document_id, "full")}
+          </div>
+          <div className="text-xs text-slate-500 mt-0.5">{getDocumentTypeLabel(student.document_type)}</div>
+        </div>
         <div className="card p-4">
           <div className="text-xs font-medium text-slate-500 uppercase">Representante</div>
           <div className="text-sm font-semibold text-slate-800 mt-1">{student.representative || "No registrado"}</div>
