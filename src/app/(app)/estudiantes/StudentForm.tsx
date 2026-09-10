@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useMemo } from "react";
 import type { StudentRow } from "@/lib/types";
 import {
   JORNADA_OPTIONS,
@@ -8,6 +11,12 @@ import {
   parseJsonArray,
 } from "@/lib/student";
 import { OFFICIAL_TECHNICAL_FIGURES } from "@/lib/technicalCatalog";
+import {
+  type DocumentType,
+  validateEcuadorianCedula,
+  validatePassport,
+  detectDocumentType,
+} from "@/lib/documentId";
 
 export default function StudentForm({
   student,
@@ -18,16 +27,126 @@ export default function StudentForm({
 }) {
   const neeTypes = student ? parseJsonArray<string>(student.nee_types) : [];
 
+  const [docType, setDocType] = useState<DocumentType>(() => {
+    if (student?.document_type) return student.document_type;
+    if (student?.document_id) return detectDocumentType(student.document_id);
+    return "CEDULA";
+  });
+  const [docId, setDocId] = useState<string>(student?.document_id || "");
+
+  const validation = useMemo(() => {
+    const trimmed = docId.trim();
+    if (!trimmed) {
+      return { status: "empty" as const, message: "" };
+    }
+
+    if (docType === "CEDULA") {
+      const res = validateEcuadorianCedula(trimmed);
+      return res.ok
+        ? { status: "valid" as const, message: "Cédula válida" }
+        : { status: "invalid" as const, message: res.reason || "Cédula inválida" };
+    }
+
+    if (docType === "PASAPORTE") {
+      const res = validatePassport(trimmed);
+      return res.ok
+        ? { status: "valid" as const, message: "Pasaporte válido" }
+        : { status: "invalid" as const, message: res.reason || "Pasaporte inválido" };
+    }
+
+    // OTRO
+    if (trimmed.length < 3) {
+      return { status: "invalid" as const, message: "Mínimo 3 caracteres" };
+    }
+    return { status: "valid" as const, message: "Formato aceptado" };
+  }, [docType, docId]);
+
+  const handleDocIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value;
+    if (docType === "CEDULA") {
+      val = val.replace(/\D/g, "").slice(0, 10);
+    } else if (docType === "PASAPORTE") {
+      val = val.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15);
+    }
+    setDocId(val);
+  };
+
+  const handleDocTypeChange = (newType: DocumentType) => {
+    setDocType(newType);
+    if (newType === "CEDULA") {
+      setDocId((prev) => prev.replace(/\D/g, "").slice(0, 10));
+    } else if (newType === "PASAPORTE") {
+      setDocId((prev) => prev.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15));
+    }
+  };
+
+  const placeholder =
+    docType === "CEDULA"
+      ? "Ej: 1710034065 (10 dígitos)"
+      : docType === "PASAPORTE"
+      ? "Ej: A12345678 (6–15 alfanumérico)"
+      : "Número de documento";
+
+  let borderClass = "";
+  if (validation.status === "invalid") {
+    borderClass = "!border-rose-500 !ring-1 !ring-rose-500 bg-rose-50/20";
+  } else if (validation.status === "valid") {
+    borderClass = "!border-emerald-500 !ring-1 !ring-emerald-500 bg-emerald-50/20";
+  }
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    if (validation.status === "invalid") {
+      e.preventDefault();
+      alert(`Por favor corrige el documento de identidad antes de continuar:\n${validation.message}`);
+    }
+  };
+
   return (
-    <form action={action} className="card p-6 space-y-5">
+    <form action={action} onSubmit={handleSubmit} className="card p-6 space-y-5">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="label">Nombres y apellidos *</label>
           <input name="full_name" required defaultValue={student?.full_name} className="input" />
         </div>
         <div>
-          <label className="label">Cédula / documento de identidad</label>
-          <input name="document_id" defaultValue={student?.document_id || ""} className="input" />
+          <label className="label">Tipo de documento</label>
+          <select
+            name="document_type"
+            value={docType}
+            onChange={(e) => handleDocTypeChange(e.target.value as DocumentType)}
+            className="select"
+          >
+            <option value="CEDULA">Cédula de identidad</option>
+            <option value="PASAPORTE">Pasaporte</option>
+            <option value="OTRO">Otro documento</option>
+          </select>
+        </div>
+        <div>
+          <div className="flex items-center justify-between">
+            <label className="label">Número de documento</label>
+            {validation.status === "valid" && (
+              <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
+                ✓ {validation.message}
+              </span>
+            )}
+          </div>
+          <input
+            name="document_id"
+            value={docId}
+            onChange={handleDocIdChange}
+            placeholder={placeholder}
+            className={`input ${borderClass}`}
+          />
+          {validation.status === "invalid" && (
+            <p className="text-xs text-rose-600 mt-1 font-medium flex items-center gap-1">
+              ⚠️ {validation.message}
+            </p>
+          )}
+          {validation.status === "empty" && (
+            <p className="text-[11px] text-slate-400 mt-1">
+              Opcional si el estudiante aún no dispone de documento registrado.
+            </p>
+          )}
         </div>
         <div>
           <label className="label">Fecha de nacimiento</label>

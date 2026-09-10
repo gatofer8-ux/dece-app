@@ -8,6 +8,12 @@ import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { logAudit } from "@/lib/audit";
 import { str, num as intOrNull, getAllStr } from "@/lib/formData";
+import {
+  validateDocumentId,
+  normalizeDocumentId,
+  detectDocumentType,
+  type DocumentType,
+} from "@/lib/documentId";
 
 /** Validación de los campos críticos de la ficha del estudiante. */
 const studentCoreSchema = z.object({
@@ -15,12 +21,6 @@ const studentCoreSchema = z.object({
     .string()
     .trim()
     .min(3, "El nombre completo del estudiante es obligatorio."),
-  document_id: z
-    .string()
-    .trim()
-    .regex(/^[0-9A-Za-z-]{4,20}$/, "El número de documento no tiene un formato válido.")
-    .optional()
-    .or(z.literal("")),
   rep_email: z
     .string()
     .trim()
@@ -38,12 +38,22 @@ const studentCoreSchema = z.object({
 function assertValidStudent(formData: FormData) {
   const result = studentCoreSchema.safeParse({
     full_name: formData.get("full_name") ?? "",
-    document_id: formData.get("document_id") ?? "",
     rep_email: formData.get("rep_email") ?? "",
     birth_date: formData.get("birth_date") ?? "",
   });
   if (!result.success) {
     throw new Error(result.error.issues[0]?.message ?? "Datos del estudiante inválidos.");
+  }
+
+  const rawDocId = str(formData, "document_id");
+  if (rawDocId) {
+    const rawDocType = str(formData, "document_type");
+    const docId = normalizeDocumentId(rawDocId);
+    const docType = (rawDocType || detectDocumentType(docId)) as DocumentType;
+    const validation = validateDocumentId(docType, docId, { required: false });
+    if (!validation.ok) {
+      throw new Error(validation.reason ?? "El número de documento no es válido.");
+    }
   }
 }
 
@@ -96,10 +106,14 @@ export async function createStudent(formData: FormData) {
   assertValidStudent(formData);
   const id = randomUUID();
 
+  const rawDocId = str(formData, "document_id");
+  const docId = rawDocId ? normalizeDocumentId(rawDocId) : null;
+  const docType = str(formData, "document_type") || (docId ? detectDocumentType(docId) : "CEDULA");
+
   try {
     db.prepare(
       `INSERT INTO students (
-         id, institution_id, full_name, document_id, birth_date, gender, course, parallel, representative, rep_phone, rep_email, address, notes,
+         id, institution_id, full_name, document_type, document_id, birth_date, gender, course, parallel, representative, rep_phone, rep_email, address, notes,
          birth_country, birth_province, birth_canton, birth_parish, jornada, education_level, bachillerato_specialty, neighborhood, lives_with, lives_with_other, leaves_alone_authorized,
          legal_guardian, father_name, father_document_id, father_education, father_address, father_phone, father_occupation, father_workplace,
          mother_name, mother_document_id, mother_education, mother_address, mother_phone, mother_occupation, mother_workplace,
@@ -108,7 +122,7 @@ export async function createStudent(formData: FormData) {
          medical_condition, medical_allergies, medical_medication_intolerance, medical_food_intolerance
        )
        VALUES (
-         @id, @institution_id, @full_name, @document_id, @birth_date, @gender, @course, @parallel, @representative, @rep_phone, @rep_email, @address, @notes,
+         @id, @institution_id, @full_name, @document_type, @document_id, @birth_date, @gender, @course, @parallel, @representative, @rep_phone, @rep_email, @address, @notes,
          @birth_country, @birth_province, @birth_canton, @birth_parish, @jornada, @education_level, @bachillerato_specialty, @neighborhood, @lives_with, @lives_with_other, @leaves_alone_authorized,
          @legal_guardian, @father_name, @father_document_id, @father_education, @father_address, @father_phone, @father_occupation, @father_workplace,
          @mother_name, @mother_document_id, @mother_education, @mother_address, @mother_phone, @mother_occupation, @mother_workplace,
@@ -120,7 +134,8 @@ export async function createStudent(formData: FormData) {
       id,
       institution_id: institutionId,
       full_name: str(formData, "full_name"),
-      document_id: str(formData, "document_id"),
+      document_type: docType,
+      document_id: docId,
       birth_date: str(formData, "birth_date"),
       gender: str(formData, "gender"),
       course: str(formData, "course"),
@@ -134,7 +149,7 @@ export async function createStudent(formData: FormData) {
     });
   } catch (err: any) {
     if (err.message && err.message.includes("UNIQUE constraint failed")) {
-      throw new Error("Ya existe un estudiante registrado con esta cédula en la institución.");
+      throw new Error("Ya existe un estudiante registrado con este documento en la institución.");
     }
     throw err;
   }
@@ -149,9 +164,13 @@ export async function updateStudent(id: string, formData: FormData) {
   const institutionId = requireInstitutionId(session);
   assertValidStudent(formData);
 
+  const rawDocId = str(formData, "document_id");
+  const docId = rawDocId ? normalizeDocumentId(rawDocId) : null;
+  const docType = str(formData, "document_type") || (docId ? detectDocumentType(docId) : "CEDULA");
+
   try {
     db.prepare(
-      `UPDATE students SET full_name=@full_name, document_id=@document_id, birth_date=@birth_date, gender=@gender,
+      `UPDATE students SET full_name=@full_name, document_type=@document_type, document_id=@document_id, birth_date=@birth_date, gender=@gender,
          course=@course, parallel=@parallel, representative=@representative, rep_phone=@rep_phone, rep_email=@rep_email,
          address=@address, notes=@notes,
          birth_country=@birth_country, birth_province=@birth_province, birth_canton=@birth_canton, birth_parish=@birth_parish,
@@ -174,7 +193,8 @@ export async function updateStudent(id: string, formData: FormData) {
       id,
       institution_id: institutionId,
       full_name: str(formData, "full_name"),
-      document_id: str(formData, "document_id"),
+      document_type: docType,
+      document_id: docId,
       birth_date: str(formData, "birth_date"),
       gender: str(formData, "gender"),
       course: str(formData, "course"),
@@ -188,7 +208,7 @@ export async function updateStudent(id: string, formData: FormData) {
     });
   } catch (err: any) {
     if (err.message && err.message.includes("UNIQUE constraint failed")) {
-      throw new Error("Ya existe un estudiante registrado con esta cédula en la institución.");
+      throw new Error("Ya existe un estudiante registrado con este documento en la institución.");
     }
     throw err;
   }
