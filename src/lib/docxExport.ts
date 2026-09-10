@@ -3181,13 +3181,15 @@ export async function generateReferralDocx(opts: {
           startCol: 0,
           colSpan: 14,
           boldPrefix: "Observaciones: ",
+          // En línea continua (no una debajo de otra), separadas por un espacio
+          // amplio, igual que "Acciones desarrolladas", para ahorrar alto.
           content: referral.observations
             ? referral.observations
                 .split("\n")
                 .map((line) => line.trim())
                 .filter(Boolean)
                 .map((line) => (line.startsWith("•") ? line : `• ${line.replace(/^(\d+[\.\)]|[\*\-\+])\s*/, "")}`))
-                .join("\n")
+                .join("     ")
             : "—",
         }),
       ],
