@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { getInstitutionCoursesWithCounts, normalizeCourseKey } from "./distributivo";
+import {
+  getInstitutionCoursesWithCounts,
+  normalizeCourseKey,
+  makeParallelKey,
+  parseParallelKey,
+  buildCoverageSqlFilter,
+} from "./distributivo";
 import { db } from "./db";
 
 describe("normalizeCourseKey helper", () => {
@@ -127,6 +133,57 @@ describe("Distributivo preview and student recalculation", () => {
       expect(prof.color).toMatch(/^#[0-9A-F]{6}$/i);
       expect(prof.estimated_students_count).toBeGreaterThan(0);
     });
+  });
+
+  it("divide cursos por paralelos entre profesionales y aísla jornadas correctamente", () => {
+    // 1. makeParallelKey y parseParallelKey
+    const key = makeParallelKey("3.° EGB", "A", "MATUTINA");
+    expect(key).toBe("3.° EGB::A::MATUTINA");
+
+    const parsed = parseParallelKey(key);
+    expect(parsed).toEqual({
+      course: "3.° EGB",
+      parallel: "A",
+      jornada: "MATUTINA",
+    });
+
+    // 2. Cobertura de Norma: solo 3.° EGB Paralelo A en Matutina
+    const normaCoverage = {
+      isAllInstitutional: false,
+      courses: ["3.° EGB"],
+      parallels: ["3.° EGB::A::MATUTINA"],
+      jornadas: ["MATUTINA"],
+    };
+    const normaFilter = buildCoverageSqlFilter(normaCoverage);
+    expect(normaFilter.sql).toContain("course = ? COLLATE NOCASE AND parallel = ? COLLATE NOCASE");
+    expect(normaFilter.params).toContain("3.° EGB");
+    expect(normaFilter.params).toContain("A");
+    expect(normaFilter.params).not.toContain("B");
+
+    // 3. Cobertura de Santiago: 3.° EGB Paralelos B y C
+    const santiagoCoverage = {
+      isAllInstitutional: false,
+      courses: ["3.° EGB"],
+      parallels: ["3.° EGB::B::MATUTINA", "3.° EGB::C::MATUTINA"],
+      jornadas: ["MATUTINA"],
+    };
+    const santiagoFilter = buildCoverageSqlFilter(santiagoCoverage);
+    expect(santiagoFilter.params).toContain("B");
+    expect(santiagoFilter.params).toContain("C");
+    expect(santiagoFilter.params).not.toContain("A");
+
+    // 4. Cobertura de Mechita: solo Bachillerato en Vespertina (aislamiento estricto de jornada)
+    const mechitaCoverage = {
+      isAllInstitutional: false,
+      courses: ["1.° BGU Ciencias (Vespertina)"],
+      parallels: ["1.° BGU Ciencias (Vespertina)::A::VESPERTINA"],
+      jornadas: ["VESPERTINA"],
+    };
+    const mechitaFilter = buildCoverageSqlFilter(mechitaCoverage);
+    expect(mechitaFilter.sql).toContain("jornada = ? COLLATE NOCASE");
+    expect(mechitaFilter.sql).not.toContain("jornada IS NULL"); // No leakage de NULL / Matutina
+    expect(mechitaFilter.params).toContain("VESPERTINA");
+    expect(mechitaFilter.params).not.toContain("MATUTINA");
   });
 });
 

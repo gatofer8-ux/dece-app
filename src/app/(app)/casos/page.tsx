@@ -9,7 +9,7 @@ import {
   type CaseFileRow,
 } from "@/lib/types";
 import { priorityStyle, caseStatusStyle, riskTypeStyle } from "@/lib/statusColors";
-import { getUserCoverage } from "@/lib/distributivo";
+import { getUserCoverage, buildCoverageSqlFilter } from "@/lib/distributivo";
 
 export default async function CasosPage({
   searchParams,
@@ -25,23 +25,10 @@ export default async function CasosPage({
   const params: any[] = [institutionId];
 
   if (!coverage.isAllInstitutional) {
-    if (coverage.courses.length > 0) {
-      const courseClauses: string[] = [];
-      const courseParams: any[] = [];
-      for (const c of coverage.courses) {
-        const match = c.match(/^(.*?)\s*\((Matutina|Vespertina|Nocturna)\)$/i);
-        if (match) {
-          const rawCourse = match[1].trim();
-          const jVal = match[2].toUpperCase();
-          courseClauses.push("(s.course = ? AND (s.jornada = ? OR s.jornada IS NULL))");
-          courseParams.push(rawCourse, jVal);
-        } else {
-          courseClauses.push("s.course = ?");
-          courseParams.push(c);
-        }
-      }
-      where += ` AND (cf.opened_by_id = ? OR cf.assigned_to_id = ? OR (${courseClauses.join(" OR ")}))`;
-      params.push(session.user.id, session.user.id, ...courseParams);
+    const coverageFilter = buildCoverageSqlFilter(coverage, "s");
+    if (coverageFilter.sql !== "1=1" && coverageFilter.sql !== "1=0") {
+      where += ` AND (cf.opened_by_id = ? OR cf.assigned_to_id = ? OR ${coverageFilter.sql})`;
+      params.push(session.user.id, session.user.id, ...coverageFilter.params);
     } else {
       where += " AND (cf.opened_by_id = ? OR cf.assigned_to_id = ?)";
       params.push(session.user.id, session.user.id);
