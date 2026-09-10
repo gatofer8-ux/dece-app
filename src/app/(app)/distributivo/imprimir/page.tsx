@@ -42,12 +42,10 @@ export default async function ImprimirDistributivoPage({
   }
 
   const { distributivo, assignments } = distributivoData;
-  const totalStudents = assignments.reduce(
-    (sum, a) => sum + (a.estimated_students_count || 0),
-    0
-  );
-  const totalAnalysts = assignments.length;
-  const averageStudents = totalAnalysts > 0 ? Math.round(totalStudents / totalAnalysts) : 0;
+
+  // Obtener conteos detallados por curso para mostrar paralelos y alumnos reales por curso
+  const coursesInfo = getInstitutionCoursesWithCounts(institutionId, distributivo.school_year_id);
+  const courseMap = new Map(coursesInfo.courseSummaries.map((c) => [c.course, c]));
 
   // Paleta oficial por defecto si no tienen asignado color
   const defaultPalette = ["#FEF08A", "#BAE6FD", "#BBF7D0", "#FED7AA", "#E9D5FF"];
@@ -71,19 +69,55 @@ export default async function ImprimirDistributivoPage({
 
     const assignedColor = a.color || defaultPalette[idx % defaultPalette.length];
 
+    // Si viene con 0 de la base de datos, recalcular dinámicamente con los cursos reales
+    let studentCount = Number(a.estimated_students_count) || 0;
+    if (studentCount === 0 && parsedCourses.length > 0) {
+      for (const cName of parsedCourses) {
+        const shiftMatch = cName.match(/\((Matutina|Vespertina|Nocturna)\)$/i);
+        const cleanName = cName.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase();
+        const targetShift = (shiftMatch ? shiftMatch[1] : (a.jornada && a.jornada !== "TODAS" && a.jornada !== "COMPLETA" ? a.jornada : "")).toUpperCase().trim();
+
+        if (targetShift) {
+          const matchingRows = coursesInfo.detailedRows.filter(
+            (r) => r.course.trim().toLowerCase() === cleanName && (r.jornada || "").toUpperCase().trim() === targetShift
+          );
+          if (matchingRows.length > 0) {
+            studentCount += matchingRows.reduce((sum, r) => sum + (r.student_count || 0), 0);
+            continue;
+          }
+        }
+
+        const summary = courseMap.get(cName);
+        if (summary) {
+          studentCount += summary.totalStudents;
+        } else {
+          const matched = coursesInfo.courseSummaries.find(
+            (s) => s.course.trim().toLowerCase() === cleanName
+          );
+          if (matched) {
+            studentCount += matched.totalStudents;
+          }
+        }
+      }
+    }
+
     return {
       ...a,
       index: idx + 1,
       initials,
       parsedCourses,
       color: assignedColor,
+      estimated_students_count: studentCount,
       lunchSchedule: a.lunch_schedule || (idx === 2 ? "12H00 A 13H00" : "13H00 A 14H00"),
     };
   });
 
-  // Obtener conteos detallados por curso para mostrar paralelos y alumnos reales por curso
-  const coursesInfo = getInstitutionCoursesWithCounts(institutionId, distributivo.school_year_id);
-  const courseMap = new Map(coursesInfo.courseSummaries.map((c) => [c.course, c]));
+  const totalStudents = analystMeta.reduce(
+    (sum, a) => sum + (a.estimated_students_count || 0),
+    0
+  );
+  const totalAnalysts = analystMeta.length;
+  const averageStudents = totalAnalysts > 0 ? Math.round(totalStudents / totalAnalysts) : 0;
 
   // Orden visual solicitado (default DESC, o ASC)
   const visualOrder = searchParams.order === "ASC" ? "ASC" : "DESC";
@@ -605,7 +639,7 @@ export default async function ImprimirDistributivoPage({
           <span className="text-[9.5px] text-slate-500 font-normal">Distribución clara y específica por analista</span>
         </div>
 
-        {assignments.map((assignment, index) => {
+        {analystMeta.map((assignment, index) => {
           let parsedCourses: string[] = [];
           let parsedSubniveles: string[] = [];
           try {
@@ -638,27 +672,47 @@ export default async function ImprimirDistributivoPage({
             };
           });
 
+          const totalCoursesStudents = richCourses.reduce((sum, c) => sum + c.studentCount, 0);
+          const displayStudentCount = assignment.estimated_students_count > 0 ? assignment.estimated_students_count : totalCoursesStudents;
+
           return (
             <div
               key={assignment.id || index}
-              className="border border-slate-300 rounded overflow-hidden break-inside-avoid page-break-inside-avoid"
+              className="border border-slate-300 rounded overflow-hidden break-inside-avoid page-break-inside-avoid shadow-sm"
             >
-              {/* Tarjeta cabecera del profesional */}
-              <div className="bg-slate-100/90 p-2.5 border-b border-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                <div>
-                  <span className="font-black text-slate-900 text-[11px] uppercase">
-                    Profesional {index + 1}: {assignment.user_name}
+              {/* Tarjeta cabecera del profesional con su distintivo de color */}
+              <div
+                className="p-2.5 border-b border-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-1"
+                style={{ backgroundColor: assignment.color ? `${assignment.color}35` : "#f1f5f9" }}
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-6 h-6 rounded flex items-center justify-center font-black text-slate-900 text-[10px] border border-slate-400 shrink-0"
+                    style={{ backgroundColor: assignment.color }}
+                  >
+                    {assignment.initials}
                   </span>
-                  <span className="text-slate-600 font-medium text-[10px] ml-2">
-                    ({assignment.user_role_label || "Analista DECE"})
-                  </span>
+                  <div>
+                    <span className="font-black text-slate-900 text-[11px] uppercase">
+                      Profesional {assignment.index}: {assignment.user_name}
+                    </span>
+                    <span className="text-slate-600 font-medium text-[10px] ml-2">
+                      ({assignment.user_role_label || "Analista DECE"})
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 text-[10px]">
+                <div className="flex items-center gap-2.5 text-[10px]">
                   <span className="bg-white px-2 py-0.5 rounded border border-slate-200 font-semibold text-slate-700">
                     Jornada: <strong>{assignment.jornada || "Todas"}</strong>
                   </span>
-                  <span className="bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 font-bold text-indigo-900">
-                    Cobertura: <strong>{assignment.estimated_students_count}</strong> estudiantes ({richCourses.length} cursos)
+                  <span
+                    className="px-2 py-0.5 rounded border font-bold text-slate-900"
+                    style={{
+                      backgroundColor: assignment.color || "#e0e7ff",
+                      borderColor: "#94a3b8",
+                    }}
+                  >
+                    Cobertura: <strong>{displayStudentCount}</strong> estudiantes ({richCourses.length} cursos)
                   </span>
                 </div>
               </div>

@@ -141,6 +141,10 @@ export async function saveDistributivo(
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`
       );
 
+      // Obtener conteos reales de estudiantes por curso de la institución
+      const coursesInfo = getInstitutionCoursesWithCounts(institutionId, schoolYearId);
+      const courseMap = new Map(coursesInfo.courseSummaries.map((c) => [c.course, c]));
+
       for (const a of assignments) {
         const uId = a.user_id || a.userId;
         if (!uId) {
@@ -151,10 +155,45 @@ export async function saveDistributivo(
         const uName = a.user_name || a.userName || "Profesional DECE";
         const uRole = a.user_role_label || a.userRoleLabel || "Analista DECE";
         const uJornada = a.jornada || "MATUTINA";
+        const rawCourses: string[] = Array.isArray(a.courses) ? a.courses : [];
         const uSubniveles = JSON.stringify(a.subniveles || []);
-        const uCourses = JSON.stringify(a.courses || []);
+        const uCourses = JSON.stringify(rawCourses);
         const uParallels = JSON.stringify(a.parallels || []);
-        const uCount = Number(a.estimated_students_count ?? a.estimatedStudentsCount ?? 0);
+
+        // Recalcular estudiantes reales a partir de los cursos asignados
+        let recalculatedCount = 0;
+        for (const cName of rawCourses) {
+          const shiftMatch = cName.match(/\((Matutina|Vespertina|Nocturna)\)$/i);
+          const cleanName = cName.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase();
+          const targetShift = (shiftMatch ? shiftMatch[1] : (uJornada !== "TODAS" && uJornada !== "COMPLETA" ? uJornada : "")).toUpperCase().trim();
+
+          if (targetShift) {
+            const matchingRows = coursesInfo.detailedRows.filter(
+              (r) => r.course.trim().toLowerCase() === cleanName && (r.jornada || "").toUpperCase().trim() === targetShift
+            );
+            if (matchingRows.length > 0) {
+              recalculatedCount += matchingRows.reduce((sum, r) => sum + (r.student_count || 0), 0);
+              continue;
+            }
+          }
+
+          const summary = courseMap.get(cName);
+          if (summary) {
+            recalculatedCount += summary.totalStudents;
+          } else {
+            const matched = coursesInfo.courseSummaries.find(
+              (s) => s.course.trim().toLowerCase() === cleanName
+            );
+            if (matched) {
+              recalculatedCount += matched.totalStudents;
+            }
+          }
+        }
+
+        const uCount = recalculatedCount > 0
+          ? recalculatedCount
+          : Number(a.estimated_students_count ?? a.estimatedStudentsCount ?? 0);
+
         const uResp = a.specific_responsibilities || a.specificResponsibilities || null;
         const hasEnlazada = a.has_enlazada ? 1 : a.hasEnlazada ? 1 : 0;
         const enlazadaName = a.enlazada_name || a.enlazadaName || null;
