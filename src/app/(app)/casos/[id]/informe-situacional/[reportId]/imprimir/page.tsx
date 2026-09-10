@@ -45,10 +45,32 @@ export default async function ImprimirInformeSituacionalPage({
   const methodologyList = parseStringList(report.methodology || "[]");
 
   return (
-    <div className="bg-white min-h-screen py-6 px-4 sm:px-8 text-black text-sm print:py-0 print:px-0 relative">
+    <div className="bg-white min-h-screen py-6 px-4 sm:px-8 text-black text-sm print:py-0 print:px-0 relative font-serif">
+      {/* CSS para impresión profesional A4 */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        @page {
+          size: A4 portrait;
+          margin: 1.5cm 1.5cm;
+        }
+        @media print {
+          html, body {
+            background: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `,
+        }}
+      />
+
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Barra superior de impresión */}
-        <div className="no-print flex items-center justify-between bg-slate-100 border-b border-slate-200 p-2">
+        <div className="no-print flex items-center justify-between bg-slate-100 border-b border-slate-200 p-2 font-sans">
           <div className="flex items-center gap-3 px-2">
             <Link
               href={`/casos/${caseFile.id}`}
@@ -85,8 +107,8 @@ export default async function ImprimirInformeSituacionalPage({
                 <div className="w-full mb-6 mt-2 pb-4">
                   <img src="/header_4k.png" alt="Ministerio de Educación, Deporte y Cultura" className="w-full h-auto object-contain" />
                   <div className="text-center mt-6">
-                    <h1 className="text-xl font-bold text-[#1E3A8A] font-sans">INFORME TÉCNICO SITUACIONAL</h1>
-                    <p className="text-sm text-gray-500 font-sans">Informe General</p>
+                    <h1 className="text-xl font-bold text-[#1E3A8A] font-serif">INFORME TÉCNICO SITUACIONAL</h1>
+                    <p className="text-sm text-gray-500 font-serif">Informe General</p>
                   </div>
                 </div>
               </td>

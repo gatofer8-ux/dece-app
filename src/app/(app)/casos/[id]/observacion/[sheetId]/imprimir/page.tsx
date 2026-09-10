@@ -43,9 +43,31 @@ export default async function ImprimirFichaObservacionPage({
   const studentCourse = formatStudentCourseFull(student);
 
   return (
-    <div className="max-w-4xl mx-auto bg-white my-4 print:my-0">
+    <div className="max-w-4xl mx-auto bg-white my-4 print:my-0 font-['Arial',sans-serif]">
+      {/* CSS para impresión profesional A4 */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        @page {
+          size: A4 portrait;
+          margin: 1.5cm 1.5cm;
+        }
+        @media print {
+          html, body {
+            background: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `,
+        }}
+      />
+
       {/* Barra de control en pantalla */}
-      <div className="flex items-center justify-between gap-3 p-4 bg-slate-50 border-b border-slate-200 print:hidden">
+      <div className="flex items-center justify-between gap-3 p-4 bg-slate-50 border-b border-slate-200 print:hidden font-sans">
         <div className="flex items-center gap-2">
           <Link
             href={`/casos/${caseFile.id}`}
@@ -72,7 +94,7 @@ export default async function ImprimirFichaObservacionPage({
         </div>
       </div>
 
-      <div id="printable-content" className="p-8 print:p-2 text-xs font-sans text-black leading-tight">
+      <div id="printable-content" className="p-8 print:p-2 text-xs font-['Arial',sans-serif] text-black leading-tight">
         <DocumentHeader
           title="Ficha de Observación"
           subtitle="Departamento de Consejería Estudiantil — DECE"

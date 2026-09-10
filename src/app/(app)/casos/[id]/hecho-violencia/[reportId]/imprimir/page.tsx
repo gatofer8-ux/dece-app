@@ -77,7 +77,29 @@ export default async function ImprimirInformeHechoViolenciaPage({
   const isOtras = !!report.violence_modality_other || violenceModalities.includes("OTRA");
 
   return (
-    <div className="max-w-[850px] mx-auto bg-white p-6 print:p-0">
+    <div className="max-w-[850px] mx-auto bg-white p-6 print:p-0 font-['Arial',sans-serif]">
+      {/* CSS para impresión profesional A4 */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        @page {
+          size: A4 portrait;
+          margin: 1.5cm 1.5cm;
+        }
+        @media print {
+          html, body {
+            background: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `,
+        }}
+      />
+
       {/* Barra de Herramientas (Oculta al imprimir) */}
       <div className="no-print sticky top-0 z-30 bg-slate-900 text-white px-4 py-3 shadow-md flex items-center justify-between gap-4 mb-6 rounded-lg">
         <div className="flex items-center gap-3">
@@ -116,8 +138,8 @@ export default async function ImprimirInformeHechoViolenciaPage({
         </div>
       </div>
       
-      <div id="printable-content" className="text-black leading-tight print:leading-tight" style={{ fontFamily: "'Agency FB', 'Arial Narrow', Arial, sans-serif" }}>
-        {/* Encabezado Oficial Fiel: Agency FB, Centrado, 18pt / 12pt */}
+      <div id="printable-content" className="text-black leading-tight print:leading-tight font-['Arial',sans-serif]">
+        {/* Encabezado Oficial Fiel: Centrado, 18pt / 12pt */}
         <div className="text-center mb-3">
           <h1 className="font-bold text-2xl uppercase tracking-wider text-black">
             {institution.name || "UNIDAD EDUCATIVA “SANTA ROSA”"}

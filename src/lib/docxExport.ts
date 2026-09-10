@@ -148,8 +148,8 @@ activeYear?: SchoolYearRow | null;
     styles: {
       default: {
         document: {
-          run: { font: "Times New Roman", size: 22, color: "000000" },
-          paragraph: { spacing: { line: 276, before: 60, after: 60 } },
+          run: { font: "Times New Roman", size: 20, color: "000000" },
+          paragraph: { spacing: { line: 260, before: 0, after: 80 } },
         },
       },
     },
@@ -3503,7 +3503,7 @@ export async function generateInterviewDocx(opts: {
       children: [
         new TextRun({
           text: "Departamento de Consejería Estudiantil - DECE",
-          font: "Georgia",
+          font: FONT_NAME,
           italics: true,
           size: 24,
           color: "4A5568",

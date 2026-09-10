@@ -46,7 +46,29 @@ export default async function ImprimirEntrevistaPage({ params }: { params: { id:
   };
 
   return (
-    <div className="max-w-[800px] mx-auto bg-white">
+    <div className="max-w-[800px] mx-auto bg-white font-['Arial',sans-serif]">
+      {/* CSS para impresión profesional A4 */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        @page {
+          size: A4 portrait;
+          margin: 1.5cm 1.5cm;
+        }
+        @media print {
+          html, body {
+            background: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `,
+        }}
+      />
+
       <div className="no-print p-4 bg-slate-100 border-b border-slate-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
@@ -73,12 +95,12 @@ export default async function ImprimirEntrevistaPage({ params }: { params: { id:
           <PrintButton hideWordButton={true} className="p-0 bg-transparent border-0" />
         </div>
       </div>
-      <div id="printable-content" className="p-8 print:p-0 text-sm font-sans text-black">
+      <div id="printable-content" className="p-8 print:p-0 text-sm font-['Arial',sans-serif] text-black">
         
         {/* Encabezado oficial copia fiel al formato ministerial DECE */}
         <div className="flex justify-end items-end mb-1">
           <div className="text-right pb-1">
-            <h1 className="text-2xl text-gray-600 font-serif italic tracking-wide" style={{ fontFamily: "'Brush Script MT', cursive, Georgia, serif" }}>
+            <h1 className="text-xl text-gray-600 font-sans italic tracking-wide">
               Departamento de Consejería Estudiantil - DECE
             </h1>
           </div>
