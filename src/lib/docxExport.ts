@@ -2670,9 +2670,9 @@ export async function generateReferralDocx(opts: {
             },
             margin: {
               top: 1000,
-              right: 1200,
+              right: 1000,
               bottom: 1000,
-              left: 1200,
+              left: 1000,
               header: 500,
               footer: 500,
             },

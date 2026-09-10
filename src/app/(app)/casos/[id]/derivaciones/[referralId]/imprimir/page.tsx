@@ -51,11 +51,11 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
   const barCell = "border border-[#2F5496] bg-[#2F5496] text-white uppercase font-bold text-center px-1.5 py-1 tracking-wide";
 
   return (
-    <div className="max-w-[1150px] mx-auto bg-white">
-      {/* Orientación horizontal y una sola hoja: coincide con el formato oficial apaisado de la Ficha de Derivación. */}
+    <div className="w-[27.7cm] max-w-full mx-auto bg-white">
+      {/* Orientación horizontal oficial A4 apaisada */}
       <style>{`
         @media print {
-          @page { size: landscape; margin: 8mm; }
+          @page { size: A4 landscape; margin: 1.5cm; }
         }
       `}</style>
       {/* Barra superior de impresión */}
