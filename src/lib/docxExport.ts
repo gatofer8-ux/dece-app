@@ -4540,8 +4540,8 @@ export async function generateSocializationActDocx(opts: {
       ],
     });
 
-  // NUEVO APARTADO: ESTRATEGIAS PARA EL ACOMPAÑAMIENTO PSICOSOCIAL
-  children.push(createBlueBanner("ESTRATEGIAS PARA EL ACOMPAÑAMIENTO PSICOSOCIAL"));
+  // APARTADO: ESTRATEGIAS PARA EL ACOMPAÑAMIENTO SOCIOEMOCIONAL
+  children.push(createBlueBanner("ESTRATEGIAS PARA EL ACOMPAÑAMIENTO SOCIOEMOCIONAL"));
   children.push(new Paragraph({ spacing: { after: 30 } }));
   children.push(
     new Paragraph({

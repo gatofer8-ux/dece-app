@@ -154,19 +154,19 @@ export async function draftText(opts: {
 
     const isSocializationStrategies =
     opts.fieldLabel.toLowerCase().includes("estrategia") &&
-    (opts.fieldLabel.toLowerCase().includes("socializ") || opts.fieldLabel.toLowerCase().includes("acompañamiento") || opts.fieldLabel.toLowerCase().includes("docente") || opts.fieldLabel.toLowerCase().includes("psicosocial"));
+    (opts.fieldLabel.toLowerCase().includes("socializ") || opts.fieldLabel.toLowerCase().includes("acompañamiento") || opts.fieldLabel.toLowerCase().includes("docente") || opts.fieldLabel.toLowerCase().includes("psicosocial") || opts.fieldLabel.toLowerCase().includes("socioemocional"));
 
   const socializationRule = isSocializationStrategies
     ? "\nREGLA OBLIGATORIA PARA ESTRATEGIAS EN ACTA DE SOCIALIZACIÓN (DIRIGIDAS AL PERSONAL DOCENTE):\n" +
-      "Las estrategias DEBEN ESTAR DIRIGIDAS DIRECTA Y PRIORITARIAMENTE AL PERSONAL DOCENTE DE AULA (profesores de asignatura y tutor/a).\n" +
-      "Integra y toma en cuenta minuciosamente TODA la información recopilada en los documentos del caso (entrevistas, observaciones, reportes de violencia, informes situacionales, problemática familiar, emocional y motivo del expediente).\n" +
-      "Debes estructurar entre 4 y 6 estrategias pedagógicas, de contención emocional y de manejo de aula para los docentes, abarcando:\n" +
-      "1. Contención y Clima de Aula: Pautas concretas para brindar contención y apoyo socioemocional empático en clase, evitando exponer, juzgar o señalar al estudiante ante sus pares.\n" +
-      "2. Flexibilidad Pedagógica y Metodológica: Adaptaciones en tiempos de entrega de tareas, evaluaciones diferenciadas y refuerzo académico según su estado emocional o vulnerabilidad.\n" +
-      "3. Confidencialidad y No Revictimización: Deber imperativo de reserva absoluta respecto a la situación personal o familiar del estudiante, evitando comentarios imprudentes.\n" +
-      "4. Observación Activa y Alerta Temprana: Indicadores de alerta conductual, anímica o de aislamiento que los docentes deben monitorear en clase y reportar de inmediato al DECE.\n" +
-      "5. Comunicación Asertiva y Motivación: Interacciones positivas que refuercen la autoestima, sentido de pertenencia y factores protectores del estudiante en la jornada escolar.\n" +
-      "Presenta las estrategias en una lista numerada (1., 2., 3., 4., 5.), con redacción clara, formal y de aplicación pedagógica inmediata.\n"
+      "Las estrategias DEBEN SER ESTRATEGIAS DE AULA dirigidas directa y prioritariamente al personal docente (profesores de asignatura y tutor/a).\n" +
+      "Integra minuciosamente la información del caso (situación de vulnerabilidad, entrevistas, observaciones y dinámica escolar).\n" +
+      "Debes estructurar entre 4 y 6 estrategias de aula numeradas (1., 2., 3., 4., 5.), con redacción formal y de aplicación inmediata en el aula, abarcando:\n" +
+      "1. Pautas concretas de contención emocional en clase y clima empático de aula, evitando exponer, juzgar o señalar al estudiante ante sus pares.\n" +
+      "2. Manejo de aula y mediación respetuosa en dinámicas grupales y actividades colaborativas.\n" +
+      "3. Flexibilidad en tiempos de entrega de tareas, evaluaciones diferenciadas y refuerzo académico formativo.\n" +
+      "4. Confidencialidad absoluta y principio de no revictimización respecto a su situación de vulnerabilidad.\n" +
+      "5. Observación de señales de alerta anímicas o conductuales para reporte oportuno al DECE.\n" +
+      "6. Comunicación asertiva, escucha activa y motivación que refuercen sus factores protectores y resiliencia.\n"
     : "";
 
   const isBimonthly = opts.fieldLabel.toLowerCase().includes("bimensual") || (opts.fieldLabel.toLowerCase().includes("acompañamiento") && !isSocializationStrategies);

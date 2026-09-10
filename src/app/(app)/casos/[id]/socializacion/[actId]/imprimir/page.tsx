@@ -91,10 +91,10 @@ export default async function ImprimirActaSocializacionPage({ params }: { params
           </p>
         </section>
 
-        {/* Apartado Solicitado: Estrategias para el acompañamiento psicosocial */}
+        {/* Apartado: Estrategias para el acompañamiento socioemocional */}
         <section className="mb-4">
           <h2 className="font-semibold uppercase text-xs mb-2 bg-[#2F5496] text-white px-2.5 py-1 rounded-xs">
-            Estrategias para el acompañamiento psicosocial
+            ESTRATEGIAS PARA EL ACOMPAÑAMIENTO SOCIOEMOCIONAL
           </h2>
           <div className="border border-slate-200 rounded p-3 bg-slate-50 text-xs leading-relaxed whitespace-pre-wrap">
             {act.psychosocial_strategies || "Sin registrar."}

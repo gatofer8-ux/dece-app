@@ -111,23 +111,23 @@ export default function SocializationActForm({
         ></textarea>
       </div>
 
-      {/* NUEVO APARTADO: Estrategias para el acompañamiento psicosocial */}
+      {/* ESTRATEGIAS PARA EL ACOMPAÑAMIENTO SOCIOEMOCIONAL */}
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="label text-xs font-semibold text-slate-700 uppercase">Estrategias para el acompañamiento psicosocial</label>
+          <label className="label text-xs font-semibold text-slate-700 uppercase">ESTRATEGIAS PARA EL ACOMPAÑAMIENTO SOCIOEMOCIONAL</label>
           <div className="flex items-center gap-2">
             <VoiceDictationButton targetId="sa-psychosocial-strategies" />
-            <AIAssistButton targetId="sa-psychosocial-strategies" caseId={caseId} fieldLabel="Estrategias pedagógicas y socioemocionales para el acompañamiento psicosocial" />
+            <AIAssistButton targetId="sa-psychosocial-strategies" caseId={caseId} fieldLabel="Estrategias de aula para el acompañamiento socioemocional dirigidas al personal docente (Acta de Socialización)" />
           </div>
         </div>
         <p className="text-xs text-slate-500 mb-1">
-          Estrategias sugeridas al equipo docente y tutores para la atención integral y acompañamiento del/la estudiante.
+          Pautas y estrategias de aula dirigidas al personal docente y tutores (contención emocional en clase, manejo de aula, flexibilidad en tiempos y evaluación, confidencialidad, señales de alerta y comunicación asertiva).
         </p>
         <textarea
           id="sa-psychosocial-strategies"
           name="psychosocial_strategies"
-          rows={4}
-          placeholder="Describir las estrategias pedagógicas, socioemocionales, adaptaciones de tiempo o ambiente, y acciones de acompañamiento..."
+          rows={5}
+          placeholder="Estrategias de aula para docentes: contención emocional, manejo grupal, flexibilidad pedagógica, confidencialidad y señales de alerta..."
           className="textarea resize-y"
         ></textarea>
       </div>
