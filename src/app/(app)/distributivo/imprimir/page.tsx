@@ -656,18 +656,48 @@ export default async function ImprimirDistributivoPage({
 
           // Enriquecer cada curso con su numérico y paralelos
           const richCourses = parsedCourses.map((cName) => {
-            const summary = courseMap.get(cName);
             const shiftMatch = cName.match(/\((Matutina|Vespertina|Nocturna)\)$/i);
-            const cleanName = cName.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "");
-            const shift = shiftMatch ? shiftMatch[1] : (summary?.jornadas?.join(", ") || assignment.jornada || "Matutina");
-            const parallels = summary?.parallels?.length ? summary.parallels.join(", ") : "A";
-            const studentCount = summary?.totalStudents || (parsedCourses.length > 0 ? Math.round(assignment.estimated_students_count / parsedCourses.length) : 0);
+            const cleanName = cName.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim();
+            const cleanLower = cleanName.toLowerCase();
+            const targetShift = (shiftMatch ? shiftMatch[1] : (assignment.jornada && assignment.jornada !== "TODAS" && assignment.jornada !== "COMPLETA" ? assignment.jornada : "")).toUpperCase().trim();
+
+            let matchedStudents = 0;
+            let matchedParallels = "";
+            let matchedShift = shiftMatch ? shiftMatch[1] : (assignment.jornada || "Matutina");
+
+            if (targetShift) {
+              const matchingRows = coursesInfo.detailedRows.filter(
+                (r) => r.course.trim().toLowerCase() === cleanLower && (r.jornada || "").toUpperCase().trim() === targetShift
+              );
+              if (matchingRows.length > 0) {
+                matchedStudents = matchingRows.reduce((sum, r) => sum + (r.student_count || 0), 0);
+                matchedParallels = Array.from(new Set(matchingRows.map((r) => r.parallel))).join(", ");
+                matchedShift = targetShift;
+              }
+            }
+
+            if (matchedStudents === 0) {
+              const summary = courseMap.get(cName) || coursesInfo.courseSummaries.find((s) => s.course.trim().toLowerCase() === cleanLower);
+              if (summary) {
+                matchedStudents = summary.totalStudents;
+                if (!matchedParallels && summary.parallels?.length) {
+                  matchedParallels = summary.parallels.join(", ");
+                }
+                if (summary.jornadas?.length) {
+                  matchedShift = summary.jornadas.join(", ");
+                }
+              }
+            }
+
+            const studentCount = matchedStudents > 0
+              ? matchedStudents
+              : (parsedCourses.length > 0 ? Math.round(assignment.estimated_students_count / parsedCourses.length) : 0);
 
             return {
               fullName: cName,
               cleanName,
-              shift,
-              parallels,
+              shift: matchedShift,
+              parallels: matchedParallels || "A",
               studentCount,
             };
           });
@@ -679,6 +709,7 @@ export default async function ImprimirDistributivoPage({
             <div
               key={assignment.id || index}
               className="border border-slate-300 rounded overflow-hidden break-inside-avoid page-break-inside-avoid shadow-sm"
+              style={{ borderLeftWidth: "5px", borderLeftColor: assignment.color || "#3b82f6" }}
             >
               {/* Tarjeta cabecera del profesional con su distintivo de color */}
               <div
@@ -687,7 +718,7 @@ export default async function ImprimirDistributivoPage({
               >
                 <div className="flex items-center gap-2">
                   <span
-                    className="w-6 h-6 rounded flex items-center justify-center font-black text-slate-900 text-[10px] border border-slate-400 shrink-0"
+                    className="w-6 h-6 rounded flex items-center justify-center font-black text-slate-900 text-[10px] border border-slate-400 shrink-0 shadow-xs"
                     style={{ backgroundColor: assignment.color }}
                   >
                     {assignment.initials}
@@ -706,7 +737,7 @@ export default async function ImprimirDistributivoPage({
                     Jornada: <strong>{assignment.jornada || "Todas"}</strong>
                   </span>
                   <span
-                    className="px-2 py-0.5 rounded border font-bold text-slate-900"
+                    className="px-2.5 py-0.5 rounded border font-bold text-slate-900 shadow-xs"
                     style={{
                       backgroundColor: assignment.color || "#e0e7ff",
                       borderColor: "#94a3b8",
@@ -755,12 +786,15 @@ export default async function ImprimirDistributivoPage({
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr className="bg-slate-100/70 border-t border-slate-300 font-bold text-[9.5px]">
-                      <td colSpan={4} className="py-1 px-3 text-right uppercase text-slate-600">
+                    <tr
+                      className="border-t border-slate-300 font-bold text-[9.5px]"
+                      style={{ backgroundColor: assignment.color ? `${assignment.color}25` : "#f8fafc" }}
+                    >
+                      <td colSpan={4} className="py-1 px-3 text-right uppercase text-slate-700">
                         Subtotal a cargo de {assignment.user_name.split(" ")[0]}:
                       </td>
                       <td className="py-1 px-3 text-center font-black text-slate-900">
-                        {assignment.estimated_students_count} est.
+                        {displayStudentCount} est.
                       </td>
                     </tr>
                   </tfoot>
