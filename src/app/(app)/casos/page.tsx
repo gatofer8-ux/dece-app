@@ -10,17 +10,18 @@ import {
 } from "@/lib/types";
 import { priorityStyle, caseStatusStyle, riskTypeStyle } from "@/lib/statusColors";
 import { getUserCoverage, buildCoverageSqlFilter } from "@/lib/distributivo";
+import { getInactiveCases } from "@/lib/caseAlerts";
 
 export default async function CasosPage({
   searchParams,
 }: {
-  searchParams: { estado?: string; prioridad?: string; riesgo?: string; q?: string };
+  searchParams: { estado?: string; prioridad?: string; riesgo?: string; q?: string; alerta?: string };
 }) {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
   const coverage = await getUserCoverage(session.user.id, institutionId, session.user.role);
 
-  const { estado, prioridad, riesgo, q } = searchParams;
+  const { estado, prioridad, riesgo, q, alerta } = searchParams;
   let where = "WHERE cf.institution_id = ?";
   const params: any[] = [institutionId];
 
@@ -53,7 +54,7 @@ export default async function CasosPage({
     params.push(`%${q}%`, `%${q}%`);
   }
 
-  const cases = db
+  let cases = db
     .prepare(
       `SELECT cf.*, s.full_name as student_name, s.course as student_course
        FROM case_files cf JOIN students s ON s.id = cf.student_id
@@ -62,6 +63,13 @@ export default async function CasosPage({
        LIMIT 300`
     )
     .all(...params) as (CaseFileRow & { student_name: string; student_course: string })[];
+
+  const inactivitySummary = getInactiveCases(institutionId, 30);
+  const inactiveMap = new Map(inactivitySummary.cases.map((c) => [c.id, c]));
+
+  if (alerta === "sin_contacto") {
+    cases = cases.filter((c) => inactiveMap.has(c.id));
+  }
 
   return (
     <div>
@@ -74,6 +82,40 @@ export default async function CasosPage({
           </Link>
         }
       />
+
+      {/* Banner Preventivo de Casos en Abandono (>30 días sin conversación) */}
+      {inactivitySummary.alertCasesCount > 0 && alerta !== "sin_contacto" && (
+        <div className="mb-4 p-4 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-start gap-2.5">
+            <span className="text-xl mt-0.5">⚠️</span>
+            <div>
+              <div className="font-bold text-sm text-amber-950">
+                Alerta de Abandono: {inactivitySummary.alertCasesCount} caso(s) sin contacto con estudiante o representante (+30 días)
+              </div>
+              <p className="text-amber-800 mt-0.5">
+                Existen expedientes abiertos que no registran entrevistas, visitas, llamadas ni esquelas en más de un mes.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/casos?alerta=sin_contacto"
+            className="btn-primary text-xs font-bold px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white shrink-0 flex items-center gap-1"
+          >
+            <span>👁️</span> Ver casos en riesgo ({inactivitySummary.alertCasesCount}) →
+          </Link>
+        </div>
+      )}
+
+      {alerta === "sin_contacto" && (
+        <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-900 flex items-center justify-between gap-2">
+          <span>
+            📌 <strong>Filtro activo:</strong> Mostrando únicamente casos con más de 30 días sin diálogo o contacto con el estudiante o su representante.
+          </span>
+          <Link href="/casos" className="text-rose-700 hover:underline font-bold shrink-0">
+            Quitar filtro ✕
+          </Link>
+        </div>
+      )}
 
       {!coverage.isAllInstitutional && (
         <div className="mb-4 p-3 bg-indigo-50/80 border border-indigo-200 rounded-lg text-xs text-indigo-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -92,27 +134,31 @@ export default async function CasosPage({
       )}
 
       <form className="card p-4 mb-4 flex flex-wrap gap-3" method="get">
-        <input type="text" name="q" defaultValue={q} placeholder="Buscar por estudiante o código..." className="input max-w-xs" />
-        <select name="estado" defaultValue={estado || ""} className="select max-w-[180px]">
+        <input type="text" name="q" defaultValue={q} placeholder="Buscar por estudiante o código..." className="input max-w-xs text-xs" />
+        <select name="estado" defaultValue={estado || ""} className="select max-w-[180px] text-xs">
           <option value="">Todos los estados (excepto cerrados)</option>
           {Object.entries(CASE_STATUS_LABELS).map(([k, v]) => (
             <option key={k} value={k}>{v}</option>
           ))}
         </select>
-        <select name="prioridad" defaultValue={prioridad || ""} className="select max-w-[160px]">
+        <select name="alerta" defaultValue={alerta || ""} className="select max-w-[200px] text-xs font-medium">
+          <option value="">Todas las situaciones</option>
+          <option value="sin_contacto">⚠️ Sin contacto (&gt; 30 días)</option>
+        </select>
+        <select name="prioridad" defaultValue={prioridad || ""} className="select max-w-[160px] text-xs">
           <option value="">Toda prioridad</option>
           {Object.entries(CASE_PRIORITY_LABELS).map(([k, v]) => (
             <option key={k} value={k}>{v}</option>
           ))}
         </select>
-        <select name="riesgo" defaultValue={riesgo || ""} className="select max-w-[220px]">
+        <select name="riesgo" defaultValue={riesgo || ""} className="select max-w-[220px] text-xs">
           <option value="">Todo tipo de riesgo</option>
           {Object.entries(RISK_TYPE_LABELS).map(([k, v]) => (
             <option key={k} value={k}>{v}</option>
           ))}
         </select>
-        <button type="submit" className="btn-secondary">Filtrar</button>
-        <Link href="/casos" className="btn-secondary">Limpiar</Link>
+        <button type="submit" className="btn-secondary text-xs">Filtrar</button>
+        <Link href="/casos" className="btn-secondary text-xs">Limpiar</Link>
       </form>
 
       {cases.length === 0 ? (
@@ -138,9 +184,17 @@ export default async function CasosPage({
               {cases.map((c) => (
                 <tr key={c.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3">
-                    <Link href={`/casos/${c.id}`} className="font-medium text-brand-700 hover:underline">
+                    <Link href={`/casos/${c.id}`} className="font-medium text-brand-700 hover:underline block">
                       {c.code}
                     </Link>
+                    {inactiveMap.has(c.id) && (
+                      <span
+                        className="inline-block mt-0.5 text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 whitespace-nowrap"
+                        title={`Sin diálogo con estudiante/representante hace ${inactiveMap.get(c.id)?.days_without_conversation} días (${inactiveMap.get(c.id)?.last_conversation_type})`}
+                      >
+                        ⚠️ {inactiveMap.get(c.id)?.days_without_conversation}d sin contacto
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {c.student_name}

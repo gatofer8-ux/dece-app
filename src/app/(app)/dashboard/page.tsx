@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui";
 import { CASE_STATUS_LABELS, CASE_PRIORITY_LABELS, RISK_TYPE_LABELS, type CaseFileRow, type RiskType } from "@/lib/types";
 import { caseStatusStyle, priorityStyle, riskTypeStyle } from "@/lib/statusColors";
 import { getSelectedSchoolYear } from "@/lib/schoolYear";
+import { getInactiveCases } from "@/lib/caseAlerts";
 import DashboardCharts from "@/components/DashboardCharts";
 import KpiCard from "@/components/KpiCard";
 
@@ -84,6 +85,9 @@ export default async function DashboardPage() {
       )
       .get(todayStr, institutionId) as { n: number }
   ).n;
+
+  // 6.b Casos sin contacto con estudiante o representante (>30 días)
+  const inactivitySummary = getInactiveCases(institutionId, 30);
 
   // 7. Estadísticas por Tipo de Riesgo
   const riskStats = db
@@ -192,11 +196,41 @@ export default async function DashboardPage() {
         }
       />
 
+      {/* Banner Preventivo de Casos en Riesgo de Abandono (>30 días sin conversación) */}
+      {inactivitySummary.alertCasesCount > 0 && (
+        <div className="p-4 bg-amber-50 border-l-4 border-amber-500 rounded-r-xl text-xs text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl mt-0.5">⚠️</span>
+            <div>
+              <div className="font-bold text-sm text-amber-950">
+                Alerta de Prevención: {inactivitySummary.alertCasesCount} caso(s) sin seguimiento ni contacto en más de 30 días
+              </div>
+              <p className="text-amber-800 mt-0.5">
+                Para evitar que los casos queden en el olvido, revise los expedientes pendientes de diálogo y emita esquelas de citación.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/casos?alerta=sin_contacto"
+            className="btn-primary text-xs font-bold px-3.5 py-2 bg-amber-700 hover:bg-amber-800 text-white shrink-0 flex items-center gap-1.5 shadow-sm"
+          >
+            <span>📨</span> Atender casos rezagados ({inactivitySummary.alertCasesCount}) →
+          </Link>
+        </div>
+      )}
+
       {/* Tarjetas KPI — clicables, con tendencia de 6 meses donde aplica */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3.5">
         <KpiCard label="Estudiantes" value={totalStudents} hint="Matrícula activa" tone="brand" href="/estudiantes" />
         <KpiCard label="Casos activos" value={openCases} hint="En acompañamiento" tone="amber" href="/casos" trend={casesTrend} />
         <KpiCard label="Prioridad alta" value={highPriority} hint="Riesgo urgente" tone="rose" href="/casos?priority=ALTA" />
+        <KpiCard
+          label="Sin contacto (+30d)"
+          value={inactivitySummary.alertCasesCount}
+          hint={inactivitySummary.alertCasesCount > 0 ? "Riesgo de olvido" : "Al día"}
+          tone={inactivitySummary.alertCasesCount > 0 ? "rose" : "slate"}
+          href="/casos?alerta=sin_contacto"
+        />
         <KpiCard label="Alertas pendientes" value={pendingAlerts} hint="Por docentes" tone="purple" href="/alertas" />
         <KpiCard label="Derivaciones" value={pendingReferrals} hint="En proceso externo" tone="indigo" href="/derivaciones" />
         <KpiCard label="Checklists incompletos" value={incompleteChecklists} hint="Docs. faltantes" tone="red" href="/casos" />
