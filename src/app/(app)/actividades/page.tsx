@@ -31,6 +31,19 @@ export default async function ActividadesPage({
   const users = db.prepare("SELECT * FROM users WHERE institution_id = ?").all(institutionId) as UserRow[];
   const userMap = new Map(users.map((u) => [u.id, u.name]));
 
+  let reportByActivity = new Map<string, string>();
+  try {
+    reportByActivity = new Map(
+      (
+        db
+          .prepare("SELECT activity_id, id FROM activity_reports WHERE institution_id = ? AND activity_id IS NOT NULL")
+          .all(institutionId) as { activity_id: string; id: string }[]
+      ).map((r) => [r.activity_id, r.id])
+    );
+  } catch {
+    /* tabla aún no migrada */
+  }
+
   return (
     <div>
       <PageHeader
@@ -38,9 +51,14 @@ export default async function ActividadesPage({
         description="Planificación y registro de actividades institucionales del DECE."
         action={
           canManage ? (
-            <Link href="/actividades/nueva" className="btn-primary">
-              + Nueva actividad
-            </Link>
+            <div className="flex gap-2">
+              <Link href="/actividades/informe-taller/nuevo" className="btn-secondary">
+                + Informe de taller
+              </Link>
+              <Link href="/actividades/nueva" className="btn-primary">
+                + Nueva actividad
+              </Link>
+            </div>
           ) : undefined
         }
       />
@@ -76,6 +94,25 @@ export default async function ActividadesPage({
                 {a.participants_count != null && <div>Participantes: {a.participants_count}</div>}
                 <div>Responsable: {userMap.get(a.responsible_id) || "—"}</div>
               </div>
+              {canManage && (
+                <div className="mt-3 pt-2 border-t border-slate-100">
+                  {reportByActivity.has(a.id) ? (
+                    <Link
+                      href={`/actividades/${a.id}/informe/${reportByActivity.get(a.id)}/imprimir`}
+                      className="text-xs font-semibold text-brand-700 hover:underline"
+                    >
+                      📄 Ver informe de taller
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/actividades/${a.id}/informe/nuevo`}
+                      className="text-xs font-semibold text-brand-700 hover:underline"
+                    >
+                      📄 Generar informe de taller
+                    </Link>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
