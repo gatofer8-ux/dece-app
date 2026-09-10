@@ -170,7 +170,7 @@ export default function EsquelaForm({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-brand-700 bg-brand-100 px-2 py-0.5 rounded">
-              {isEditing ? "Edición de Citación" : "Nueva Esquela de Citación"}
+              {isEditing ? "Edición de Convocatoria" : "Nueva Convocatoria de Asistencia"}
             </span>
             <h2 className="text-xl font-bold text-slate-800 mt-1">
               {isEditing ? `Citación N° ${initialData?.citation_number}` : "Convocatoria a Representante / Estudiante"}
@@ -647,7 +647,7 @@ export default function EsquelaForm({
           ) : (
             <>
               <span>📨</span>
-              <span>{isEditing ? "Guardar Cambios" : "Emitir Esquela de Citación"}</span>
+              <span>{isEditing ? "Guardar Cambios" : "Emitir Convocatoria de Asistencia"}</span>
             </>
           )}
         </button>

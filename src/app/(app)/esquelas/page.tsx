@@ -49,7 +49,7 @@ export default async function EsquelasPage({
         description="Emisión y control de citaciones a representantes legales y estudiantes con talón desprendible."
         action={
           <Link href="/esquelas/nueva" className="btn-primary flex items-center gap-1.5 font-bold shadow-sm">
-            <span>+</span> Nueva esquela de citación
+            <span>+</span> Nueva convocatoria
           </Link>
         }
       />
