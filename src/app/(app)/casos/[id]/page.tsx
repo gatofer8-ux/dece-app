@@ -40,8 +40,11 @@ import {
   type CaseAlertNotificationRow,
   type CaseClosureReportRow,
   type RestorativeCircleConsentRow,
+  type DeceEsquelaRow,
   CLOSURE_TYPE_LABELS,
 } from "@/lib/types";
+import { getCaseInactivityInfo } from "@/lib/caseAlerts";
+import { listEsquelasByCase, deleteEsquela } from "@/lib/esquelas";
 import { deleteCircleConsentAction } from "@/lib/restorativeCircleConsent";
 import AttachmentsSection from "./AttachmentsSection";
 import {
@@ -236,6 +239,14 @@ export default async function CasoDetallePage({
   const hasChecklist = checklistItems.length > 0;
   const isChecklistIncomplete = hasChecklist && incompleteChecklistItems.length > 0;
 
+  let caseEsquelas: DeceEsquelaRow[] = [];
+  try {
+    caseEsquelas = listEsquelasByCase(caseFile.id, institutionId);
+  } catch {
+    // Si la tabla no existe aún
+  }
+  const inactivityInfo = getCaseInactivityInfo(caseFile.id, institutionId);
+
   return (
     <div>
       {!hasChecklist && caseFile.status !== "CERRADO" && (
@@ -297,6 +308,40 @@ export default async function CasoDetallePage({
           </div>
         </div>
       )}
+
+      {inactivityInfo.isAlert && (
+        <div
+          className={`mb-4 p-4 rounded-xl border shadow-sm ${
+            inactivityInfo.isUrgent
+              ? "bg-rose-50 border-rose-300 text-rose-950"
+              : "bg-amber-50 border-amber-300 text-amber-950"
+          }`}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl mt-0.5">⚠️</span>
+              <div>
+                <h3 className="font-bold text-sm">
+                  Alerta Preventiva de Seguimiento: {inactivityInfo.daysWithoutConversation} días sin diálogo con estudiante o representante
+                </h3>
+                <p className="text-xs mt-1 leading-relaxed">
+                  Último contacto registrado: <strong className="font-semibold">{inactivityInfo.lastConversationType}</strong> ({formatDate(inactivityInfo.lastConversationDate)}).
+                  Para evitar que el expediente quede en el olvido, emita una esquela de citación o registre una entrevista.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Link
+                href={`/casos/${caseFile.id}/esquelas/nueva`}
+                className="btn-primary text-xs font-bold px-3 py-1.5 flex items-center gap-1 bg-amber-700 hover:bg-amber-800 text-white"
+              >
+                <span>📨</span> Emitir Esquela
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       <PageHeader
         title={caseFile.code}
         description={
@@ -825,6 +870,83 @@ export default async function CasoDetallePage({
               ))}
               {corresponsibilityActs.length === 0 && (
                 <p className="text-sm text-slate-400">Sin actas de corresponsabilidad registradas.</p>
+              )}
+            </div>
+          </section>
+
+          {/* Esquelas de Citación */}
+          <section className="card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                  <span>📨</span> Esquelas de citación (Representantes / Estudiantes)
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Convocatorias oficiales con talón desprendible y acuse de recibido para el expediente.
+                </p>
+              </div>
+              <Link href={`/casos/${caseFile.id}/esquelas/nueva`} className="text-xs text-brand-700 hover:underline font-medium">
+                + Nueva esquela de citación
+              </Link>
+            </div>
+            <div className="space-y-2">
+              {caseEsquelas.map((e) => (
+                <div key={e.id} className="text-sm border-b border-slate-100 pb-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                        {e.citation_number}
+                      </span>
+                      <span className="font-semibold text-slate-900 text-xs">
+                        {e.representative_name}
+                      </span>
+                      {e.urgency_level === "URGENTE" && (
+                        <span className="text-[10px] text-red-600 font-bold">⚠️ Urgente</span>
+                      )}
+                      {e.talon_returned ? (
+                        <Badge color="green">✂️ Talón devuelto</Badge>
+                      ) : (
+                        <Badge color="amber">Talón pendiente</Badge>
+                      )}
+                      {e.talon_attended === 1 && <Badge color="green">Asistió</Badge>}
+                      {e.talon_attended === 2 && <Badge color="amber">Justificó</Badge>}
+                      {e.talon_attended === 3 && <Badge color="rose">No asistió</Badge>}
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      Cita: <strong className="text-slate-700">{formatDate(e.citation_date)}</strong> a las <strong className="text-slate-700">{e.citation_time}</strong> · Motivo: {(e.citation_reason || "").slice(0, 50)}...
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={`/esquelas/${e.id}`}
+                      className="text-xs text-indigo-700 hover:underline whitespace-nowrap font-semibold"
+                    >
+                      👁️ Gestionar
+                    </Link>
+                    <Link
+                      href={`/esquelas/${e.id}/imprimir`}
+                      className="text-xs text-brand-700 hover:underline whitespace-nowrap font-medium"
+                    >
+                      🖨️ Imprimir
+                    </Link>
+                    <Link
+                      href={`/esquelas/${e.id}/editar`}
+                      className="text-xs text-amber-700 hover:underline whitespace-nowrap font-medium"
+                    >
+                      ✏️ Editar
+                    </Link>
+                    <DeleteButton
+                      onDelete={async () => {
+                        "use server";
+                        deleteEsquela(e.id, institutionId);
+                      }}
+                      confirmMessage="¿Borrar esta esquela de citación? Esta acción no se puede deshacer."
+                    />
+                  </div>
+                </div>
+              ))}
+              {caseEsquelas.length === 0 && (
+                <p className="text-sm text-slate-400">Sin esquelas de citación registradas en este expediente.</p>
               )}
             </div>
           </section>

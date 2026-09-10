@@ -1641,3 +1641,47 @@ export interface CaseAlertNotificationRow {
   created_at: string;
   updated_at: string;
 }
+
+export interface DeceCitationSequenceRow {
+  institution_id: string;
+  school_year_code: string;
+  last_number: number;
+  updated_at: string;
+}
+
+export interface DeceEsquelaRow {
+  id: string;
+  institution_id: string;
+  citation_number: string;
+  sequence_number: number;
+  school_year_code: string;
+  case_file_id: string | null;
+  student_id: string | null;
+  student_name: string;
+  student_id_number: string | null;
+  course: string | null;
+  parallel: string | null;
+  jornada: string | null;
+  representative_name: string;
+  representative_id_number: string | null;
+  representative_phone: string | null;
+  citation_date: string;
+  citation_time: string;
+  citation_place: string | null;
+  citation_reason: string;
+  urgency_level: "ORDINARIA" | "URGENTE";
+  professional_id: string | null;
+  professional_name: string;
+  professional_role: string | null;
+  observations: string | null;
+  talon_returned: number; // 0 o 1
+  received_by_name: string | null;
+  received_by_relation: string | null;
+  received_by_id_number: string | null;
+  received_date: string | null;
+  talon_attended: number; // 0=pendiente, 1=asistió, 2=justificó, 3=injustificado
+  talon_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+

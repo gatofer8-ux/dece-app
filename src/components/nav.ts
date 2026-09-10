@@ -20,6 +20,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/casos", label: "Casos y fichas", icon: "📁", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
   { href: "/alertas", label: "Alertas", icon: "🚩", roles: ["SUPERADMIN", "ADMIN", "DECE", "DOCENTE"], group: "Principal" },
   { href: "/citas", label: "Citas y agenda", icon: "📅", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
+  { href: "/esquelas", label: "Esquelas de citación", icon: "📨", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
   { href: "/derivaciones", label: "Derivaciones", icon: "🔀", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
   { href: "/atencion-diaria", label: "Atención diaria", icon: "📋", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
 
