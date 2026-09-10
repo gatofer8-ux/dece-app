@@ -174,6 +174,7 @@ export interface StudentRow {
   institution_id: string;
   full_name: string;
   document_id: string | null;
+  document_type?: "CEDULA" | "PASAPORTE" | "OTRO" | null;
   birth_date: string | null;
   gender: string | null;
   course: string;

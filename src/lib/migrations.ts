@@ -42,8 +42,24 @@ export function runMigrations(db: Database.Database, migrationsDir: string): voi
     if (applied.has(version)) continue;
 
     const sql = fs.readFileSync(path.join(migrationsDir, file), "utf-8");
+    const statements = sql
+      .split(";")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
     const tx = db.transaction(() => {
-      db.exec(sql);
+      for (const stmt of statements) {
+        try {
+          db.exec(stmt);
+        } catch (err: any) {
+          const msg = err?.message?.toLowerCase() || "";
+          if (msg.includes("duplicate column name")) {
+            // Idempotencia: la columna ya fue agregada previamente
+            continue;
+          }
+          throw err;
+        }
+      }
       db.prepare("INSERT INTO schema_migrations (version) VALUES (?)").run(version);
     });
 
