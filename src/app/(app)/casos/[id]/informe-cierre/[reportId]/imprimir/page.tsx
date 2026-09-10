@@ -177,7 +177,7 @@ export default async function ImprimirInformeCierrePage({
       </div>
 
       {/* Contenedor principal de la hoja A4 con membrete oficial */}
-      <div className="print-sheet relative max-w-[850px] mx-auto bg-white shadow-xl print:shadow-none border border-slate-200 print:border-none min-h-[1120px]">
+      <div className="print-sheet relative max-w-[850px] mx-auto bg-white shadow-xl print:shadow-none border border-slate-200 print:border-none">
         {/* Cabecera ministerial oficial para visualización en pantalla */}
         <div className="w-full print:hidden pointer-events-none">
           {/* eslint-disable-next-line @next/next/no-img-element */}

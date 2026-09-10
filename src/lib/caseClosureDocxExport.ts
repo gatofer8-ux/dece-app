@@ -62,20 +62,22 @@ function textToParagraphs(
   size = 20,
   align?: (typeof AlignmentType)[keyof typeof AlignmentType]
 ): Paragraph[] {
-  if (!text) return [new Paragraph({ text: "" })];
-  return text.split("\n").map(
+  if (!text || !text.trim()) return [];
+  const normalized = text.trim().replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n");
+  return normalized.split("\n").map(
     (line) =>
       new Paragraph({
         alignment: align ?? smartAlign(line),
         children: [new TextRun({ text: line, size, font: "Calibri" })],
-        spacing: { after: 100, line: 260 },
+        spacing: { after: 80, line: 260 },
       })
   );
 }
 
-function createHeading(text: string, size = 22, spacingBefore = 200, spacingAfter = 100): Paragraph {
+function createHeading(text: string, size = 21, spacingBefore = 140, spacingAfter = 60): Paragraph {
   return new Paragraph({
     alignment: AlignmentType.LEFT,
+    keepNext: true,
     children: [
       new TextRun({
         text,
@@ -92,6 +94,7 @@ function createHeading(text: string, size = 22, spacingBefore = 200, spacingAfte
 function createSubheading(text: string, size = 20): Paragraph {
   return new Paragraph({
     alignment: AlignmentType.LEFT,
+    keepNext: true,
     children: [
       new TextRun({
         text,
@@ -101,7 +104,7 @@ function createSubheading(text: string, size = 20): Paragraph {
         color: "000000",
       }),
     ],
-    spacing: { before: 120, after: 80 },
+    spacing: { before: 100, after: 60 },
   });
 }
 
@@ -121,7 +124,7 @@ function createHeaderCell(
     rowSpan: opts.rowSpan || 1,
     width: opts.width ? { size: opts.width, type: WidthType.DXA } : undefined,
     verticalAlign: opts.vAlign || VerticalAlign.CENTER,
-    margins: { top: 80, bottom: 80, left: 100, right: 100 },
+    margins: { top: 50, bottom: 50, left: 80, right: 80 },
     children: [
       new Paragraph({
         alignment: opts.align || AlignmentType.CENTER,
@@ -157,7 +160,7 @@ function createDataCell(
     rowSpan: opts.rowSpan || 1,
     width: opts.width ? { size: opts.width, type: WidthType.DXA } : undefined,
     verticalAlign: opts.vAlign || VerticalAlign.CENTER,
-    margins: { top: 80, bottom: 80, left: 100, right: 100 },
+    margins: { top: 50, bottom: 50, left: 80, right: 80 },
     children: [
       new Paragraph({
         alignment: opts.align || AlignmentType.CENTER,
@@ -930,10 +933,9 @@ export async function generateCaseClosureReportDocx(data: {
         children: [
           // TABLA 1: DATOS GENERALES
           table1,
-          new Paragraph({ text: "", spacing: { after: 150 } }),
 
           // ANTECEDENTES
-          createHeading("ANTECEDENTES", 21, 200, 80),
+          createHeading("ANTECEDENTES", 21, 140, 60),
           createSubheading("RAZONES DEL CIERRE O TRASLADO DE CASO", 20),
           ...textToParagraphs(report.closure_reasons, 20),
 
@@ -1052,31 +1054,27 @@ export async function generateCaseClosureReportDocx(data: {
           // TABLA 2: ACTIVIDADES REALIZADAS
           createSubheading("ACTIVIDADES REALIZADAS:", 20),
           table2,
-          new Paragraph({ text: "", spacing: { after: 120 } }),
 
           // CONSOLIDADO BIMENSUAL
           ...bimonthlyElements,
-          new Paragraph({ text: "", spacing: { after: 120 } }),
 
           // METODOLOGÍA
-          createHeading("METODOLOGÍA", 21, 200, 80),
+          createHeading("METODOLOGÍA", 21, 140, 60),
           ...textToParagraphs(report.methodology, 20),
 
           // CONCLUSIONES
-          createHeading("CONCLUSIONES", 21, 200, 80),
+          createHeading("CONCLUSIONES", 21, 140, 60),
           ...textToParagraphs(report.conclusions, 20),
 
           // RECOMENDACIONES
-          createHeading("RECOMENDACIONES", 21, 200, 80),
+          createHeading("RECOMENDACIONES", 21, 140, 60),
           ...textToParagraphs(report.recommendations, 20),
 
           // TABLA 3: FIRMAS
-          new Paragraph({ text: "", spacing: { after: 140 } }),
           table3,
-          new Paragraph({ text: "", spacing: { after: 160 } }),
 
-          // ANEXOS
-          createHeading("ANEXOS:", 21, 200, 80),
+          // ANTECEDENTES Y ANEXOS
+          createHeading("ANEXOS:", 21, 140, 60),
           new Paragraph({
             children: [new TextRun({ text: "• MATRÍCULA EN CASO DE TRASLADO", bold: true, size: 19 })],
             spacing: { after: 40 },
