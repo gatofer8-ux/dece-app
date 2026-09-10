@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { generateReferralDocx } from "@/lib/docxExport";
-import type { ReferralRow, StudentRow, InstitutionRow, CaseFileRow } from "@/lib/types";
+import type { ReferralRow, StudentRow, InstitutionRow, CaseFileRow, UserRow } from "@/lib/types";
 
 export async function GET(
   req: NextRequest,
@@ -44,11 +44,16 @@ export async function GET(
         | undefined)
     : null;
 
+  const user = referral.created_by_id
+    ? (db.prepare("SELECT * FROM users WHERE id = ?").get(referral.created_by_id) as UserRow | undefined)
+    : null;
+
   const docBuffer = await generateReferralDocx({
     referral,
     caseFile,
     student,
     institution,
+    user,
   });
 
   const fileName = `Ficha_Derivacion_${referral.scope}_${student.full_name.replace(/[^a-zA-Z0-9-_]/g, "_")}.docx`;

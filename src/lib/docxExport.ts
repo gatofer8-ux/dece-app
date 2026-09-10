@@ -23,6 +23,7 @@ import {
   VerticalPositionRelativeFrom,
   VerticalPositionAlign,
   PageOrientation,
+  TableLayoutType,
 } from "docx";
 import path from "path";
 import fs from "fs";
@@ -31,6 +32,7 @@ import type {
   CaseFileRow,
   StudentRow,
   InstitutionRow,
+  UserRow,
   CaseActionRow,
   InterventionPlanRow,
   ReferralRow,
@@ -2536,13 +2538,39 @@ export async function generateReferralDocx(opts: {
   caseFile: CaseFileRow;
   student: StudentRow;
   institution?: InstitutionRow | null;
+  user?: UserRow | null;
 }): Promise<Buffer> {
-  const { referral, caseFile: _caseFile, student, institution } = opts;
+  const { referral, caseFile: _caseFile, student, institution, user } = opts;
 
   const COLOR_BLUE_HEADER = "D9E2F3";
   const COLOR_ORANGE_HEADER = "FBE5D6";
   const COLOR_BORDER = "8EAADB";
   const COLOR_TEXT_BLACK = "000000";
+
+  const COL_WIDTHS_DXA = [
+    930,  // Col 0: A
+    930,  // Col 1: B
+    930,  // Col 2: C
+    930,  // Col 3: D
+    93,   // Col 4: E
+    1022, // Col 5: F
+    496,  // Col 6: G
+    898,  // Col 7: H
+    1270, // Col 8: I
+    1807, // Col 9: J
+    1063, // Col 10: K
+    599,  // Col 11: L
+    930,  // Col 12: M
+    2940, // Col 13: N
+  ];
+
+  function spanWidth(startCol: number, colSpan: number): number {
+    let sum = 0;
+    for (let i = 0; i < colSpan; i++) {
+      sum += COL_WIDTHS_DXA[startCol + i] || 0;
+    }
+    return sum;
+  }
 
   const tableBorders = {
     top: { style: BorderStyle.SINGLE, size: 4, color: COLOR_BORDER },
@@ -2553,22 +2581,24 @@ export async function generateReferralDocx(opts: {
     insideVertical: { style: BorderStyle.SINGLE, size: 4, color: COLOR_BORDER },
   };
 
-  function headerBar(text: string, colSpan = 6, bgColor = COLOR_BLUE_HEADER, textColor = COLOR_TEXT_BLACK): TableRow {
+  function headerBar(text: string, colSpan = 14, bgColor = COLOR_BLUE_HEADER): TableRow {
     return new TableRow({
       children: [
         new TableCell({
           columnSpan: colSpan,
+          width: { size: spanWidth(0, colSpan), type: WidthType.DXA },
           shading: { fill: bgColor },
           margins: { top: 40, bottom: 40, left: 80, right: 80 },
           children: [
             new Paragraph({
               alignment: AlignmentType.CENTER,
+              spacing: { line: 250, before: 0, after: 0 },
               children: [
                 new TextRun({
                   text,
                   bold: true,
-                  color: textColor,
-                  size: 20, // 10pt
+                  color: COLOR_TEXT_BLACK,
+                  size: 20,
                   font: "Calibri",
                 }),
               ],
@@ -2579,21 +2609,165 @@ export async function generateReferralDocx(opts: {
     });
   }
 
-  function subHeaderCell(text: string, colSpan = 3, bgColor = COLOR_BLUE_HEADER): TableCell {
+  function richCell(opts: {
+    startCol: number;
+    colSpan: number;
+    rowSpan?: number;
+    boldPrefix?: string;
+    regularText?: string | null;
+    boldText?: string | null;
+    boldText2?: string | null;
+    regularText2?: string | null;
+    fontSize?: number;
+    align?: (typeof AlignmentType)[keyof typeof AlignmentType];
+    bgColor?: string;
+    color?: string;
+  }): TableCell {
+    const runs: TextRun[] = [];
+    const size = opts.fontSize ?? 20;
+    const color = opts.color ?? COLOR_TEXT_BLACK;
+
+    if (opts.boldPrefix) {
+      runs.push(
+        new TextRun({
+          text: opts.boldPrefix,
+          bold: true,
+          size,
+          font: "Calibri",
+          color,
+        })
+      );
+    }
+    if (opts.regularText) {
+      runs.push(
+        new TextRun({
+          text: opts.regularText,
+          bold: false,
+          size,
+          font: "Calibri",
+          color,
+        })
+      );
+    }
+    if (opts.boldText) {
+      runs.push(
+        new TextRun({
+          text: opts.boldText,
+          bold: true,
+          size,
+          font: "Calibri",
+          color,
+        })
+      );
+    }
+    if (opts.regularText2) {
+      runs.push(
+        new TextRun({
+          text: opts.regularText2,
+          bold: false,
+          size,
+          font: "Calibri",
+          color,
+        })
+      );
+    }
+    if (opts.boldText2) {
+      runs.push(
+        new TextRun({
+          text: opts.boldText2,
+          bold: true,
+          size,
+          font: "Calibri",
+          color,
+        })
+      );
+    }
+
     return new TableCell({
-      columnSpan: colSpan,
-      shading: { fill: bgColor },
+      columnSpan: opts.colSpan,
+      rowSpan: opts.rowSpan,
+      width: { size: spanWidth(opts.startCol, opts.colSpan), type: WidthType.DXA },
+      shading: opts.bgColor ? { fill: opts.bgColor } : undefined,
       margins: { top: 40, bottom: 40, left: 80, right: 80 },
+      children: [
+        new Paragraph({
+          alignment: opts.align ?? AlignmentType.LEFT,
+          spacing: { line: 250, before: 0, after: 20 },
+          children: runs.length > 0 ? runs : [new TextRun({ text: "—", size, font: "Calibri" })],
+        }),
+      ],
+    });
+  }
+
+  function multilineCell(opts: {
+    startCol: number;
+    colSpan: number;
+    boldPrefix: string;
+    content: string | null | undefined;
+    fontSize?: number;
+  }): TableCell {
+    const size = opts.fontSize ?? 20;
+    const raw = opts.content && opts.content.trim() ? opts.content.trim() : "—";
+    const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
+    const paragraphs: Paragraph[] = [];
+
+    if (lines.length === 0) {
+      paragraphs.push(
+        new Paragraph({
+          spacing: { line: 250, before: 0, after: 20 },
+          children: [
+            new TextRun({ text: opts.boldPrefix, bold: true, size, font: "Calibri", color: COLOR_TEXT_BLACK }),
+            new TextRun({ text: " —", bold: false, size, font: "Calibri", color: COLOR_TEXT_BLACK }),
+          ],
+        })
+      );
+    } else {
+      paragraphs.push(
+        new Paragraph({
+          spacing: { line: 250, before: 0, after: 20 },
+          children: [
+            new TextRun({ text: opts.boldPrefix, bold: true, size, font: "Calibri", color: COLOR_TEXT_BLACK }),
+            new TextRun({ text: " " + lines[0], bold: false, size, font: "Calibri", color: COLOR_TEXT_BLACK }),
+          ],
+        })
+      );
+      for (let i = 1; i < lines.length; i++) {
+        paragraphs.push(
+          new Paragraph({
+            spacing: { line: 250, before: 0, after: 20 },
+            children: [
+              new TextRun({ text: lines[i], bold: false, size, font: "Calibri", color: COLOR_TEXT_BLACK }),
+            ],
+          })
+        );
+      }
+    }
+
+    return new TableCell({
+      columnSpan: opts.colSpan,
+      width: { size: spanWidth(opts.startCol, opts.colSpan), type: WidthType.DXA },
+      margins: { top: 40, bottom: 40, left: 80, right: 80 },
+      children: paragraphs,
+    });
+  }
+
+  function checkboxCell(startCol: number, isChecked: boolean, rowSpan?: number): TableCell {
+    return new TableCell({
+      columnSpan: 1,
+      rowSpan: rowSpan,
+      width: { size: spanWidth(startCol, 1), type: WidthType.DXA },
+      margins: { top: 40, bottom: 40, left: 20, right: 20 },
       children: [
         new Paragraph({
           alignment: AlignmentType.CENTER,
+          spacing: { line: 250, before: 0, after: 0 },
           children: [
             new TextRun({
-              text,
+              text: isChecked ? "X" : "",
               bold: true,
-              color: COLOR_TEXT_BLACK,
-              size: 20, // 10pt
+              size: 20,
               font: "Calibri",
+              color: COLOR_TEXT_BLACK,
             }),
           ],
         }),
@@ -2601,78 +2775,473 @@ export async function generateReferralDocx(opts: {
     });
   }
 
-  function lbl(text: string, colSpan = 1, align: (typeof AlignmentType)[keyof typeof AlignmentType] = AlignmentType.LEFT): TableCell {
-    return new TableCell({
-      columnSpan: colSpan,
-      margins: { top: 40, bottom: 40, left: 80, right: 80 },
+  function formatStudentAge(studentAge: string | null | undefined, birthDate: string | null | undefined, refDate?: string | null): string {
+    if (studentAge && studentAge.trim()) {
+      const trimmed = studentAge.trim();
+      return trimmed.includes("año") ? trimmed : `${trimmed} años`;
+    }
+    if (birthDate) {
+      const b = new Date(birthDate);
+      const ref = refDate ? new Date(refDate) : new Date();
+      if (!isNaN(b.getTime())) {
+        let age = ref.getFullYear() - b.getFullYear();
+        const m = ref.getMonth() - b.getMonth();
+        if (m < 0 || (m === 0 && ref.getDate() < b.getDate())) age--;
+        if (age >= 0) return `${age} años`;
+      }
+    }
+    return "—";
+  }
+
+  function formatCourseForReferral(st: StudentRow): string {
+    const parts: string[] = [];
+    if (st.course) parts.push(st.course.trim());
+    if (st.parallel) parts.push(`"${st.parallel.trim().toLowerCase()}"`);
+    if (st.jornada) parts.push(st.jornada.trim().toLowerCase());
+    return parts.join(" ") || "—";
+  }
+
+  function formatGender(gender: string | null | undefined): string {
+    if (!gender) return "—";
+    const g = gender.trim().toLowerCase();
+    if (g === "f" || g === "femenino" || g === "femenina") return "femenina";
+    if (g === "m" || g === "masculino") return "masculino";
+    return g;
+  }
+
+  function formatDisability(referralDisability: string | null | undefined, st: StudentRow): string {
+    if (referralDisability && referralDisability.trim()) return referralDisability.trim();
+    if (st.disability_card_detail && st.disability_card_detail.trim()) return st.disability_card_detail.trim();
+    return "Ninguna";
+  }
+
+  const sel = referral.destination_detail;
+
+  const studentAgeDisplay = formatStudentAge(referral.student_age, student.birth_date, referral.referral_date);
+  const birthDateDisplay = student.birth_date ? formatDate(student.birth_date) : "—";
+  const courseDisplay = formatCourseForReferral(student);
+  const genderDisplay = formatGender(student.gender);
+  const disabilityDisplay = formatDisability(referral.student_disability, student);
+  const nationalityDisplay = referral.student_nationality || student.nationality || "ecuatoriana";
+  const representativeDocId = referral.representative_document_id || student.representative_document_id || "—";
+
+  const fichaNo = _caseFile?.code
+    ? (_caseFile.code.replace(/[^0-9]/g, "").slice(-3) || _caseFile.code)
+    : (referral.id.length > 5 ? referral.id.slice(0, 5).toUpperCase() : referral.id);
+
+  const deceName = (user?.title_prefix ? `${user.title_prefix} ` : "") + (referral.elaborated_by_name || user?.name || "—");
+  const deceRole = user?.job_title || "ANALISTA  DECE";
+  const deceDoc = user?.document_id ? `C.I. ${user.document_id}` : "";
+
+  const receivedName = referral.received_by || student.representative || "—";
+
+  const authorityName = (institution?.rector_title ? `${institution.rector_title} ` : "") + (institution?.rector_name || referral.authority_name || "—");
+  const authorityRole = institution?.rector_role || "RECTOR/A DE LA INSTITUCIÓN";
+
+  const rows: TableRow[] = [
+    // 1. Título
+    headerBar("FICHA DE DERIVACIÓN", 14, COLOR_BLUE_HEADER),
+
+    // 2. Datos institucionales
+    headerBar("DATOS INSTITUCIONALES", 14, COLOR_BLUE_HEADER),
+    new TableRow({
       children: [
-        new Paragraph({
-          alignment: align,
+        richCell({
+          startCol: 0,
+          colSpan: 8,
+          boldPrefix: "Nombre de la institución educativa:   ",
+          boldText: institution?.name || "—",
+        }),
+        richCell({
+          startCol: 8,
+          colSpan: 6,
+          boldText: ` ${referral.district_office_label || institution?.district || "—"}`,
+        }),
+      ],
+    }),
+    new TableRow({
+      children: [
+        richCell({
+          startCol: 0,
+          colSpan: 14,
+          boldPrefix: "Dirección de la institución: ",
+          regularText: `${institution?.address || "—"}                                               `,
+          boldText: "Teléfono: ",
+          regularText2: institution?.institution_phone || "—",
+        }),
+      ],
+    }),
+    new TableRow({
+      children: [
+        richCell({
+          startCol: 0,
+          colSpan: 8,
+          boldPrefix: "Fecha de derivación: ",
+          regularText: formatDate(referral.referral_date),
+        }),
+        new TableCell({
+          columnSpan: 6,
+          width: { size: spanWidth(8, 6), type: WidthType.DXA },
+          margins: { top: 40, bottom: 40, left: 80, right: 80 },
           children: [
-            new TextRun({
-              text,
-              bold: true,
-              color: COLOR_TEXT_BLACK,
-              size: 20, // 10pt
-              font: "Calibri",
+            new Paragraph({
+              spacing: { line: 250, before: 0, after: 20 },
+              children: [
+                new TextRun({ text: " Ficha No.: ", bold: true, size: 20, font: "Calibri", color: "0070C0" }),
+                new TextRun({ text: fichaNo, bold: true, size: 20, font: "Calibri", color: "0070C0" }),
+              ],
             }),
           ],
         }),
       ],
-    });
-  }
+    }),
 
-  function val(text: string | null | undefined, colSpan = 1, bold = true, align: (typeof AlignmentType)[keyof typeof AlignmentType] = AlignmentType.LEFT): TableCell {
-    const content = text && text.trim() ? text.trim() : "—";
-    const lines = content.split("\n");
-    return new TableCell({
-      columnSpan: colSpan,
-      margins: { top: 40, bottom: 40, left: 80, right: 80 },
-      children: lines.map(
-        (line) =>
-          new Paragraph({
-            alignment: align,
-            spacing: { before: 10, after: 10 },
-            children: [
-              new TextRun({
-                text: line,
-                bold: bold,
-                size: 20, // 10pt
-                font: "Calibri",
-                color: COLOR_TEXT_BLACK,
-              }),
-            ],
-          })
-      ),
-    });
-  }
+    // 3. INTERNA
+    headerBar("INTERNA\nMarque con una X", 14, COLOR_BLUE_HEADER),
+    new TableRow({
+      children: [
+        new TableCell({
+          columnSpan: 6,
+          width: { size: spanWidth(0, 6), type: WidthType.DXA },
+          shading: { fill: COLOR_BLUE_HEADER },
+          margins: { top: 40, bottom: 40, left: 80, right: 80 },
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { line: 250, before: 0, after: 0 },
+              children: [new TextRun({ text: "INTERNA A LA INSTITUCIÓN EDUCATIVA", bold: true, size: 20, font: "Calibri", color: COLOR_TEXT_BLACK })],
+            }),
+          ],
+        }),
+        new TableCell({
+          columnSpan: 8,
+          width: { size: spanWidth(6, 8), type: WidthType.DXA },
+          shading: { fill: COLOR_BLUE_HEADER },
+          margins: { top: 40, bottom: 40, left: 80, right: 80 },
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { line: 250, before: 0, after: 0 },
+              children: [new TextRun({ text: "INTERNA AL MINISTERIO DE EDUCACIÓN", bold: true, size: 20, font: "Calibri", color: COLOR_TEXT_BLACK })],
+            }),
+          ],
+        }),
+      ],
+    }),
+    // Row 11
+    new TableRow({
+      children: [
+        richCell({ startCol: 0, colSpan: 5, boldText: "Departamento de Inclusión Educativa:" }),
+        checkboxCell(5, sel === "DEPARTAMENTO_INCLUSION"),
+        richCell({ startCol: 6, colSpan: 5, rowSpan: 2, boldText: "Unidad Distrital de Apoyo a la Inclusión (UDAI):" }),
+        checkboxCell(11, sel === "UDAI", 2),
+        richCell({ startCol: 12, colSpan: 2, rowSpan: 2, regularText: sel === "UDAI" ? (referral.institution || "") : "" }),
+      ],
+    }),
+    // Row 12
+    new TableRow({
+      children: [
+        richCell({ startCol: 0, colSpan: 5, boldText: "Docente de apoyo a la inclusión:" }),
+        checkboxCell(5, sel === "DOCENTE_APOYO_INCLUSION"),
+      ],
+    }),
+    // Row 13
+    new TableRow({
+      children: [
+        richCell({ startCol: 0, colSpan: 5, boldText: "Rectorado / Vicerrectorado:" }),
+        checkboxCell(5, sel === "RECTORADO_VICERRECTORADO"),
+        richCell({ startCol: 6, colSpan: 5, boldText: "Dirección Distrital de Educación:" }),
+        checkboxCell(11, sel === "DIRECCION_DISTRITAL"),
+        richCell({ startCol: 12, colSpan: 2, regularText: sel === "DIRECCION_DISTRITAL" ? (referral.institution || "") : "" }),
+      ],
+    }),
+    // Row 14
+    new TableRow({
+      children: [
+        richCell({ startCol: 0, colSpan: 5, boldText: "Inspección:" }),
+        checkboxCell(5, sel === "INSPECCION"),
+        richCell({ startCol: 6, colSpan: 5, rowSpan: 2, boldText: "Otro (indique):" }),
+        checkboxCell(11, sel === "OTRO_INTERNA_MINEDUC", 2),
+        richCell({ startCol: 12, colSpan: 2, rowSpan: 2, regularText: sel === "OTRO_INTERNA_MINEDUC" ? (referral.institution || "") : "" }),
+      ],
+    }),
+    // Row 15
+    new TableRow({
+      children: [
+        richCell({ startCol: 0, colSpan: 5, boldText: "Otro (indique):" }),
+        checkboxCell(5, sel === "OTRO_INTERNA_IE"),
+      ],
+    }),
 
-  const selectedDestination = referral.destination_detail;
+    // 4. EXTERNA
+    headerBar("EXTERNA\nMarque con una X", 14, COLOR_BLUE_HEADER),
+    headerBar("EXTERNA AL MINISTERIO DE EDUCACIÓN", 14, COLOR_BLUE_HEADER),
+    // Row 18
+    new TableRow({
+      children: [
+        richCell({ startCol: 0, colSpan: 6, boldText: "Unidades especializadas de la policía:" }),
+        checkboxCell(6, sel === "POLICIA_ESPECIALIZADA"),
+        richCell({ startCol: 7, colSpan: 4, boldText: "Ministerio de Inclusión Económica y Social:" }),
+        checkboxCell(11, sel === "MIES"),
+        richCell({ startCol: 12, colSpan: 2, regularText: sel === "MIES" ? (referral.institution || "") : "" }),
+      ],
+    }),
+    // Row 19
+    new TableRow({
+      children: [
+        richCell({
+          startCol: 0,
+          colSpan: 6,
+          boldText: "Establecimiento de salud pública: ",
+          regularText: sel === "SALUD_PUBLICA" && referral.institution ? `(${referral.institution})` : "",
+        }),
+        checkboxCell(6, sel === "SALUD_PUBLICA"),
+        richCell({ startCol: 7, colSpan: 4, boldText: "Ministerio de la mujer y derechos humanos:" }),
+        checkboxCell(11, sel === "MINISTERIO_MUJER_DDHH"),
+        richCell({ startCol: 12, colSpan: 2, regularText: sel === "MINISTERIO_MUJER_DDHH" ? (referral.institution || "") : "" }),
+      ],
+    }),
+    // Row 20
+    new TableRow({
+      children: [
+        richCell({
+          startCol: 0,
+          colSpan: 6,
+          boldText: "Establecimiento de salud privada:",
+          regularText: sel === "SALUD_PRIVADA" && referral.institution ? `(${referral.institution})` : "",
+        }),
+        checkboxCell(6, sel === "SALUD_PRIVADA"),
+        richCell({
+          startCol: 7,
+          colSpan: 7,
+          boldPrefix: "Otro (indique): ",
+          regularText: sel === "OTRO_EXTERNA" ? `[X] ${referral.institution || ""}` : "",
+        }),
+      ],
+    }),
 
-  function destinationParagraphs(options: typeof DESTINATION_OPTIONS) {
-    return options.map((opt) => {
-      const isSelected = selectedDestination === opt.value;
-      return new Paragraph({
-        spacing: { before: 20, after: 20 },
-        children: [
-          new TextRun({
-            text: isSelected ? "  ☑  " : "  ☐  ",
-            bold: isSelected,
-            size: 15,
-            font: "Calibri",
-            color: isSelected ? "1E3A8A" : "64748B",
-          }),
-          new TextRun({
-            text: opt.label,
-            bold: isSelected,
-            size: 15,
-            font: "Calibri",
-            color: isSelected ? "0F172A" : "334155",
-          }),
-        ],
-      });
-    });
-  }
+    // 5. DATOS PERSONALES DEL ESTUDIANTE
+    headerBar("DATOS PERSONALES DEL O LA ESTUDIANTE QUE SE DERIVA", 14, COLOR_ORANGE_HEADER),
+    new TableRow({
+      children: [
+        richCell({
+          startCol: 0,
+          colSpan: 14,
+          boldPrefix: "Apellidos y Nombres completos: ",
+          boldText: student.full_name.toUpperCase(),
+        }),
+      ],
+    }),
+    new TableRow({
+      children: [
+        richCell({ startCol: 0, colSpan: 1, boldText: "Edad:" }),
+        richCell({ startCol: 1, colSpan: 1, regularText: ` ${studentAgeDisplay}`, fontSize: 18 }),
+        richCell({ startCol: 2, colSpan: 3, boldText: "Fecha de nacimiento:" }),
+        richCell({ startCol: 5, colSpan: 3, regularText: birthDateDisplay, fontSize: 18 }),
+        richCell({ startCol: 8, colSpan: 1, boldText: "Grado/curso:" }),
+        richCell({ startCol: 9, colSpan: 2, regularText: courseDisplay, fontSize: 18 }),
+        richCell({ startCol: 11, colSpan: 2, boldText: "Género:" }),
+        richCell({ startCol: 13, colSpan: 1, regularText: genderDisplay, fontSize: 18 }),
+      ],
+    }),
+    new TableRow({
+      children: [
+        richCell({ startCol: 0, colSpan: 3, boldText: "N° documento identidad:" }),
+        richCell({ startCol: 3, colSpan: 8, regularText: student.document_id || "—", fontSize: 18 }),
+        richCell({ startCol: 11, colSpan: 2, boldText: "Discapacidad:" }),
+        richCell({ startCol: 13, colSpan: 1, regularText: disabilityDisplay, fontSize: 18 }),
+      ],
+    }),
+    new TableRow({
+      children: [
+        richCell({
+          startCol: 0,
+          colSpan: 14,
+          boldPrefix: "Dirección domiciliaria: ",
+          regularText: student.address || "—",
+        }),
+      ],
+    }),
+    new TableRow({
+      children: [
+        richCell({
+          startCol: 0,
+          colSpan: 10,
+          boldPrefix: "Nacionalidad: ",
+          regularText: nationalityDisplay,
+        }),
+        richCell({ startCol: 10, colSpan: 3, boldText: "N° contacto telefónico" }),
+        richCell({ startCol: 13, colSpan: 1, regularText: student.rep_phone || "—" }),
+      ],
+    }),
+    new TableRow({
+      children: [
+        richCell({
+          startCol: 0,
+          colSpan: 10,
+          boldPrefix: "Nombre de representante: ",
+          regularText: student.representative || "—",
+        }),
+        richCell({ startCol: 10, colSpan: 3, boldText: "N° documento identidad:" }),
+        richCell({ startCol: 13, colSpan: 1, regularText: representativeDocId }),
+      ],
+    }),
+
+    // 6. MOTIVO DE REFERENCIA
+    headerBar("MOTIVO DE REFERENCIA", 14, COLOR_ORANGE_HEADER),
+    new TableRow({
+      children: [
+        multilineCell({
+          startCol: 0,
+          colSpan: 14,
+          boldPrefix: "Historia de la situación actual: ",
+          content: referral.current_situation_history || referral.background_summary || referral.reason || "—",
+        }),
+      ],
+    }),
+    new TableRow({
+      children: [
+        multilineCell({
+          startCol: 0,
+          colSpan: 14,
+          boldPrefix: "Acciones desarrolladas: ",
+          content: referral.actions_taken
+            ? referral.actions_taken
+                .split("\n")
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .map((line) => (line.startsWith("-") ? line : `- ${line.replace(/^(\d+[\.\)]|[•\*\+])\s*/, "")}`))
+                .join("\n")
+            : "—",
+        }),
+      ],
+    }),
+    new TableRow({
+      children: [
+        multilineCell({
+          startCol: 0,
+          colSpan: 14,
+          boldPrefix: "Tipo de atención que se requiere de parte de la entidad interna/externa:   ",
+          content: referral.care_type_required || "—",
+        }),
+      ],
+    }),
+    new TableRow({
+      children: [
+        multilineCell({
+          startCol: 0,
+          colSpan: 14,
+          boldPrefix: "Observaciones: ",
+          content: referral.observations
+            ? referral.observations
+                .split("\n")
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .map((line) => (line.startsWith("•") ? line : `• ${line.replace(/^(\d+[\.\)]|[\*\-\+])\s*/, "")}`))
+                .join("\n")
+            : "—",
+        }),
+      ],
+    }),
+
+    // 7. FIRMAS
+    new TableRow({
+      children: [
+        richCell({ startCol: 0, colSpan: 5, boldText: "FICHA ELABORADA POR:", align: AlignmentType.CENTER }),
+        richCell({ startCol: 5, colSpan: 5, boldText: "RECIBIDO POR", align: AlignmentType.CENTER }),
+        richCell({ startCol: 10, colSpan: 4, boldText: "AUTORIDAD INSTITUCIONAL", align: AlignmentType.CENTER }),
+      ],
+    }),
+    new TableRow({
+      children: [
+        new TableCell({
+          columnSpan: 5,
+          width: { size: spanWidth(0, 5), type: WidthType.DXA },
+          margins: { top: 80, bottom: 80, left: 60, right: 60 },
+          children: [
+            new Paragraph({ text: "", spacing: { before: 180, after: 120 } }),
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { line: 250, before: 0, after: 0 },
+              children: [
+                new TextRun({ text: "____________________________________\n", color: "64748B", size: 16 }),
+                new TextRun({ text: `${deceName}\n`, bold: true, size: 20, font: "Calibri" }),
+                new TextRun({ text: `${deceRole}\n`, size: 16, font: "Calibri" }),
+                ...(deceDoc ? [new TextRun({ text: deceDoc, size: 16, font: "Calibri" })] : []),
+              ],
+            }),
+          ],
+        }),
+        new TableCell({
+          columnSpan: 5,
+          width: { size: spanWidth(5, 5), type: WidthType.DXA },
+          margins: { top: 80, bottom: 80, left: 60, right: 60 },
+          children: [
+            new Paragraph({ text: "", spacing: { before: 180, after: 120 } }),
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { line: 250, before: 0, after: 0 },
+              children: [
+                new TextRun({ text: "..............................................................\n", color: "64748B", size: 16 }),
+                new TextRun({ text: `${receivedName}\n`, bold: true, size: 20, font: "Calibri" }),
+                new TextRun({ text: "Representante legal", size: 16, font: "Calibri" }),
+              ],
+            }),
+          ],
+        }),
+        new TableCell({
+          columnSpan: 4,
+          width: { size: spanWidth(10, 4), type: WidthType.DXA },
+          margins: { top: 80, bottom: 80, left: 60, right: 60 },
+          children: [
+            new Paragraph({ text: "", spacing: { before: 180, after: 120 } }),
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { line: 250, before: 0, after: 0 },
+              children: [
+                new TextRun({ text: "____________________________________\n", color: "64748B", size: 16 }),
+                new TextRun({ text: `${authorityName}\n`, bold: true, size: 20, font: "Calibri" }),
+                new TextRun({ text: authorityRole, size: 16, font: "Calibri" }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    }),
+    new TableRow({
+      children: [
+        richCell({ startCol: 0, colSpan: 5, boldText: "Fecha: …......................................................" }),
+        richCell({ startCol: 5, colSpan: 5, boldText: "Fecha: …......................................................" }),
+        richCell({ startCol: 10, colSpan: 4, boldText: "Fecha: …......................................................" }),
+      ],
+    }),
+
+    // 8. Nota legal
+    new TableRow({
+      children: [
+        new TableCell({
+          columnSpan: 14,
+          width: { size: 14838, type: WidthType.DXA },
+          margins: { top: 40, bottom: 40, left: 80, right: 80 },
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { line: 220, before: 0, after: 0 },
+              children: [
+                new TextRun({
+                  text: "ES RESPONSABILIDAD DEL REPRESENTANTE LEGAL AGENDAR LOS TURNOS NECESARIOS EN EL MSP 171 O IESS U OTRO PROFESIONAL EN SALUD Y/O SALUD MENTAL\nTIENE 15 DIAS A PARTIR DE LA FECHA PARA PRESENTAR EL CERTIFICADO CORRESPONDIENTE O DOCUMENTO DE RESPALDO EN EL DEPARTAMENTO DE CONSEJERÍA ESTUDIANTIL PARA SEGUIMIENTO DEL CASO",
+                  bold: true,
+                  size: 16, // 8pt
+                  font: "Calibri",
+                  color: COLOR_TEXT_BLACK,
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    }),
+  ];
 
   const doc = new Document({
     creator: "DECE App",
@@ -2708,302 +3277,12 @@ export async function generateReferralDocx(opts: {
         headers: { default: createOfficialLandscapeHeader() },
         footers: { default: createOfficialLandscapeFooter() },
         children: [
-          // Tabla principal de 6 columnas
           new Table({
-            width: { size: 100, type: WidthType.PERCENTAGE },
+            layout: TableLayoutType.FIXED,
+            width: { size: 14838, type: WidthType.DXA },
+            columnWidths: COL_WIDTHS_DXA,
             borders: tableBorders,
-            rows: [
-              // Título
-              headerBar("FICHA DE DERIVACIÓN", 6, COLOR_BLUE_HEADER),
-
-              // 1. DATOS INSTITUCIONALES
-              headerBar("DATOS INSTITUCIONALES", 6, COLOR_BLUE_HEADER),
-              new TableRow({
-                children: [
-                  lbl("Nombre de la institución educativa", 2),
-                  val(institution?.name || "UNIDAD EDUCATIVA SANTA ROSA", 2),
-                  lbl("Dirección distrital", 1),
-                  val(referral.district_office_label || institution?.district || "DIRECCIÓN DISTRITAL DE EDUCACIÓN 18D02 AMBATO 2", 1),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  lbl("Dirección de la institución", 2),
-                  val(institution?.address || "—", 2),
-                  lbl("Teléfono", 1),
-                  val("—", 1),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  lbl("Fecha de derivación", 2),
-                  val(formatDate(referral.referral_date), 4),
-                ],
-              }),
-
-              // 2. INTERNA
-              headerBar("INTERNA — MARQUE CON UNA X", 6, COLOR_BLUE_HEADER),
-              new TableRow({
-                children: [
-                  subHeaderCell("INTERNA A LA INSTITUCIÓN EDUCATIVA", 3, COLOR_BLUE_HEADER),
-                  subHeaderCell("INTERNA AL MINISTERIO DE EDUCACIÓN", 3, COLOR_BLUE_HEADER),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  new TableCell({
-                    columnSpan: 3,
-                    margins: { top: 60, bottom: 60, left: 80, right: 80 },
-                    children: destinationParagraphs(DESTINATION_OPTIONS.filter((o) => o.group === "INTERNA_IE")),
-                  }),
-                  new TableCell({
-                    columnSpan: 3,
-                    margins: { top: 60, bottom: 60, left: 80, right: 80 },
-                    children: destinationParagraphs(DESTINATION_OPTIONS.filter((o) => o.group === "INTERNA_MINEDUC")),
-                  }),
-                ],
-              }),
-
-              // 3. EXTERNA
-              headerBar("EXTERNA — MARQUE CON UNA X", 6, COLOR_BLUE_HEADER),
-              headerBar("EXTERNA AL MINISTERIO DE EDUCACIÓN", 6, COLOR_BLUE_HEADER),
-              new TableRow({
-                children: [
-                  new TableCell({
-                    columnSpan: 3,
-                    margins: { top: 60, bottom: 60, left: 80, right: 80 },
-                    children: destinationParagraphs(
-                      DESTINATION_OPTIONS.filter((o) =>
-                        ["POLICIA_ESPECIALIZADA", "SALUD_PUBLICA", "SALUD_PRIVADA"].includes(o.value)
-                      )
-                    ),
-                  }),
-                  new TableCell({
-                    columnSpan: 3,
-                    margins: { top: 60, bottom: 60, left: 80, right: 80 },
-                    children: destinationParagraphs(
-                      DESTINATION_OPTIONS.filter((o) =>
-                        ["MIES", "MINISTERIO_MUJER_DDHH", "OTRO_EXTERNA"].includes(o.value)
-                      )
-                    ),
-                  }),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  lbl("Entidad específica", 1),
-                  val(referral.institution || "—", 5),
-                ],
-              }),
-
-              // 4. DATOS PERSONALES DEL ESTUDIANTE
-              headerBar("DATOS PERSONALES DEL O LA ESTUDIANTE QUE SE DERIVA", 6, COLOR_ORANGE_HEADER),
-              new TableRow({
-                children: [
-                  lbl("Apellidos y nombres completos", 1),
-                  val(student.full_name, 5),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  lbl("Edad", 1),
-                  val(referral.student_age || "—", 1),
-                  lbl("Fecha de nacimiento", 1),
-                  val(student.birth_date ? formatDate(student.birth_date) : "—", 1),
-                  lbl("Grado/curso", 1),
-                  val(`${student.course} ${student.parallel || ""}`.trim() || "—", 1),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  lbl("Género", 1),
-                  val(student.gender || "—", 1),
-                  lbl("N° documento identidad", 1),
-                  val(student.document_id || "—", 1),
-                  lbl("Discapacidad", 1),
-                  val(referral.student_disability || "Ninguna", 1),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  lbl("Dirección domiciliaria", 1),
-                  val(student.address || "—", 5),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  lbl("Nacionalidad", 1),
-                  val(referral.student_nationality || "ecuatoriana", 1),
-                  lbl("N° contacto telefónico", 1),
-                  val(student.rep_phone || "—", 3),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  lbl("Nombre de representante", 1),
-                  val(student.representative || "—", 2),
-                  lbl("N° documento identidad", 1),
-                  val(referral.representative_document_id || student.representative_document_id || "—", 2),
-                ],
-              }),
-
-              // 5. MOTIVO DE REFERENCIA (Sin consentimiento informado)
-              headerBar("MOTIVO DE REFERENCIA", 6, COLOR_ORANGE_HEADER),
-              new TableRow({
-                children: [
-                  lbl("Historia de la situación actual", 1),
-                  val(referral.current_situation_history || referral.background_summary || referral.reason || "—", 5, false),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  lbl("Acciones desarrolladas", 1),
-                  val(
-                    referral.actions_taken
-                      ? referral.actions_taken
-                          .split("\n")
-                          .map((line) => line.trim())
-                          .filter(Boolean)
-                          .map((line) => (line.startsWith("-") ? line : `- ${line.replace(/^(\d+[\.\)]|[•\*\+])\s*/, "")}`))
-                          .join("\n")
-                      : "—",
-                    5,
-                    false
-                  ),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  lbl("Tipo de atención que se requiere", 1),
-                  val(referral.care_type_required || "—", 5, false),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  lbl("Observaciones", 1),
-                  val(
-                    referral.observations
-                      ? referral.observations
-                          .split("\n")
-                          .map((line) => line.trim())
-                          .filter(Boolean)
-                          .map((line) => (line.startsWith("•") ? line : `• ${line.replace(/^(\d+[\.\)]|[\*\-\+])\s*/, "")}`))
-                          .join("\n")
-                      : "—",
-                    5,
-                    false
-                  ),
-                ],
-              }),
-            ],
-          }),
-
-          // Aviso de responsabilidad legal del representante
-          new Paragraph({
-            spacing: { before: 120, after: 120 },
-            children: [
-              new TextRun({
-                text: "Es responsabilidad del representante legal agendar los turnos necesarios en el MSP 171, IESS u otro profesional en salud y/o salud mental. Tiene 15 días a partir de la fecha para presentar el certificado correspondiente o documento de respaldo en el Departamento de Consejería Estudiantil para seguimiento del caso.",
-                italics: true,
-                size: 14,
-                font: "Calibri",
-                color: "475569",
-              }),
-            ],
-          }),
-
-          // Tabla de Firmas
-          new Table({
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            borders: tableBorders,
-            rows: [
-              new TableRow({
-                children: [
-                  new TableCell({
-                    columnSpan: 1,
-                    margins: { top: 40, bottom: 40, left: 60, right: 60 },
-                    children: [
-                      new Paragraph({
-                        alignment: AlignmentType.CENTER,
-                        children: [new TextRun({ text: "FICHA ELABORADA POR:", bold: true, color: COLOR_TEXT_BLACK, size: 20, font: "Calibri" })],
-                      }),
-                    ],
-                  }),
-                  new TableCell({
-                    columnSpan: 1,
-                    margins: { top: 40, bottom: 40, left: 60, right: 60 },
-                    children: [
-                      new Paragraph({
-                        alignment: AlignmentType.CENTER,
-                        children: [new TextRun({ text: "RECIBIDO POR", bold: true, color: COLOR_TEXT_BLACK, size: 20, font: "Calibri" })],
-                      }),
-                    ],
-                  }),
-                  new TableCell({
-                    columnSpan: 1,
-                    margins: { top: 40, bottom: 40, left: 60, right: 60 },
-                    children: [
-                      new Paragraph({
-                        alignment: AlignmentType.CENTER,
-                        children: [new TextRun({ text: "AUTORIDAD INSTITUCIONAL", bold: true, color: COLOR_TEXT_BLACK, size: 20, font: "Calibri" })],
-                      }),
-                    ],
-                  }),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  new TableCell({
-                    columnSpan: 1,
-                    margins: { top: 80, bottom: 80, left: 60, right: 60 },
-                    children: [
-                      new Paragraph({ text: "", spacing: { before: 240, after: 120 } }),
-                      new Paragraph({
-                        alignment: AlignmentType.CENTER,
-                        children: [
-                          new TextRun({ text: "____________________________________\n", color: "64748B", size: 15 }),
-                          new TextRun({ text: referral.elaborated_by_name || "—", bold: true, size: 15, font: "Calibri" }),
-                          new TextRun({ text: "\nCoordinador/a DECE", size: 13, color: "64748B", font: "Calibri" }),
-                          new TextRun({ text: "\nFecha: ......................................................", size: 13, color: "64748B", font: "Calibri" }),
-                        ],
-                      }),
-                    ],
-                  }),
-                  new TableCell({
-                    columnSpan: 1,
-                    margins: { top: 80, bottom: 80, left: 60, right: 60 },
-                    children: [
-                      new Paragraph({ text: "", spacing: { before: 240, after: 120 } }),
-                      new Paragraph({
-                        alignment: AlignmentType.CENTER,
-                        children: [
-                          new TextRun({ text: "____________________________________\n", color: "64748B", size: 15 }),
-                          new TextRun({ text: referral.received_by || student.representative || "—", bold: true, size: 15, font: "Calibri" }),
-                          new TextRun({ text: "\nRepresentante legal", size: 13, color: "64748B", font: "Calibri" }),
-                          new TextRun({ text: "\nFecha: ......................................................", size: 13, color: "64748B", font: "Calibri" }),
-                        ],
-                      }),
-                    ],
-                  }),
-                  new TableCell({
-                    columnSpan: 1,
-                    margins: { top: 80, bottom: 80, left: 60, right: 60 },
-                    children: [
-                      new Paragraph({ text: "", spacing: { before: 240, after: 120 } }),
-                      new Paragraph({
-                        alignment: AlignmentType.CENTER,
-                        children: [
-                          new TextRun({ text: "____________________________________\n", color: "64748B", size: 15 }),
-                          new TextRun({ text: referral.authority_name || "—", bold: true, size: 15, font: "Calibri" }),
-                          new TextRun({ text: "\nRector/a de la Institución", size: 13, color: "64748B", font: "Calibri" }),
-                          new TextRun({ text: "\nFecha: ......................................................", size: 13, color: "64748B", font: "Calibri" }),
-                        ],
-                      }),
-                    ],
-                  }),
-                ],
-              }),
-            ],
+            rows: rows,
           }),
         ],
       },
