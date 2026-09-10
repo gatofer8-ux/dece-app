@@ -1860,3 +1860,55 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin markdown ni texto adicional
 
   return { error: "No se pudieron generar las preguntas del círculo restaurativo." };
 }
+
+/**
+ * Juego de Tarjetas de Arquetipos TaPas: sugiere un nombre (verbo + habilidad)
+ * para un grupo de arquetipos que el estudiante armó.
+ */
+export async function suggestTapasGroupName(
+  archetypeNames: string[]
+): Promise<{ name?: string; error?: string }> {
+  if (!isAiConfigured()) return { error: "La ayuda de IA todavía no está configurada." };
+  if (archetypeNames.length === 0) return { error: "El grupo no tiene tarjetas." };
+  const prompt = `Eres un/a orientador/a vocacional del DECE en Ecuador aplicando el juego de Tarjetas de Arquetipos (Proyecto TaPas).
+Un/a estudiante agrupó estas tarjetas porque siente que se relacionan entre sí:
+${archetypeNames.map((n) => `- ${n}`).join("\n")}
+
+Proponle UN nombre para ese grupo de talentos. El nombre debe:
+- Empezar con un verbo en infinitivo (por ejemplo: "Proteger", "Crear", "Cuidar", "Investigar", "Liderar", "Construir").
+- Ser una frase corta de 2 a 5 palabras que exprese la habilidad común.
+- Estar en español, sin comillas, sin punto final.
+
+Responde ÚNICAMENTE con la frase.`;
+  const res = await generateWithFallback({ prompt, temperature: 0.6, maxOutputTokens: 40 });
+  if ("error" in res) return { error: res.error };
+  const name = res.text.split("\n")[0].replace(/^["'\s]+|["'.\s]+$/g, "").slice(0, 60);
+  return name ? { name } : { error: "No se pudo generar el nombre." };
+}
+
+/**
+ * Juego TaPas: sugiere áreas de estudio y campos ocupacionales a partir de los
+ * grupos de talentos que armó y ordenó el/la estudiante.
+ */
+export async function suggestTapasAreas(
+  groups: { name: string; archetypes: string[] }[]
+): Promise<{ text?: string; error?: string }> {
+  if (!isAiConfigured()) return { error: "La ayuda de IA todavía no está configurada." };
+  if (groups.length === 0) return { error: "No hay grupos de talentos." };
+  const prompt = `Eres un/a orientador/a vocacional del DECE del Ministerio de Educación del Ecuador.
+Un/a estudiante de bachillerato completó el juego de Tarjetas de Arquetipos (Proyecto TaPas) y armó estos grupos de talentos, ordenados del más fuerte al más débil:
+${groups
+    .map((g, i) => `${i + 1}. ${g.name || "(sin nombre)"}: ${g.archetypes.join(", ")}`)
+    .join("\n")}
+
+Para los 2 o 3 grupos más fuertes, sugiere áreas de estudio y campos ocupacionales relacionados, considerando la oferta educativa del Ecuador (bachillerato técnico, institutos tecnológicos públicos, universidades, formación dual) y recordando que no siempre hace falta una carrera universitaria.
+
+REGLAS:
+- Texto plano, en español, sin markdown.
+- Para cada grupo fuerte: una línea con el nombre del grupo y luego 4 a 6 opciones de estudio o campo ocupacional, separadas por comas.
+- Cierra con una línea breve recordando contrastar estas opciones con los intereses del estudiante, los costos y las becas disponibles.
+- No inventes instituciones concretas ni datos que no conozcas con certeza.`;
+  const res = await generateWithFallback({ prompt, temperature: 0.6, maxOutputTokens: 900 });
+  if ("error" in res) return { error: res.error };
+  return { text: res.text };
+}
