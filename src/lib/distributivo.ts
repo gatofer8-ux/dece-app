@@ -363,3 +363,38 @@ export function getInstitutionDeceTeam(institutionId: string): UserRow[] {
     )
     .all(institutionId) as UserRow[];
 }
+
+/**
+ * Normaliza una cadena de curso a una clave canónica para comparaciones robustas:
+ * minúsculas, sin tildes, sin puntos ni "°"/"º", sin texto entre paréntesis o corchetes,
+ * niveles educativos unificados (egb, bgu), ordinales en palabras/sufijos convertidos a números,
+ * y espacios colapsados.
+ */
+export function normalizeCourseKey(name: string | null | undefined): string {
+  if (!name) return "";
+  let s = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  s = s.replace(/\(.*?\)/g, "").replace(/\[.*?\]/g, "");
+  s = s.replace(/[.°º,_\-\/]/g, " ");
+  s = s.replace(/\beducacion\s+general\s+basica\b/g, "egb")
+       .replace(/\bbachillerato\s+general\s+unificado\b/g, "bgu")
+       .replace(/\bbachillerato\b/g, "bgu")
+       .replace(/\bbasica\b/g, "egb");
+  s = s.replace(/\binicial\s+ii\b/g, "inicial 2").replace(/\binicial\s+i\b/g, "inicial 1");
+  s = s.replace(/\bdecimo\b/g, "10").replace(/\b10mo\b/g, "10").replace(/\b10ma\b/g, "10")
+       .replace(/\bnoveno\b/g, "9").replace(/\b9no\b/g, "9").replace(/\b9na\b/g, "9").replace(/\b9vo\b/g, "9").replace(/\b9va\b/g, "9")
+       .replace(/\boctavo\b/g, "8").replace(/\b8vo\b/g, "8").replace(/\b8va\b/g, "8")
+       .replace(/\bseptimo\b/g, "7").replace(/\b7mo\b/g, "7").replace(/\b7ma\b/g, "7")
+       .replace(/\bsexto\b/g, "6").replace(/\b6to\b/g, "6").replace(/\b6ta\b/g, "6")
+       .replace(/\bquinto\b/g, "5").replace(/\b5to\b/g, "5").replace(/\b5ta\b/g, "5")
+       .replace(/\bcuarto\b/g, "4").replace(/\b4to\b/g, "4").replace(/\b4ta\b/g, "4")
+       .replace(/\btercero\b/g, "3").replace(/\btercer\b/g, "3").replace(/\b3ero\b/g, "3").replace(/\b3era\b/g, "3").replace(/\b3ro\b/g, "3").replace(/\b3ra\b/g, "3")
+       .replace(/\bsegundo\b/g, "2").replace(/\b2do\b/g, "2").replace(/\b2da\b/g, "2")
+       .replace(/\bprimero\b/g, "1").replace(/\bprimer\b/g, "1").replace(/\b1ero\b/g, "1").replace(/\b1era\b/g, "1").replace(/\b1ro\b/g, "1").replace(/\b1ra\b/g, "1")
+       .replace(/\bpreparatoria\b/g, "1 egb")
+       .replace(/\biii\b/g, "3")
+       .replace(/\bii\b/g, "2")
+       .replace(/\bi\s+(bgu|egb)\b/g, "1 $1");
+  s = s.replace(/\bde\b/g, "").replace(/\bdel\b/g, "").replace(/\bano\b/g, "").replace(/\banos\b/g, "").replace(/\bgrado\b/g, "").replace(/\bcurso\b/g, "").replace(/\bnivel\b/g, "");
+  return s.trim().replace(/\s+/g, " ");
+}
+

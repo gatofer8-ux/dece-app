@@ -6,6 +6,7 @@ import {
   getActiveDistributivo,
   getDistributivoById,
   getInstitutionCoursesWithCounts,
+  normalizeCourseKey,
 } from "@/lib/distributivo";
 import { compareCoursesDescending, compareCoursesAscending } from "@/lib/courseOrder";
 import { getSelectedSchoolYear } from "@/lib/schoolYear";
@@ -74,12 +75,12 @@ export default async function ImprimirDistributivoPage({
     if (studentCount === 0 && parsedCourses.length > 0) {
       for (const cName of parsedCourses) {
         const shiftMatch = cName.match(/\((Matutina|Vespertina|Nocturna)\)$/i);
-        const cleanName = cName.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase();
+        const normKey = normalizeCourseKey(cName);
         const targetShift = (shiftMatch ? shiftMatch[1] : (a.jornada && a.jornada !== "TODAS" && a.jornada !== "COMPLETA" ? a.jornada : "")).toUpperCase().trim();
 
         if (targetShift) {
           const matchingRows = coursesInfo.detailedRows.filter(
-            (r) => r.course.trim().toLowerCase() === cleanName && (r.jornada || "").toUpperCase().trim() === targetShift
+            (r) => normalizeCourseKey(r.course) === normKey && (r.jornada || "").toUpperCase().trim() === targetShift
           );
           if (matchingRows.length > 0) {
             studentCount += matchingRows.reduce((sum, r) => sum + (r.student_count || 0), 0);
@@ -92,7 +93,7 @@ export default async function ImprimirDistributivoPage({
           studentCount += summary.totalStudents;
         } else {
           const matched = coursesInfo.courseSummaries.find(
-            (s) => s.course.trim().toLowerCase() === cleanName
+            (s) => normalizeCourseKey(s.course) === normKey
           );
           if (matched) {
             studentCount += matched.totalStudents;
@@ -112,13 +113,6 @@ export default async function ImprimirDistributivoPage({
     };
   });
 
-  const totalStudents = analystMeta.reduce(
-    (sum, a) => sum + (a.estimated_students_count || 0),
-    0
-  );
-  const totalAnalysts = analystMeta.length;
-  const averageStudents = totalAnalysts > 0 ? Math.round(totalStudents / totalAnalysts) : 0;
-
   // Orden visual solicitado (default DESC, o ASC)
   const visualOrder = searchParams.order === "ASC" ? "ASC" : "DESC";
 
@@ -132,23 +126,23 @@ export default async function ImprimirDistributivoPage({
 
   // Función para determinar el profesional asignado a cada fila con precisión por curso y jornada
   const getAssignedAnalyst = (courseName: string, jornada: string) => {
-    const cleanCourse = courseName.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase();
+    const cleanCourseKey = normalizeCourseKey(courseName);
     const jNorm = (jornada || "").toUpperCase().trim();
 
     // 1. Prioridad: Coincidencia exacta de curso Y turno asignado
     for (const a of analystMeta) {
       for (const pc of a.parsedCourses) {
         const pcLower = pc.toLowerCase();
-        const pcClean = pc.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase();
+        const pcKey = normalizeCourseKey(pc);
 
         // Si el curso asignado al analista especifica turno entre paréntesis:
-        if (pcLower.includes("(matutina)") && jNorm === "MATUTINA" && pcClean === cleanCourse) return a;
-        if (pcLower.includes("(vespertina)") && jNorm === "VESPERTINA" && pcClean === cleanCourse) return a;
-        if (pcLower.includes("(nocturna)") && jNorm === "NOCTURNA" && pcClean === cleanCourse) return a;
+        if (pcLower.includes("(matutina)") && jNorm === "MATUTINA" && pcKey === cleanCourseKey) return a;
+        if (pcLower.includes("(vespertina)") && jNorm === "VESPERTINA" && pcKey === cleanCourseKey) return a;
+        if (pcLower.includes("(nocturna)") && jNorm === "NOCTURNA" && pcKey === cleanCourseKey) return a;
 
-        // Si el curso asignado no tiene turno entre paréntesis pero coincide el nombre limpio:
+        // Si el curso asignado no tiene turno entre paréntesis pero coincide la clave canónica:
         if (!pcLower.includes("(matutina)") && !pcLower.includes("(vespertina)") && !pcLower.includes("(nocturna)")) {
-          if (pcClean === cleanCourse) {
+          if (pcKey === cleanCourseKey) {
             const aJornada = (a.jornada || "").toUpperCase();
             if (aJornada === jNorm || aJornada === "TODAS" || aJornada === "COMPLETA") {
               return a;
@@ -158,11 +152,11 @@ export default async function ImprimirDistributivoPage({
       }
     }
 
-    // 2. Si no hubo coincidencia por turno exacto, buscar si algún analista lo tiene asignado directamente
+    // 2. Si no hubo coincidencia por turno exacto, buscar si algún analista lo tiene asignado directamente por curso
     for (const a of analystMeta) {
       for (const pc of a.parsedCourses) {
-        const pcClean = pc.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase();
-        if (pcClean === cleanCourse) {
+        const pcKey = normalizeCourseKey(pc);
+        if (pcKey === cleanCourseKey) {
           return a;
         }
       }
@@ -171,6 +165,24 @@ export default async function ImprimirDistributivoPage({
     // 3. Fallback: Profesional asignado a esa jornada
     return analystMeta.find((a) => (a.jornada || "").toUpperCase() === jNorm) || null;
   };
+
+  // Sincronizar el conteo de estudiantes asignados por profesional con la suma exacta de sus filas
+  analystMeta.forEach((a) => {
+    const colSum = sortedDetailedRows.reduce((sum, r) => {
+      const assigned = getAssignedAnalyst(r.course, r.jornada);
+      return (assigned?.user_id === a.user_id || assigned?.id === a.id) ? sum + r.student_count : sum;
+    }, 0);
+    if (colSum > 0 || a.estimated_students_count === 0) {
+      a.estimated_students_count = colSum;
+    }
+  });
+
+  const totalStudents = analystMeta.reduce(
+    (sum, a) => sum + (a.estimated_students_count || 0),
+    0
+  );
+  const totalAnalysts = analystMeta.length;
+  const averageStudents = totalAnalysts > 0 ? Math.round(totalStudents / totalAnalysts) : 0;
 
   const coordinatorName =
     distributivo.elaborated_by_name ||
@@ -450,15 +462,22 @@ export default async function ImprimirDistributivoPage({
               <td className="border border-slate-400 p-1.5 text-center font-black text-[11px] text-slate-900">
                 {totalStudents}
               </td>
-              {analystMeta.map((a) => (
-                <td
-                  key={a.id || a.initials}
-                  className="border border-slate-400 p-1.5 text-center font-black text-[11px] text-slate-900"
-                  style={{ backgroundColor: a.color }}
-                >
-                  {a.estimated_students_count}
-                </td>
-              ))}
+              {analystMeta.map((a) => {
+                const colSum = sortedDetailedRows.reduce((sum, r) => {
+                  const assigned = getAssignedAnalyst(r.course, r.jornada);
+                  return (assigned?.user_id === a.user_id || assigned?.id === a.id) ? sum + r.student_count : sum;
+                }, 0);
+                const displayTotal = colSum > 0 ? colSum : (a.estimated_students_count || 0);
+                return (
+                  <td
+                    key={a.id || a.initials}
+                    className="border border-slate-400 p-1.5 text-center font-black text-[11px] text-slate-900"
+                    style={{ backgroundColor: a.color }}
+                  >
+                    {displayTotal}
+                  </td>
+                );
+              })}
             </tr>
           </tfoot>
         </table>
@@ -658,7 +677,7 @@ export default async function ImprimirDistributivoPage({
           const richCourses = parsedCourses.map((cName) => {
             const shiftMatch = cName.match(/\((Matutina|Vespertina|Nocturna)\)$/i);
             const cleanName = cName.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim();
-            const cleanLower = cleanName.toLowerCase();
+            const normCKey = normalizeCourseKey(cName);
             const targetShift = (shiftMatch ? shiftMatch[1] : (assignment.jornada && assignment.jornada !== "TODAS" && assignment.jornada !== "COMPLETA" ? assignment.jornada : "")).toUpperCase().trim();
 
             let matchedStudents = 0;
@@ -667,7 +686,7 @@ export default async function ImprimirDistributivoPage({
 
             if (targetShift) {
               const matchingRows = coursesInfo.detailedRows.filter(
-                (r) => r.course.trim().toLowerCase() === cleanLower && (r.jornada || "").toUpperCase().trim() === targetShift
+                (r) => normalizeCourseKey(r.course) === normCKey && (r.jornada || "").toUpperCase().trim() === targetShift
               );
               if (matchingRows.length > 0) {
                 matchedStudents = matchingRows.reduce((sum, r) => sum + (r.student_count || 0), 0);
@@ -677,7 +696,7 @@ export default async function ImprimirDistributivoPage({
             }
 
             if (matchedStudents === 0) {
-              const summary = courseMap.get(cName) || coursesInfo.courseSummaries.find((s) => s.course.trim().toLowerCase() === cleanLower);
+              const summary = courseMap.get(cName) || coursesInfo.courseSummaries.find((s) => normalizeCourseKey(s.course) === normCKey);
               if (summary) {
                 matchedStudents = summary.totalStudents;
                 if (!matchedParallels && summary.parallels?.length) {

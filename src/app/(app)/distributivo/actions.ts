@@ -1,6 +1,6 @@
 "use server";
 
-import { saveInstitutionCourseQuotas, getInstitutionCourseQuotas, getInstitutionCoursesWithCounts } from "@/lib/distributivo";
+import { saveInstitutionCourseQuotas, getInstitutionCourseQuotas, getInstitutionCoursesWithCounts, normalizeCourseKey } from "@/lib/distributivo";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -157,19 +157,36 @@ export async function saveDistributivo(
         const uJornada = a.jornada || "MATUTINA";
         const rawCourses: string[] = Array.isArray(a.courses) ? a.courses : [];
         const uSubniveles = JSON.stringify(a.subniveles || []);
-        const uCourses = JSON.stringify(rawCourses);
+
+        // Mapear y guardar los cursos del profesional usando los identificadores exactos de getInstitutionCoursesWithCounts
+        const canonicalCourses: string[] = rawCourses.map((rc) => {
+          const normRc = normalizeCourseKey(rc);
+          const foundSummary = coursesInfo.courseSummaries.find(
+            (cs) => normalizeCourseKey(cs.course) === normRc
+          );
+          if (foundSummary) return foundSummary.course;
+
+          const foundRow = coursesInfo.detailedRows.find(
+            (dr) => normalizeCourseKey(dr.course) === normRc
+          );
+          if (foundRow) return foundRow.course;
+
+          return rc;
+        });
+        const uniqueCanonicalCourses = Array.from(new Set(canonicalCourses));
+        const uCourses = JSON.stringify(uniqueCanonicalCourses);
         const uParallels = JSON.stringify(a.parallels || []);
 
-        // Recalcular estudiantes reales a partir de los cursos asignados
+        // Recalcular estudiantes reales a partir de los cursos asignados sumando r.student_count
         let recalculatedCount = 0;
-        for (const cName of rawCourses) {
+        for (const cName of uniqueCanonicalCourses) {
           const shiftMatch = cName.match(/\((Matutina|Vespertina|Nocturna)\)$/i);
-          const cleanName = cName.replace(/\s*\((Matutina|Vespertina|Nocturna)\)$/i, "").trim().toLowerCase();
+          const normKey = normalizeCourseKey(cName);
           const targetShift = (shiftMatch ? shiftMatch[1] : (uJornada !== "TODAS" && uJornada !== "COMPLETA" ? uJornada : "")).toUpperCase().trim();
 
           if (targetShift) {
             const matchingRows = coursesInfo.detailedRows.filter(
-              (r) => r.course.trim().toLowerCase() === cleanName && (r.jornada || "").toUpperCase().trim() === targetShift
+              (r) => normalizeCourseKey(r.course) === normKey && (r.jornada || "").toUpperCase().trim() === targetShift
             );
             if (matchingRows.length > 0) {
               recalculatedCount += matchingRows.reduce((sum, r) => sum + (r.student_count || 0), 0);
@@ -177,15 +194,17 @@ export async function saveDistributivo(
             }
           }
 
-          const summary = courseMap.get(cName);
+          const summary = courseMap.get(cName) || coursesInfo.courseSummaries.find(
+            (s) => normalizeCourseKey(s.course) === normKey
+          );
           if (summary) {
             recalculatedCount += summary.totalStudents;
           } else {
-            const matched = coursesInfo.courseSummaries.find(
-              (s) => s.course.trim().toLowerCase() === cleanName
+            const matchingRows = coursesInfo.detailedRows.filter(
+              (r) => normalizeCourseKey(r.course) === normKey
             );
-            if (matched) {
-              recalculatedCount += matched.totalStudents;
+            if (matchingRows.length > 0) {
+              recalculatedCount += matchingRows.reduce((sum, r) => sum + (r.student_count || 0), 0);
             }
           }
         }
