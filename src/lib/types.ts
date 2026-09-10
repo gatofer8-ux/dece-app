@@ -765,6 +765,48 @@ export interface ActivityRow {
   updated_at: string;
 }
 
+export interface ActivityReportRow {
+  id: string;
+  institution_id: string;
+  activity_id: string | null;
+  created_by_id: string | null;
+  report_number: string | null;
+  report_date: string;
+  school_year_text: string | null;
+  responsible_name: string | null;
+  responsible_role: string | null;
+  responsible_phone_ext: string | null;
+  responsible_email: string | null;
+  directed_to_name: string | null;
+  directed_to_role: string | null;
+  directed_to_phone_ext: string | null;
+  directed_to_email: string | null;
+  tema: string | null;
+  legal_basis: string | null;
+  scope_text: string | null;
+  objective_general: string | null;
+  objectives_specific: string | null;
+  development_analysis: string | null;
+  activity_name: string | null;
+  activity_axis: string | null;
+  activity_date: string | null;
+  activity_responsible: string | null;
+  activity_beneficiaries: string | null;
+  participants_count: number | null;
+  advances: string | null;
+  critical_nodes: string | null;
+  conclusions: string | null;
+  recommendations: string | null;
+  elaborated_by_name: string | null;
+  elaborated_by_role: string | null;
+  elaborated_date: string | null;
+  approved_by_name: string | null;
+  approved_by_role: string | null;
+  approved_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface TeacherAlertRow {
   id: string;
   institution_id: string;
