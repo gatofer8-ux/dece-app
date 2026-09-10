@@ -18,6 +18,7 @@ const TEXT_COLS = [
   "district_name",
   "facilitator_name",
   "circle_type",
+  "circle_modality",
   "participants_count",
   "participant_type",
   "problematica",
@@ -145,18 +146,44 @@ export async function draftFichaField(
 
 export async function suggestCircleQuestions(
   problematica: string,
-  ctx: { circleType?: string; participantType?: string }
+  ctx: {
+    circleType?: string;
+    participantType?: string;
+    modality?: string;
+    participantsCount?: string;
+    caseFileId?: string;
+  }
 ): Promise<
   | { questions: { q_icebreaker: string[]; q_intro: string[]; q_develop: string[]; q_actions: string[] } }
   | { error: string }
 > {
-  await requireRole(["ADMIN", "DECE"]);
+  const session = await requireRole(["ADMIN", "DECE"]);
+  const institutionId = requireInstitutionId(session);
   if (!isAiConfigured()) return { error: "La ayuda de IA todavía no está configurada." };
   if (!problematica.trim()) return { error: "Escribe primero la problemática para generar preguntas." };
+
+  let caseContext = "";
+  if (ctx.caseFileId) {
+    const cf = db
+      .prepare("SELECT risk_type, risk_type_other FROM case_files WHERE id = ? AND institution_id = ?")
+      .get(ctx.caseFileId, institutionId) as
+      | { risk_type: string; risk_type_other: string | null }
+      | undefined;
+    if (cf) {
+      // Solo el tipo de riesgo (categoría), sin narrativa del caso, para no exponer datos personales.
+      caseContext = `Tipo de riesgo del caso vinculado: ${cf.risk_type}${
+        cf.risk_type_other ? ` (${cf.risk_type_other})` : ""
+      }`;
+    }
+  }
+
   return generateRestorativeCircleQuestions({
     problematica,
     circleType: ctx.circleType,
     participantType: ctx.participantType,
+    modality: ctx.modality,
+    participantsCount: ctx.participantsCount,
+    caseContext: caseContext || undefined,
   });
 }
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
 import { createCircleFicha, updateCircleFicha, draftFichaField, suggestCircleQuestions } from "../actions";
-import { CIRCLE_TYPES, QUESTION_STAGES, type AiFieldKey } from "@/lib/restorativeCircleFicha";
+import { CIRCLE_TYPES, CIRCLE_MODALITIES, QUESTION_STAGES, type AiFieldKey } from "@/lib/restorativeCircleFicha";
 import type { RestorativeCircleFichaRow } from "@/lib/types";
 
 type Prefill = Record<string, string>;
@@ -66,7 +66,7 @@ const STAGE_LABELS: Record<string, string> = {
   q_actions: "Preguntas para definir acciones y compromisos",
 };
 
-function QuestionGenerator() {
+function QuestionGenerator({ caseFileId }: { caseFileId?: string }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [banks, setBanks] = useState<Record<string, string[]>>({});
@@ -79,6 +79,9 @@ function QuestionGenerator() {
       const res = await suggestCircleQuestions(getVal("f-problematica"), {
         circleType: getVal("f-circle_type"),
         participantType: getVal("f-participant_type"),
+        modality: getVal("f-circle_modality"),
+        participantsCount: getVal("f-participants_count"),
+        caseFileId: caseFileId || undefined,
       });
       if ("error" in res) setErr(res.error);
       else {
@@ -261,6 +264,24 @@ export default function FichaCirculoForm({
               ))}
             </select>
           </div>
+          <div>
+            <Label>{LABELS.circle_modality}</Label>
+            <select
+              id="f-circle_modality"
+              name="circle_modality"
+              defaultValue={v("circle_modality") || "grupal"}
+              className="select text-sm"
+            >
+              {CIRCLE_MODALITIES.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Define si la IA formula preguntas para el grupo o dirigidas por rol (quien causó el daño / quien fue afectado).
+            </p>
+          </div>
           {IN({ name: "participants_count" })}
           {IN({ name: "participant_type", voice: true })}
           {IN({ name: "circle_date", type: "date" })}
@@ -297,7 +318,7 @@ export default function FichaCirculoForm({
 
       <section>
         <h3 className="text-xs font-semibold text-slate-500 uppercase mb-2">4) Preguntas restaurativas</h3>
-        <QuestionGenerator />
+        <QuestionGenerator caseFileId={v("case_file_id") || undefined} />
         <div className="space-y-4 mt-4">
           {QUESTION_STAGES.map((stage) => (
             <div key={stage.key}>
@@ -351,6 +372,7 @@ const LABELS: Record<string, string> = {
   district_name: "Distrito educativo",
   facilitator_name: "Facilitador / facilitadora",
   circle_type: "Tipo de círculo restaurativo",
+  circle_modality: "Modalidad del círculo",
   participants_count: "N.º participantes",
   participant_type: "Tipo de participantes",
   problematica: "Problemática",
