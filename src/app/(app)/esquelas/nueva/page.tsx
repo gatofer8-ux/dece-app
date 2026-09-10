@@ -20,7 +20,7 @@ export default async function NuevaEsquelaPage() {
 
   const students = db
     .prepare(
-      `SELECT id, full_name, course, parallel, document_id, representative, rep_phone
+      `SELECT id, full_name, course, parallel, document_id, representative, rep_phone, representative_document_id, jornada
        FROM students
        WHERE institution_id = ? AND active = 1
        ORDER BY full_name ASC`

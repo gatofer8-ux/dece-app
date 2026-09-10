@@ -1,9 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import type { DeceEsquelaRow } from "@/lib/types";
 import { createEsquelaAction, updateEsquelaAction } from "./actions";
+
+function normalizeSearchText(text?: string | null): string {
+  return (text || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
 
 interface StudentOption {
   id: string;
@@ -16,6 +24,8 @@ interface StudentOption {
   id_number?: string | null;
   representative_name?: string | null;
   representative_phone?: string | null;
+  representative_document_id?: string | null;
+  jornada?: string | null;
 }
 
 const COMMON_REASONS = [
@@ -48,6 +58,8 @@ export default function EsquelaForm({
   currentUserName?: string;
 }) {
   const [selectedStudentId, setSelectedStudentId] = useState(initialData?.student_id || "");
+  const [studentSearch, setStudentSearch] = useState("");
+  const [courseFilter, setCourseFilter] = useState("");
   const [studentName, setStudentName] = useState(initialData?.student_name || "");
   const [studentIdNumber, setStudentIdNumber] = useState(initialData?.student_id_number || "");
   const [course, setCourse] = useState(initialData?.course || "");
@@ -59,23 +71,66 @@ export default function EsquelaForm({
   const [citationReason, setCitationReason] = useState(initialData?.citation_reason || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleStudentSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const sId = e.target.value;
-    setSelectedStudentId(sId);
-    if (!sId) return;
+  // Estudiante seleccionado del catálogo institucional
+  const selectedStudentObj = useMemo(() => {
+    if (!selectedStudentId) return null;
+    return studentsList.find((s) => s.id === selectedStudentId) || null;
+  }, [studentsList, selectedStudentId]);
 
-    const found = studentsList.find((s) => s.id === sId);
-    if (found) {
-      setStudentName(found.full_name);
-      const docId = found.document_id || found.id_number;
-      if (docId) setStudentIdNumber(docId);
-      if (found.course) setCourse(found.course);
-      if (found.parallel) setParallel(found.parallel);
-      const rep = found.representative || found.representative_name;
-      if (rep) setRepresentativeName(rep);
-      const phone = found.rep_phone || found.representative_phone;
-      if (phone) setRepresentativePhone(phone);
+  // Cursos únicos presentes en el plantel para filtrado rápido
+  const uniqueCourses = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of studentsList) {
+      if (s.course && s.course.trim()) {
+        set.add(s.course.trim());
+      }
     }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "es", { numeric: true }));
+  }, [studentsList]);
+
+  // Búsqueda en vivo tolerante a tildes, mayúsculas y subcadenas
+  const filteredStudents = useMemo(() => {
+    const q = normalizeSearchText(studentSearch);
+    return studentsList.filter((s) => {
+      if (courseFilter && (s.course || "").trim() !== courseFilter) {
+        return false;
+      }
+      if (!q) return true;
+
+      const fullName = normalizeSearchText(s.full_name);
+      const doc = normalizeSearchText(s.document_id || s.id_number);
+      const rep = normalizeSearchText(s.representative || s.representative_name);
+      const c = normalizeSearchText(s.course);
+      const p = normalizeSearchText(s.parallel);
+
+      return (
+        fullName.includes(q) ||
+        doc.includes(q) ||
+        rep.includes(q) ||
+        c.includes(q) ||
+        p.includes(q)
+      );
+    });
+  }, [studentsList, studentSearch, courseFilter]);
+
+  const handlePickStudent = (s: StudentOption) => {
+    setSelectedStudentId(s.id);
+    setStudentName(s.full_name);
+    const docId = s.document_id || s.id_number;
+    if (docId) setStudentIdNumber(docId);
+    if (s.course) setCourse(s.course);
+    if (s.parallel) setParallel(s.parallel);
+    if (s.jornada) setJornada(s.jornada);
+    const rep = s.representative || s.representative_name;
+    if (rep) setRepresentativeName(rep);
+    const repDoc = s.representative_document_id;
+    if (repDoc) setRepresentativeIdNumber(repDoc);
+    const phone = s.rep_phone || s.representative_phone;
+    if (phone) setRepresentativePhone(phone);
+  };
+
+  const handleClearSelectedStudent = () => {
+    setSelectedStudentId("");
   };
 
   // Fecha de la cita: por defecto mañana o la fecha guardada
@@ -138,27 +193,184 @@ export default function EsquelaForm({
         </div>
       </div>
 
-      {/* Selector de estudiante registrado (si hay lista y no está en modo edición forzada) */}
+      {/* Buscador inteligente de estudiante registrado */}
       {!caseFileId && studentsList.length > 0 && !isEditing && (
-        <div className="card p-4 bg-slate-50 border-dashed border-slate-300">
-          <label className="label text-xs font-bold text-slate-700">
-            🔍 Autocompletar con un estudiante registrado en el plantel (Opcional):
-          </label>
-          <select
-            value={selectedStudentId}
-            onChange={handleStudentSelect}
-            className="select text-sm w-full bg-white"
-          >
-            <option value="">-- Ingresar datos manualmente o seleccionar de la lista --</option>
-            {studentsList.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.full_name} {s.course ? `· ${s.course} ${s.parallel || ""}` : ""} {s.document_id || s.id_number ? `(${s.document_id || s.id_number})` : ""}
-              </option>
-            ))}
-          </select>
-          <p className="text-[11px] text-slate-500 mt-1">
-            Si el estudiante no está en el sistema o es un caso no registrado, puedes escribir sus datos directamente abajo.
-          </p>
+        <div className="space-y-3">
+          {selectedStudentObj ? (
+            <div className="card p-4 bg-gradient-to-r from-emerald-50 via-teal-50/40 to-white border border-emerald-200 shadow-sm rounded-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0 mt-0.5">
+                    ✓
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider bg-emerald-100 px-2 py-0.5 rounded">
+                        Estudiante Seleccionado
+                      </span>
+                      {selectedStudentObj.course && (
+                        <span className="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded">
+                          {selectedStudentObj.course} {selectedStudentObj.parallel || ""}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-base font-bold text-slate-900 mt-1">
+                      {selectedStudentObj.full_name}
+                    </div>
+                    <div className="text-xs text-slate-600 mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                      {(selectedStudentObj.document_id || selectedStudentObj.id_number) && (
+                        <span>
+                          <strong className="text-slate-700">C.I:</strong> {selectedStudentObj.document_id || selectedStudentObj.id_number}
+                        </span>
+                      )}
+                      {(selectedStudentObj.representative || selectedStudentObj.representative_name) && (
+                        <span>
+                          <strong className="text-slate-700">Representante:</strong> {selectedStudentObj.representative || selectedStudentObj.representative_name}
+                        </span>
+                      )}
+                      {(selectedStudentObj.rep_phone || selectedStudentObj.representative_phone) && (
+                        <span>
+                          <strong className="text-slate-700">Teléfono:</strong> {selectedStudentObj.rep_phone || selectedStudentObj.representative_phone}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+                  <button
+                    type="button"
+                    onClick={handleClearSelectedStudent}
+                    className="text-xs font-semibold text-slate-700 hover:text-brand-900 bg-white hover:bg-slate-50 border border-slate-300 hover:border-brand-300 px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1.5"
+                  >
+                    <span>🔄</span> Cambiar / Buscar otro
+                  </button>
+                </div>
+              </div>
+              <p className="text-[11px] text-emerald-700/90 mt-2.5 border-t border-emerald-100/80 pt-1.5">
+                Datos cargados en el formulario. Puedes ajustar o completar cualquier campo abajo antes de emitir la citación.
+              </p>
+            </div>
+          ) : (
+            <div className="card p-4 bg-slate-50/90 border border-slate-200 rounded-xl space-y-3 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <div>
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <span className="text-brand-600 font-normal">🔍</span> Autocompletar con estudiante registrado (Opcional)
+                  </label>
+                  <p className="text-[11px] text-slate-500">
+                    Escribe nombre, apellido, cédula o representante, o filtra por curso para autocompletar en 1 clic.
+                  </p>
+                </div>
+                <span className="text-[11px] bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-medium w-fit">
+                  {studentsList.length} en el plantel
+                </span>
+              </div>
+
+              {/* Fila de Controles: Barra de búsqueda + Filtro por Curso */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="sm:col-span-2 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                    placeholder="Escribe apellido, nombre o cédula para buscar..."
+                    className="input pl-9 pr-8 text-sm w-full bg-white shadow-sm"
+                  />
+                  {studentSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setStudentSearch("")}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-xs font-bold"
+                      title="Borrar búsqueda"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div>
+                  <select
+                    value={courseFilter}
+                    onChange={(e) => setCourseFilter(e.target.value)}
+                    className="select text-sm w-full bg-white shadow-sm"
+                  >
+                    <option value="">Todos los cursos ({uniqueCourses.length})</option>
+                    {uniqueCourses.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Resultados interactivos */}
+              {filteredStudents.length > 0 ? (
+                <div className="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-inner max-h-56 overflow-y-auto divide-y divide-slate-100">
+                  {filteredStudents.slice(0, 15).map((s) => {
+                    const docId = s.document_id || s.id_number;
+                    const rep = s.representative || s.representative_name;
+                    const phone = s.rep_phone || s.representative_phone;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => handlePickStudent(s)}
+                        className="w-full text-left p-2.5 hover:bg-brand-50/80 active:bg-brand-100/70 transition-colors flex items-center justify-between gap-3 group"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold text-slate-800 group-hover:text-brand-800 truncate">
+                              {s.full_name}
+                            </span>
+                            {s.course && (
+                              <span className="text-[11px] font-medium bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200 group-hover:bg-brand-100/60 group-hover:border-brand-200">
+                                {s.course} {s.parallel || ""}
+                              </span>
+                            )}
+                            {docId && (
+                              <span className="text-[11px] font-mono text-slate-500">
+                                CI: {docId}
+                              </span>
+                            )}
+                          </div>
+                          {(rep || phone) && (
+                            <div className="text-[11px] text-slate-500 mt-0.5 truncate">
+                              {rep ? `Rep: ${rep}` : ""} {phone ? `· Telf: ${phone}` : ""}
+                            </div>
+                          )}
+                        </div>
+                        <div className="shrink-0 text-xs font-semibold text-brand-700 group-hover:translate-x-0.5 transition-transform">
+                          Seleccionar →
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-4 bg-white border border-slate-200 rounded-lg text-center text-xs text-slate-500">
+                  No se encontraron estudiantes que coincidan con la búsqueda. Puedes ingresar los datos manualmente abajo.
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-slate-500 px-1 gap-1">
+                <span>
+                  {filteredStudents.length > 15
+                    ? `Mostrando los primeros 15 de ${filteredStudents.length} resultados. Escribe más para afinar.`
+                    : `${filteredStudents.length} resultado${filteredStudents.length === 1 ? "" : "s"}.`}
+                </span>
+                <span className="text-slate-400">
+                  💡 Si no encuentras al estudiante, escribe sus datos en la sección 1 directamente.
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
