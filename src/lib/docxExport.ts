@@ -3105,13 +3105,16 @@ export async function generateReferralDocx(opts: {
           startCol: 0,
           colSpan: 14,
           boldPrefix: "Acciones desarrolladas: ",
+          // Las acciones van en línea seguida (no una debajo de otra) separadas
+          // por un espacio amplio, para ahorrar alto y que la ficha entre en
+          // una hoja. El texto se ajusta y va envolviendo dentro de la celda.
           content: referral.actions_taken
             ? referral.actions_taken
                 .split("\n")
                 .map((line) => line.trim())
                 .filter(Boolean)
                 .map((line) => (line.startsWith("-") ? line : `- ${line.replace(/^(\d+[\.\)]|[•\*\+])\s*/, "")}`))
-                .join("\n")
+                .join("     ")
             : "—",
         }),
       ],

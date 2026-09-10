@@ -347,13 +347,10 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
             <tr>
               <td colSpan={14} className={cell}>
                 <span className="font-bold">Acciones desarrolladas: </span>
-                <div className="font-normal whitespace-pre-wrap">
-                  {actionsLines.length > 0 ? (
-                    actionsLines.map((line, idx) => <div key={idx}>{line}</div>)
-                  ) : (
-                    <span>—</span>
-                  )}
-                </div>
+                {/* En línea seguida (no una debajo de otra) para ahorrar alto */}
+                <span className="font-normal whitespace-pre-wrap">
+                  {actionsLines.length > 0 ? actionsLines.join("   ") : "—"}
+                </span>
               </td>
             </tr>
             <tr>
