@@ -254,10 +254,16 @@ documentación (`SECURITY.md`, `CONTRIBUTING.md`, este archivo).
   exportadores.
 - Precarga en distributivo y círculos restaurativos.
 
+**[hecho] — quinta tanda**
+- **Toasts en 29 formularios**: `useToastOnChange(state.error)` — cuando el
+  servidor rechaza un guardado ahora salta un toast, no solo un recuadro que a
+  veces quedaba fuera de vista. `ConfirmDeleteForm`, `DeleteButton`,
+  ajustes de institución, perfil y los botones de copiar enlace también.
+- Precarga en distributivo y círculos restaurativos (nivel institucional).
+
 **Pendiente**
-- Adoptar `useToast()` en las server actions (hoy solo `DeleteButton`).
 - Formularios oficiales por pasos/pestañas (son muy largos).
-- Buscador global más visible; modo oscuro; auditoría de accesibilidad.
+- Modo oscuro; auditoría de accesibilidad.
 - Precarga en los formularios de edición.
 - Las plantillas .docx externas (`templates/*.docx`) rellenadas con
   docxtemplater: si tienen párrafos justificados, hay que ajustarlas en Word
