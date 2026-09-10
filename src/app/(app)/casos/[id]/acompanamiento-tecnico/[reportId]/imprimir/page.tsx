@@ -47,9 +47,9 @@ export default async function ImprimirInformeAcompanamientoPage({
   const psy = parsePsychosocialReferral(r.psychosocial_referral_json);
   const psyName = (o: string) => psy.entries.find((e) => e.option === o)?.name;
 
-  const cell = "border border-slate-500 px-2 py-1 text-[10pt] align-top";
-  const lbl = `${cell} bg-[#F2F2F2] font-semibold`;
-  const bar = "border border-slate-500 bg-[#BFBFBF] font-bold px-2 py-1 text-[10pt]";
+  const cell = "border border-black px-2 py-1 text-[10pt] align-top bg-[#F2F2F2]";
+  const lbl = `${cell} font-semibold`;
+  const bar = "border border-black bg-[#BFBFBF] font-bold px-2 py-1 text-[10pt]";
   const chk = (opts: string[], sel: string[], otros: string) => (
     <ul className="text-[9pt] space-y-0.5">
       {opts.map((o) => <li key={o}>{sel.includes(o) ? "☑" : "☐"} {o}</li>)}
@@ -108,7 +108,7 @@ export default async function ImprimirInformeAcompanamientoPage({
 
         <p className={`${bar} mt-3`}>3. CONTEXTO PSICOSOCIAL Y PEDAGÓGICO</p>
         <p className={lbl}>SITUACIÓN FAMILIAR</p>
-        <p className="text-[10pt] text-justify border border-slate-500 px-2 py-1 whitespace-pre-wrap">{r.family_situation || "—"}</p>
+        <p className="text-[10pt] text-justify border border-black px-2 py-1 whitespace-pre-wrap bg-[#F2F2F2]">{r.family_situation || "—"}</p>
         <p className={`${lbl} mt-2`}>INDICADORES (SECCIÓN 3.2.1 A. PROTOCOLOS Y RUTAS)</p>
         <table className="w-full border-collapse"><tbody><tr>
           <td className={cell}><b>Signos físicos</b>{chk(INDICATOR_SIGNOS_FISICOS, ind.signos_fisicos, ind.signos_fisicos_otros)}</td>
@@ -131,10 +131,10 @@ export default async function ImprimirInformeAcompanamientoPage({
           </td>
         </tr></tbody></table>
         <p className={`${lbl} mt-2`}>RENDIMIENTO ACADÉMICO</p>
-        <p className="text-[10pt] text-justify border border-slate-500 px-2 py-1 whitespace-pre-wrap">{r.academic_performance || "—"}</p>
+        <p className="text-[10pt] text-justify border border-black px-2 py-1 whitespace-pre-wrap bg-[#F2F2F2]">{r.academic_performance || "—"}</p>
 
         <p className={`${bar} mt-3`}>4. ACCIONES DE ACOMPAÑAMIENTO</p>
-        <p className="text-[10pt] text-justify border border-slate-500 px-2 py-1 whitespace-pre-wrap">{r.accompaniment_actions || "—"}</p>
+        <p className="text-[10pt] text-justify border border-black px-2 py-1 whitespace-pre-wrap bg-[#F2F2F2]">{r.accompaniment_actions || "—"}</p>
 
         <p className={`${bar} mt-3`}>REFERENCIA EXTERNA</p>
         <p className="text-[10pt] font-semibold mt-1">Procedimiento de referencia a instancias externas:</p>
