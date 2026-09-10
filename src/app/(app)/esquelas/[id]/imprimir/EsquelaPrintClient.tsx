@@ -66,7 +66,7 @@ export default function EsquelaPrintClient({
 
         {/* Título de la Esquela */}
         <div className="text-center font-bold text-[12px] uppercase tracking-wider text-slate-900 bg-slate-100 py-1 rounded border border-slate-200">
-          ESQUELA DE CITACIÓN A CONSEJERÍA ESTUDIANTIL (DECE)
+          CONVOCATORIA DE ASISTENCIA AL DEPARTAMENTO DE CONSEJERÍA ESTUDIANTIL (DECE)
         </div>
 
         {/* Datos del Estudiante y Representante */}
