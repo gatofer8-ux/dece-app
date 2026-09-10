@@ -29,6 +29,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/circulos-restaurativos", label: "Círculos restaurativos", icon: "⭕", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Acompañamiento y prevención" },
   { href: "/circulos-restaurativos/fichas", label: "Fichas de círculo restaurativo", icon: "🗒️", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Acompañamiento y prevención" },
   { href: "/actas-reunion", label: "Actas de reunión", icon: "📝", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Acompañamiento y prevención" },
+  { href: "/ovp", label: "Orientación vocacional (OVP)", icon: "🧭", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Acompañamiento y prevención" },
   { href: "/plan-accion", label: "Plan de acción (POA)", icon: "🎯", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Acompañamiento y prevención" },
 
   // Informes
