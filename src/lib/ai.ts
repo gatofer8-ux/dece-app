@@ -1598,3 +1598,114 @@ Responde ÚNICAMENTE con un JSON:
 
   return { error: "No se pudieron generar los logros y nudos críticos con IA." };
 }
+
+/**
+ * Genera un banco de preguntas restaurativas para un Círculo Restaurativo del DECE,
+ * a partir de la problemática descrita por el profesional. Devuelve varias opciones
+ * por cada fase del círculo para que el profesional escoja las que va a utilizar.
+ * Fundamentado en el enfoque de justicia restaurativa (LOEI, Código de la Niñez y
+ * Adolescencia, Guía de Prácticas Restaurativas y Rutas y Protocolos del MinEduc):
+ * reparación del daño, responsabilidad activa, escucha y reintegración, no punitivo.
+ */
+export async function generateRestorativeCircleQuestions(opts: {
+  problematica: string;
+  circleType?: string;
+  participantType?: string;
+}): Promise<
+  | {
+      questions: {
+        q_icebreaker: string[];
+        q_intro: string[];
+        q_develop: string[];
+        q_actions: string[];
+      };
+    }
+  | { error: string }
+> {
+  const ai = getClient();
+  if (!ai) {
+    return { error: "La ayuda de IA todavía no está configurada en este sistema." };
+  }
+
+  const prompt = `Eres un/a profesional del Departamento de Consejería Estudiantil (DECE) del Ministerio de Educación del Ecuador, especialista en prácticas restaurativas y círculos de diálogo con estudiantes.
+
+Tu tarea es proponer un BANCO DE PREGUNTAS RESTAURATIVAS para planificar un Círculo Restaurativo, a partir de la problemática que describe el profesional. El profesional escogerá después cuáles usar.
+
+MARCO OBLIGATORIO (enfoque de justicia restaurativa, NO punitivo):
+- Fundamento: LOEI y su Reglamento, Código de la Niñez y Adolescencia, Guía de Prácticas Restaurativas y Rutas y Protocolos de actuación frente a situaciones de violencia (MinEduc).
+- Principios: reparación del daño, responsabilidad activa de quien lo causó, escucha y validación de quien fue afectado, participación de la comunidad, reintegración, no revictimización, interés superior del niño, niña y adolescente.
+- Las preguntas deben ser abiertas, respetuosas, adecuadas a la edad, no acusatorias ni culpabilizantes, y favorecer la reflexión, la empatía y el compromiso.
+- NO incluyas nombres propios de estudiantes ni datos personales. Habla de "la persona afectada", "la persona que causó el daño", "el grupo", etc.
+
+DATOS:
+- Problemática descrita por el profesional: "${opts.problematica.trim() || "(no especificada)"}"
+- Tipo de círculo: ${opts.circleType || "Reactivo"}
+- Tipo de participantes: ${opts.participantType || "Estudiantes"}
+
+Debes generar preguntas para las CUATRO fases del círculo:
+1. "q_icebreaker": pregunta o dinámica breve para romper el hielo y generar confianza (3 a 5 opciones).
+2. "q_intro": preguntas para introducir la temática y reflexionar sobre cómo nos sentimos y sobre nuestras acciones (4 a 6 opciones).
+3. "q_develop": preguntas para desarrollar la temática a profundidad, contemplando distintos roles según la problemática (por ejemplo, para la persona que causó el daño, para la persona afectada, para el grupo). Puedes usar prefijos como "Para quien causó el daño:" al inicio de la pregunta cuando corresponda (6 a 10 opciones).
+4. "q_actions": preguntas para definir acciones, acuerdos y compromisos de reparación y prevención, incluyendo el rol del grupo y de la comunidad educativa (5 a 8 opciones).
+
+Responde ÚNICAMENTE con un objeto JSON válido, sin markdown ni texto adicional, con esta estructura exacta:
+{
+  "q_icebreaker": ["¿...?", "¿...?"],
+  "q_intro": ["¿...?", "¿...?"],
+  "q_develop": ["¿...?", "¿...?"],
+  "q_actions": ["¿...?", "¿...?"]
+}`;
+
+  const preferredModel = process.env.GEMINI_MODEL;
+  const modelsToTry = preferredModel
+    ? [preferredModel, ...MODEL_FALLBACK_CHAIN.filter((m) => m !== preferredModel)]
+    : MODEL_FALLBACK_CHAIN;
+
+  const clean = (arr: unknown): string[] =>
+    Array.isArray(arr)
+      ? arr
+          .map((q) => String(q).replace(/^\s*[-•*\d.)]+\s*/, "").trim())
+          .filter(Boolean)
+          .slice(0, 12)
+      : [];
+
+  for (const model of modelsToTry) {
+    try {
+      const response = await ai.models.generateContent({ model, contents: prompt });
+      const text = (response.text || "").trim();
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) {
+        const parsed = JSON.parse(match[0]);
+        const questions = {
+          q_icebreaker: clean(parsed.q_icebreaker),
+          q_intro: clean(parsed.q_intro),
+          q_develop: clean(parsed.q_develop),
+          q_actions: clean(parsed.q_actions),
+        };
+        if (
+          questions.q_icebreaker.length ||
+          questions.q_intro.length ||
+          questions.q_develop.length ||
+          questions.q_actions.length
+        ) {
+          return { questions };
+        }
+      }
+    } catch (err: any) {
+      const message = String(err?.message || err || "");
+      if (
+        message.includes("429") ||
+        message.toLowerCase().includes("quota") ||
+        message.toLowerCase().includes("resource_exhausted")
+      ) {
+        return {
+          error:
+            "Se alcanzó el límite de la clave de IA (posiblemente por minuto). Espera 1 minuto y vuelve a intentar.",
+        };
+      }
+      console.warn(`[ai circulo restaurativo] Falló modelo ${model}:`, message);
+    }
+  }
+
+  return { error: "No se pudieron generar las preguntas del círculo restaurativo." };
+}

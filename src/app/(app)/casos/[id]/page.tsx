@@ -218,6 +218,17 @@ export default async function CasoDetallePage({
   const circleConsents = db
     .prepare("SELECT * FROM restorative_circle_consents WHERE case_file_id = ? ORDER BY consent_date DESC, created_at DESC")
     .all(caseFile.id) as RestorativeCircleConsentRow[];
+  const circleFichas = db
+    .prepare(
+      "SELECT id, ficha_code, problematica, circle_date, circle_type FROM restorative_circle_fichas WHERE case_file_id = ? ORDER BY COALESCE(circle_date, created_at) DESC, created_at DESC"
+    )
+    .all(caseFile.id) as {
+    id: string;
+    ficha_code: string | null;
+    problematica: string | null;
+    circle_date: string | null;
+    circle_type: string | null;
+  }[];
   const riskMatrixEntries = db
     .prepare("SELECT * FROM case_risk_matrix_entries WHERE case_file_id = ? ORDER BY report_month DESC, created_at DESC")
     .all(caseFile.id) as RiskMatrixEntryRow[];
@@ -1305,6 +1316,73 @@ export default async function CasoDetallePage({
                     className="text-xs font-semibold text-purple-700 hover:underline mt-1.5 inline-block"
                   >
                     Emitir consentimiento de círculo restaurativo para este estudiante →
+                  </Link>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Fichas de planificación del Círculo Restaurativo */}
+          <section className="card p-5 border-l-4 border-l-purple-400">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+              <div>
+                <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                  <span>⭕</span> Fichas de círculo restaurativo
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Planificación del círculo: diagnóstico, objetivos, declaraciones, preguntas restaurativas (con IA) e informe.
+                </p>
+              </div>
+              <Link
+                href={`/circulos-restaurativos/fichas/nueva?caso=${caseFile.id}`}
+                className="btn-primary text-xs px-3 py-2 flex items-center gap-1.5 font-semibold shrink-0"
+              >
+                <span>+ Nueva ficha</span>
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {circleFichas.map((f) => (
+                <div
+                  key={f.id}
+                  className="text-sm border border-slate-200 rounded-xl p-3.5 bg-slate-50/60 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs"
+                >
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono font-bold text-slate-900 text-xs">{f.ficha_code || "Ficha"}</span>
+                      {f.circle_type && (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
+                          {f.circle_type}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-slate-600">
+                      {f.problematica || "Sin problemática"} · Fecha: {formatDate(f.circle_date)}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 self-end md:self-center">
+                    <Link
+                      href={`/circulos-restaurativos/fichas/${f.id}/imprimir`}
+                      className="text-xs font-semibold text-brand-700 border border-brand-200 bg-brand-50 px-2.5 py-1.5 rounded-lg hover:bg-brand-100 whitespace-nowrap"
+                    >
+                      🖨️ Ver / Imprimir
+                    </Link>
+                    <Link
+                      href={`/circulos-restaurativos/fichas/${f.id}/editar`}
+                      className="text-xs font-semibold text-slate-700 border border-slate-200 bg-white px-2.5 py-1.5 rounded-lg hover:bg-slate-50 whitespace-nowrap"
+                    >
+                      ✏️ Editar
+                    </Link>
+                  </div>
+                </div>
+              ))}
+              {circleFichas.length === 0 && (
+                <div className="text-center py-5 bg-slate-50/60 rounded-xl border border-dashed border-slate-200">
+                  <p className="text-xs text-slate-500">No se han registrado fichas de círculo restaurativo para este caso.</p>
+                  <Link
+                    href={`/circulos-restaurativos/fichas/nueva?caso=${caseFile.id}`}
+                    className="text-xs font-semibold text-purple-700 hover:underline mt-1.5 inline-block"
+                  >
+                    Planificar un círculo restaurativo para este caso →
                   </Link>
                 </div>
               )}
