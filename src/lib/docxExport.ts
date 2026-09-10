@@ -1,5 +1,5 @@
 import { INTERVENTION_TYPE_OPTIONS, parseCarePlanActions } from "./carePlan";
-import { NORMATIVE_TEXT, CONFIDENTIALITY_TEXT as SOCIALIZATION_CONFIDENTIALITY_TEXT, CURRICULAR_ADAPTATION_TEXT } from "./socializationAct";
+import { NORMATIVE_TEXT, CONFIDENTIALITY_TEXT as SOCIALIZATION_CONFIDENTIALITY_TEXT, formatCurricularAdaptationText } from "./socializationAct";
 import {
   Document,
   Paragraph,
@@ -4580,12 +4580,13 @@ export async function generateSocializationActDocx(opts: {
       );
     });
   }
-  if (act.curricular_adaptation_grade) {
+  const adaptationText = formatCurricularAdaptationText(act.curricular_adaptation_grade);
+  if (adaptationText) {
     children.push(
       new Paragraph({
         children: [
           new TextRun({ text: "• ", bold: true, font: FONT_NAME, size: FONT_SIZE_SM }),
-          new TextRun({ text: `${CURRICULAR_ADAPTATION_TEXT} ${act.curricular_adaptation_grade}`, font: FONT_NAME, size: FONT_SIZE_SM }),
+          new TextRun({ text: adaptationText, font: FONT_NAME, size: FONT_SIZE_SM }),
         ],
         spacing: { after: 20 },
       })

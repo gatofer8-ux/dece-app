@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { useToastOnChange } from "@/components/Toast";
 import { createSocializationAct, type ActionState } from "../../../actions";
-import { NORMATIVE_TEXT, CONFIDENTIALITY_TEXT, CURRICULAR_ADAPTATION_TEXT, DEFAULT_AGREEMENTS } from "@/lib/socializationAct";
+import { NORMATIVE_TEXT, CONFIDENTIALITY_TEXT, DEFAULT_AGREEMENTS, CURRICULAR_ADAPTATION_OPTIONS } from "@/lib/socializationAct";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
 import AIAssistButton from "@/components/AIAssistButton";
 
@@ -156,15 +156,23 @@ export default function SocializationActForm({
         </div>
       </div>
 
-      {/* Adaptación curricular */}
+      {/* Ajuste / adaptación curricular */}
       <div>
-        <label className="label text-xs">Grado de adaptación curricular recomendada (opcional)</label>
-        <input
+        <label className="label text-xs font-medium text-slate-700">Ajuste / adaptación curricular recomendada (opcional)</label>
+        <select
           name="curricular_adaptation_grade"
-          placeholder="Ej: 1, 2, 3 o Grado 2 no significativa..."
-          className="input"
-        />
-        <p className="text-xs text-slate-400 mt-1">{CURRICULAR_ADAPTATION_TEXT} [grado ingresado].</p>
+          className="select"
+          defaultValue="Ninguna"
+        >
+          {CURRICULAR_ADAPTATION_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-slate-400 mt-1">
+          Según el Art. 160 del RLOEI, para situaciones de vulnerabilidad se recomienda aplicar ajustes razonables o adaptaciones curriculares. Si seleccionas "Ninguna", se omitirá este apartado en el documento final.
+        </p>
       </div>
 
       {/* Firmas de docentes */}

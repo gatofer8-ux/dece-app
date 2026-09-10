@@ -5,7 +5,7 @@ import { useFormState, useFormStatus } from "react-dom";
 import { useToastOnChange } from "@/components/Toast";
 import Link from "next/link";
 import { updateSocializationAct, type ActionState } from "../../../../actions";
-import { NORMATIVE_TEXT, CONFIDENTIALITY_TEXT, CURRICULAR_ADAPTATION_TEXT, parseJsonArray, type TeacherSignatureEntry } from "@/lib/socializationAct";
+import { NORMATIVE_TEXT, CONFIDENTIALITY_TEXT, CURRICULAR_ADAPTATION_OPTIONS, parseJsonArray, type TeacherSignatureEntry } from "@/lib/socializationAct";
 import type { SocializationActRow } from "@/lib/types";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
 import AIAssistButton from "@/components/AIAssistButton";
@@ -178,16 +178,32 @@ export default function SocializationActEditForm({
         </div>
       </div>
 
-      {/* Adaptación curricular */}
+      {/* Ajuste / adaptación curricular */}
       <div>
-        <label className="label text-xs">Grado de adaptación curricular recomendada (opcional)</label>
-        <input
+        <label className="label text-xs font-medium text-slate-700">Ajuste / adaptación curricular recomendada (opcional)</label>
+        <select
           name="curricular_adaptation_grade"
-          defaultValue={act.curricular_adaptation_grade || ""}
-          placeholder="Ej: 1, 2, 3 o Grado 2 no significativa..."
-          className="input"
-        />
-        <p className="text-xs text-slate-400 mt-1">{CURRICULAR_ADAPTATION_TEXT} [grado ingresado].</p>
+          className="select"
+          defaultValue={
+            act.curricular_adaptation_grade &&
+            CURRICULAR_ADAPTATION_OPTIONS.includes(act.curricular_adaptation_grade as any)
+              ? act.curricular_adaptation_grade
+              : act.curricular_adaptation_grade && /1|2|ajuste/i.test(act.curricular_adaptation_grade)
+              ? "Ajustes razonables"
+              : act.curricular_adaptation_grade && /3|adaptaci/i.test(act.curricular_adaptation_grade)
+              ? "Adaptaciones curriculares"
+              : "Ninguna"
+          }
+        >
+          {CURRICULAR_ADAPTATION_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-slate-400 mt-1">
+          Según el Art. 160 del RLOEI, para situaciones de vulnerabilidad se recomienda aplicar ajustes razonables o adaptaciones curriculares. Si seleccionas "Ninguna", se omitirá este apartado en el documento final.
+        </p>
       </div>
 
       {/* Firmas de docentes */}

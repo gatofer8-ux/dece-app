@@ -7,7 +7,7 @@ import type { CaseFileRow, StudentRow, SocializationActRow, InstitutionRow } fro
 import {
   NORMATIVE_TEXT,
   CONFIDENTIALITY_TEXT,
-  CURRICULAR_ADAPTATION_TEXT,
+  formatCurricularAdaptationText,
   parseJsonArray,
   type TeacherSignatureEntry,
 } from "@/lib/socializationAct";
@@ -110,9 +110,9 @@ export default async function ImprimirActaSocializacionPage({ params }: { params
               {agreements.map((a, i) => (
                 <li key={i}>{a}</li>
               ))}
-              {act.curricular_adaptation_grade && (
+              {formatCurricularAdaptationText(act.curricular_adaptation_grade) && (
                 <li>
-                  {CURRICULAR_ADAPTATION_TEXT} {act.curricular_adaptation_grade}
+                  {formatCurricularAdaptationText(act.curricular_adaptation_grade)}
                 </li>
               )}
             </ul>

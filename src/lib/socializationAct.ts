@@ -23,8 +23,24 @@ export const DEFAULT_AGREEMENTS = [
   'En caso de que los estudiantes requieran refuerzo pedagógico, aplicarlo según la normativa legal vigente: ACUERDO Nro. MINEDUC-MINEDUC-2024-00031-A "NORMATIVA PARA REGULAR LOS PROCESOS DE EVALUACIÓN EDUCATIVA Y LOS PROCESOS ORGANIZACIONALES DE LAS INSTITUCIONES EDUCATIVAS DE TODOS LOS SOSTENIMIENTOS DEL SISTEMA NACIONAL DE EDUCACIÓN"',
 ];
 
+export const CURRICULAR_ADAPTATION_OPTIONS = [
+  "Ninguna",
+  "Ajustes razonables",
+  "Adaptaciones curriculares",
+] as const;
+
+export type CurricularAdaptationOption = (typeof CURRICULAR_ADAPTATION_OPTIONS)[number];
+
+export function formatCurricularAdaptationText(value?: string | null): string {
+  if (!value || value.trim() === "" || value.trim().toLowerCase() === "ninguna") {
+    return "";
+  }
+  const valor = value.trim().toLowerCase();
+  return `En el Art. 160 del RLOEI sobre Necesidades educativas específicas no asociadas a la discapacidad se consideran como necesidades educativas específicas no asociadas a la discapacidad las siguientes: "…2. Situaciones de vulnerabilidad…", por lo cual se recomienda aplicar ${valor}.`;
+}
+
 export const CURRICULAR_ADAPTATION_TEXT =
-  'En el Art. 160 de RLOEI sobre Necesidades educativas específicas no asociadas a la discapacidad se consideran como necesidades educativas específicas no asociadas a la discapacidad las siguientes: "…2. Situaciones de vulnerabilidad…", por lo cual se recomienda aplicar adaptaciones curriculares Grado';
+  'En el Art. 160 del RLOEI sobre Necesidades educativas específicas no asociadas a la discapacidad se consideran como necesidades educativas específicas no asociadas a la discapacidad las siguientes: "…2. Situaciones de vulnerabilidad…", por lo cual se recomienda aplicar';
 
 export interface TeacherSignatureEntry {
   asignatura: string;
