@@ -281,18 +281,23 @@ export async function uploadChecklistItemAttachment(caseId: string, itemId: stri
   const institutionId = requireInstitutionId(session);
   requireOwnedCase(caseId, institutionId);
 
+  const failUrl = (msg: string) => `/casos/${caseId}?checklist_error=${encodeURIComponent(msg)}#checklist`;
+
   const item = db
     .prepare("SELECT id, attachment_id FROM case_checklist_items WHERE id = ? AND case_file_id = ?")
     .get(itemId, caseId) as { id: string; attachment_id: string | null } | undefined;
-  if (!item) throw new Error("Ítem de checklist no encontrado.");
+  if (!item) redirect(failUrl("Ítem de checklist no encontrado."));
 
-  const file = formData.get(`checklist_file_${itemId}`);
-  if (!(file instanceof File) || file.size === 0) throw new Error("Selecciona un archivo.");
-  if (file.size > MAX_ATTACHMENT_SIZE) {
-    throw new Error(`El archivo supera el máximo permitido (${Math.round(MAX_ATTACHMENT_SIZE / 1024 / 1024)} MB).`);
+  const file = formData.get("respaldo_file");
+  if (!(file instanceof File) || file.size === 0) {
+    redirect(failUrl("Selecciona un archivo antes de pulsar «adjuntar»."));
   }
-  if (file.type && !isAllowedAttachmentType(file.type)) {
-    throw new Error("Tipo de archivo no permitido (PDF, imágenes o Word/Excel).");
+  const f = file as File;
+  if (f.size > MAX_ATTACHMENT_SIZE) {
+    redirect(failUrl(`El archivo supera el máximo permitido (${Math.round(MAX_ATTACHMENT_SIZE / 1024 / 1024)} MB).`));
+  }
+  if (f.type && !isAllowedAttachmentType(f.type)) {
+    redirect(failUrl("Tipo de archivo no permitido. Se aceptan PDF, imágenes (JPG/PNG/WEBP) y documentos de Word/Excel."));
   }
 
   // Si el ítem ya tenía un respaldo, se reemplaza.
@@ -306,7 +311,7 @@ export async function uploadChecklistItemAttachment(caseId: string, itemId: stri
     }
   }
 
-  const { relativePath, size } = await saveAttachmentFile(file, caseId);
+  const { relativePath, size } = await saveAttachmentFile(f, caseId);
   const attachmentId = randomUUID();
   db.prepare(
     `INSERT INTO attachments (id, institution_id, filename, path, mime_type, size, uploaded_by_id, case_file_id, checklist_item_id, document_type)
@@ -314,9 +319,9 @@ export async function uploadChecklistItemAttachment(caseId: string, itemId: stri
   ).run({
     id: attachmentId,
     institution_id: institutionId,
-    filename: file.name || "respaldo",
+    filename: f.name || "respaldo",
     path: relativePath,
-    mime_type: file.type || null,
+    mime_type: f.type || null,
     size,
     uploaded_by_id: session.user.id,
     case_file_id: caseId,
@@ -339,7 +344,7 @@ export async function uploadChecklistItemAttachment(caseId: string, itemId: stri
     randomUUID(),
     caseId,
     session.user.id,
-    `Respaldo adjuntado al checklist — "${itemText}" (archivo: ${file.name || "respaldo"}).`
+    `Respaldo adjuntado al checklist — "${itemText}" (archivo: ${f.name || "respaldo"}).`
   );
   db.prepare("UPDATE case_files SET updated_at = datetime('now') WHERE id = ?").run(caseId);
 
