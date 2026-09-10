@@ -257,12 +257,12 @@ export default function SeguimientoPrintView({
           <thead>
             <tr className="bg-slate-100 text-slate-800">
               <th className="border border-slate-400 p-1.5 w-28 text-left">Tipo de intervención</th>
-              <th className="border border-slate-400 p-1.5 text-left">Descripción de la atención psicosocial</th>
-              <th className="border border-slate-400 p-1.5 w-28 text-left">Profesional DECE</th>
+              <th className="border border-slate-400 p-1.5 w-44 sm:w-48 text-left">Descripción de la atención psicosocial</th>
+              <th className="border border-slate-400 p-1.5 w-24 text-left">Profesional DECE</th>
               <th className="border border-slate-400 p-1.5 w-20 text-center">Fecha</th>
-              <th className="border border-slate-400 p-1.5 w-32 text-left">Observaciones / Acuerdos</th>
+              <th className="border border-slate-400 p-1.5 text-left">Observaciones / Acuerdos</th>
               {showPerRowSign && (
-                <th className="border border-slate-400 p-1.5 w-32 text-center bg-blue-50/70 text-blue-950 font-bold">
+                <th className="border border-slate-400 p-1.5 w-28 text-center bg-blue-50/70 text-blue-950 font-bold">
                   Firma y C.I. del Representante
                 </th>
               )}
@@ -292,7 +292,7 @@ export default function SeguimientoPrintView({
                 <td className="border border-slate-400 p-1.5 text-[11px] text-center whitespace-nowrap">
                   {formatDate(a.date)}
                 </td>
-                <td className="border border-slate-400 p-1.5 text-[11px] leading-snug">
+                <td className="border border-slate-400 p-1.5 text-[11px] whitespace-pre-wrap leading-snug">
                   {a.observations || "—"}
                 </td>
                 {showPerRowSign && (
