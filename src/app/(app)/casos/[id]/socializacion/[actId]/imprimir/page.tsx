@@ -117,6 +117,18 @@ export default async function ImprimirActaSocializacionPage({ params }: { params
               )}
             </ul>
           )}
+
+          {/* Renglones para acuerdo a mano adicional */}
+          <div className="mt-3 pt-2 text-xs border-t border-slate-200/60">
+            <p className="font-semibold text-slate-700 mb-2">
+              Acuerdo adicional acordado en la socialización (a completar a mano):
+            </p>
+            <div className="space-y-3 pt-1">
+              <div className="border-b border-slate-300 h-4"></div>
+              <div className="border-b border-slate-300 h-4"></div>
+              <div className="border-b border-slate-300 h-4"></div>
+            </div>
+          </div>
         </section>
 
         <section className="mb-4">

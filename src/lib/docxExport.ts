@@ -4593,6 +4593,38 @@ export async function generateSocializationActDocx(opts: {
     );
   }
 
+  // Acuerdo adicional a mano
+  children.push(new Paragraph({ spacing: { before: 80, after: 30 } }));
+  children.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: "Acuerdo adicional acordado en la socialización (a completar a mano):",
+          bold: true,
+          font: FONT_NAME,
+          size: FONT_SIZE_SM,
+          color: "334155",
+        }),
+      ],
+      spacing: { after: 30 },
+    })
+  );
+  for (let i = 0; i < 3; i++) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "____________________________________________________________________________________________________",
+            font: FONT_NAME,
+            size: FONT_SIZE_SM,
+            color: "94A3B8",
+          }),
+        ],
+        spacing: { after: 30 },
+      })
+    );
+  }
+
   children.push(new Paragraph({ spacing: { after: 60 } }));
 
   // Apartado: FIRMAS DE RESPONSABILIDAD (Docentes)
