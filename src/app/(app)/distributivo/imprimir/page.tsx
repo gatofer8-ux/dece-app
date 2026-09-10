@@ -105,6 +105,31 @@ export default async function ImprimirDistributivoPage({
       parsedParallels = [];
     }
 
+    // Contar los paralelos reales que atiende el profesional (no los grados).
+    // Un curso como "10.° EGB" puede tener 4 paralelos (A, B, C, D).
+    const parallelsForCourse = (cName: string) => {
+      const normKey = normalizeCourseKey(cName);
+      const summary =
+        courseMap.get(cName) ||
+        coursesInfo.courseSummaries.find((s) => normalizeCourseKey(s.course) === normKey);
+      return summary?.parallels?.length || 1;
+    };
+    const structuredPks = parsedParallels.filter((pk) => typeof pk === "string" && pk.includes("::"));
+    let parallelCount = 0;
+    if (structuredPks.length > 0) {
+      parallelCount = new Set(structuredPks).size;
+      for (const cName of parsedCourses) {
+        const normClean = normalizeCourseKey(cName);
+        const hasKeys = structuredPks.some((pk) => {
+          const p = parseParallelKey(pk);
+          return p && normalizeCourseKey(p.course) === normClean;
+        });
+        if (!hasKeys) parallelCount += parallelsForCourse(cName);
+      }
+    } else {
+      parallelCount = parsedCourses.reduce((sum, cName) => sum + parallelsForCourse(cName), 0);
+    }
+
     const assignedColor = a.color || defaultPalette[idx % defaultPalette.length];
 
     // Si viene con 0 de la base de datos, recalcular dinámicamente con los cursos reales
@@ -145,6 +170,7 @@ export default async function ImprimirDistributivoPage({
       initials,
       parsedCourses,
       parsedParallels,
+      parallelCount,
       color: assignedColor,
       estimated_students_count: studentCount,
       lunchSchedule: a.lunch_schedule || (idx === 2 ? "12H00 A 13H00" : "13H00 A 14H00"),
@@ -347,7 +373,7 @@ export default async function ImprimirDistributivoPage({
               <th className="border border-slate-400 p-1.5 text-left">Profesional DECE</th>
               <th className="border border-slate-400 p-1.5 text-left">Rol / Función</th>
               <th className="border border-slate-400 p-1.5 text-center w-24">Jornada</th>
-              <th className="border border-slate-400 p-1.5 text-center w-20">N.° Cursos</th>
+              <th className="border border-slate-400 p-1.5 text-center w-24">Grados / Paralelos</th>
               <th className="border border-slate-400 p-1.5 text-center w-20">Estudiantes</th>
               <th className="border border-slate-400 p-1.5 text-center w-16">% Cobertura</th>
               <th className="border border-slate-400 p-1.5 text-center w-28">Cumplimiento Ratio (~450)</th>
@@ -383,7 +409,10 @@ export default async function ImprimirDistributivoPage({
                     {a.jornada || "Todas"}
                   </td>
                   <td className="border border-slate-300 p-1.5 text-center font-bold text-slate-800">
-                    {a.parsedCourses.length} cursos
+                    {a.parsedCourses.length} {a.parsedCourses.length === 1 ? "grado" : "grados"}
+                    <span className="block text-[9px] font-semibold text-slate-500">
+                      {a.parallelCount} {a.parallelCount === 1 ? "paralelo" : "paralelos"}
+                    </span>
                   </td>
                   <td className="border border-slate-300 p-1.5 text-center font-black text-slate-900 text-[11px]">
                     {a.estimated_students_count}
@@ -410,7 +439,10 @@ export default async function ImprimirDistributivoPage({
                 Totales Consolidados Institucionales:
               </td>
               <td className="border border-slate-400 p-2 text-center text-slate-900">
-                {analystMeta.reduce((sum, a) => sum + a.parsedCourses.length, 0)} cursos
+                {analystMeta.reduce((sum, a) => sum + a.parsedCourses.length, 0)} grados
+                <span className="block text-[9px] font-semibold text-slate-500">
+                  {analystMeta.reduce((sum, a) => sum + a.parallelCount, 0)} paralelos
+                </span>
               </td>
               <td className="border border-slate-400 p-2 text-center text-[12px] font-black text-slate-900">
                 {totalStudents}
@@ -780,6 +812,8 @@ export default async function ImprimirDistributivoPage({
 
           const totalCoursesStudents = richCourses.reduce((sum, c) => sum + c.studentCount, 0);
           const displayStudentCount = assignment.estimated_students_count > 0 ? assignment.estimated_students_count : totalCoursesStudents;
+          const countParallels = (s: string) => s.split(",").map((p) => p.trim()).filter(Boolean).length;
+          const totalParallels = richCourses.reduce((sum, c) => sum + countParallels(c.parallels), 0);
 
           return (
             <div
@@ -819,7 +853,7 @@ export default async function ImprimirDistributivoPage({
                       borderColor: "#94a3b8",
                     }}
                   >
-                    Cobertura: <strong>{displayStudentCount}</strong> estudiantes ({richCourses.length} cursos)
+                    Cobertura: <strong>{displayStudentCount}</strong> estudiantes · <strong>{totalParallels}</strong> {totalParallels === 1 ? "paralelo" : "paralelos"} ({richCourses.length} {richCourses.length === 1 ? "grado" : "grados"})
                   </span>
                 </div>
               </div>
@@ -866,8 +900,11 @@ export default async function ImprimirDistributivoPage({
                       className="border-t border-slate-300 font-bold text-[9.5px]"
                       style={{ backgroundColor: assignment.color ? `${assignment.color}25` : "#f8fafc" }}
                     >
-                      <td colSpan={4} className="py-1 px-3 text-right uppercase text-slate-700">
+                      <td colSpan={3} className="py-1 px-3 text-right uppercase text-slate-700">
                         Subtotal a cargo de {assignment.user_name.split(" ")[0]}:
+                      </td>
+                      <td className="py-1 px-3 text-center text-slate-700">
+                        {totalParallels} {totalParallels === 1 ? "paralelo" : "paralelos"}
                       </td>
                       <td className="py-1 px-3 text-center font-black text-slate-900">
                         {displayStudentCount} est.
