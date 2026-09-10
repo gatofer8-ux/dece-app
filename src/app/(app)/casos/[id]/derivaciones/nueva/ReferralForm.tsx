@@ -119,26 +119,12 @@ export default function ReferralForm({
         />
       </div>
 
+      {/* "MOTIVO DE REFERENCIA" en el formato oficial es solo un encabezado de
+          sección: no se llena un texto libre, se desglosa en Historia de la
+          situación actual, Acciones desarrolladas, Tipo de atención y
+          Observaciones. Por eso aquí no hay campo "Motivo". */}
       <div>
-        <div className="flex items-center justify-between">
-          <label className="label text-xs">Motivo breve de la derivación *</label>
-          <div className="flex items-center gap-2">
-            <VoiceDictationButton targetId="referral-reason" />
-            <AIAssistButton targetId="referral-reason" caseId={caseId} fieldLabel="Motivo breve de la derivación" />
-          </div>
-        </div>
-        <textarea
-          id="referral-reason"
-          name="reason"
-          required
-          defaultValue={initialData?.reason || ""}
-          rows={2}
-          className="textarea"
-          placeholder="Ej: Derivación a Centro de Salud para evaluación y atención psicológica especializada."
-        />
-      </div>
-
-      <div>
+        <h3 className="text-xs font-semibold text-slate-500 uppercase mb-2">Motivo de referencia</h3>
         <div className="flex items-center justify-between">
           <label className="label text-xs">Historia de la situación actual</label>
           <div className="flex items-center gap-2">

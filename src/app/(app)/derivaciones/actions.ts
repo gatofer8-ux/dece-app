@@ -42,7 +42,9 @@ function insertReferral(
     userId,
     str(formData, "scope") || "EXTERNA",
     str(formData, "institution") || "",
-    str(formData, "reason") || "",
+    // "reason" (NOT NULL, legado) ya no tiene campo propio en el formulario:
+    // "Motivo de referencia" es solo un encabezado. Se respalda con la historia.
+    str(formData, "reason") || currentSituation || "",
     str(formData, "referral_date") || new Date().toISOString(),
     str(formData, "destination_detail"),
     currentSituation,
@@ -136,7 +138,7 @@ export async function updateOfficialReferral(
     ).run(
       str(formData, "scope") || "EXTERNA",
       str(formData, "institution") || "",
-      str(formData, "reason") || "",
+      str(formData, "reason") || currentSituation || "",
       str(formData, "referral_date") || new Date().toISOString(),
       str(formData, "destination_detail"),
       currentSituation,
