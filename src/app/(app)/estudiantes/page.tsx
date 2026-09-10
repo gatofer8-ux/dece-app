@@ -56,9 +56,15 @@ export default async function EstudiantesPage({
 
   if (!coverage.isAllInstitutional) {
     const coverageFilter = buildCoverageSqlFilter(coverage);
-    if (coverageFilter.sql !== "1=1") {
+    if (coverageFilter.sql !== "1=1" && coverageFilter.sql !== "1=0") {
       where += ` AND ${coverageFilter.sql}`;
       params.push(...coverageFilter.params);
+    } else if (coverageFilter.sql === "1=0") {
+      // El analista no tiene cursos ni paralelos asignados en el distributivo.
+      // En vez de dejar la lista vacía sin explicación, se muestran los
+      // estudiantes que él mismo registró (mismo criterio que en /casos).
+      where += " AND (created_by_id = ? OR created_by_id IS NULL)";
+      params.push(session.user.id);
     }
   }
   if (estado === "activos") where += " AND active = 1";

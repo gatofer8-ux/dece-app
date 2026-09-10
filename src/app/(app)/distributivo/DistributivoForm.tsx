@@ -15,7 +15,7 @@ import type {
   UserRow,
 } from "@/lib/types";
 import { compareCoursesDescending, compareCoursesAscending } from "@/lib/courseOrder";
-import { makeParallelKey, parseParallelKey, normalizeCourseKey, type CourseParallelDetail } from "@/lib/distributivo";
+import { makeParallelKey, parseParallelKey, normalizeCourseKey, type CourseParallelDetail } from "@/lib/distributivoShared";
 
 interface CourseSummary {
   course: string;
