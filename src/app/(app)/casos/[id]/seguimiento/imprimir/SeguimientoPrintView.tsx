@@ -44,11 +44,39 @@ export default function SeguimientoPrintView({
   const [showPerRowSign, setShowPerRowSign] = useState(true);
   const [blankRowsCount, setBlankRowsCount] = useState<number>(3);
   const [includeStudentSignature, setIncludeStudentSignature] = useState(false);
+  const [folioNumber, setFolioNumber] = useState<number>(1);
+
+  // Selección de acciones a imprimir (resuelve el problema de cuando el padre regresa después de un mes)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    () => new Set(actions.map((a) => a.id))
+  );
+
+  const displayedActions = actions.filter((a) => selectedIds.has(a.id));
+
+  function selectAll() {
+    setSelectedIds(new Set(actions.map((a) => a.id)));
+  }
+
+  function selectOnlyLast() {
+    if (actions.length > 0) {
+      setSelectedIds(new Set([actions[actions.length - 1].id]));
+    }
+  }
+
+  function toggleAction(id: string) {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedIds(next);
+  }
 
   function downloadWord() {
     const content = document.getElementById("printable-content");
     if (!content) return;
-    const title = `Bitacora_Seguimiento_${student.full_name.replace(/\s+/g, "_")}`;
+    const title = `Bitacora_Seguimiento_${student.full_name.replace(/\s+/g, "_")}${folioNumber > 1 ? `_Folio_${folioNumber}` : ""}`;
     const html = buildWordDocument(content.innerHTML, title);
     const blob = new Blob(["\ufeff", html], { type: "application/msword" });
     const url = URL.createObjectURL(blob);
@@ -72,7 +100,7 @@ export default function SeguimientoPrintView({
               <span>Herramientas de Optimización y Ahorro de Hojas</span>
             </span>
             <p className="text-[11px] text-slate-500 mt-0.5">
-              Configura cómo hacer firmar al representante para no reimprimir hojas en cada abordaje.
+              Si el padre regresa tras semanas o meses, puedes desmarcar lo ya firmado anteriormente para imprimir solo las acciones nuevas como hoja de continuación.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -95,46 +123,92 @@ export default function SeguimientoPrintView({
           </div>
         </div>
 
-        <div className="bg-white p-3 rounded border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showPerRowSign}
-              onChange={(e) => setShowPerRowSign(e.target.checked)}
-              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-            />
-            <div>
-              <span className="font-medium text-slate-700">Firma por cada abordaje</span>
-              <p className="text-[10px] text-slate-400">Columna de firma en la misma tabla</p>
-            </div>
-          </label>
+        {/* Panel de Opciones */}
+        <div className="bg-white p-3 rounded border border-slate-200 space-y-2.5 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showPerRowSign}
+                onChange={(e) => setShowPerRowSign(e.target.checked)}
+                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <div>
+                <span className="font-medium text-slate-700">Firma en cada fila</span>
+                <p className="text-[10px] text-slate-400">Columna de firma por abordaje</p>
+              </div>
+            </label>
 
-          <div className="flex items-center gap-2">
-            <label className="text-slate-700 font-medium whitespace-nowrap">Filas en blanco:</label>
-            <select
-              value={blankRowsCount}
-              onChange={(e) => setBlankRowsCount(Number(e.target.value))}
-              className="select !py-1 !px-2 text-xs flex-1"
-            >
-              <option value={0}>0 (solo registradas)</option>
-              <option value={3}>+3 filas para carpeta</option>
-              <option value={5}>+5 filas para carpeta</option>
-              <option value={8}>+8 filas (hoja completa)</option>
-            </select>
+            <div className="flex items-center gap-2">
+              <label className="text-slate-700 font-medium whitespace-nowrap">Filas en blanco:</label>
+              <select
+                value={blankRowsCount}
+                onChange={(e) => setBlankRowsCount(Number(e.target.value))}
+                className="select !py-1 !px-2 text-xs flex-1"
+              >
+                <option value={0}>0 (solo registradas)</option>
+                <option value={3}>+3 filas para carpeta</option>
+                <option value={5}>+5 filas para carpeta</option>
+                <option value={8}>+8 filas (hoja completa)</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-slate-700 font-medium whitespace-nowrap">Folio / Hoja N°:</label>
+              <select
+                value={folioNumber}
+                onChange={(e) => setFolioNumber(Number(e.target.value))}
+                className="select !py-1 !px-2 text-xs flex-1 font-semibold text-blue-800"
+              >
+                <option value={1}>Hoja 1 (Apertura)</option>
+                <option value={2}>Hoja 2 (Continuación)</option>
+                <option value={3}>Hoja 3 (Continuación)</option>
+                <option value={4}>Hoja 4 (Continuación)</option>
+              </select>
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeStudentSignature}
+                onChange={(e) => setIncludeStudentSignature(e.target.checked)}
+                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <div>
+                <span className="font-medium text-slate-700">Firma del estudiante</span>
+                <p className="text-[10px] text-slate-400">Al pie del documento</p>
+              </div>
+            </label>
           </div>
 
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={includeStudentSignature}
-              onChange={(e) => setIncludeStudentSignature(e.target.checked)}
-              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-            />
-            <div>
-              <span className="font-medium text-slate-700">Firma del estudiante</span>
-              <p className="text-[10px] text-slate-400">Para adolescentes / bachillerato</p>
+          {/* Filtro rápido de acciones (para cuando el padre regresa después de un tiempo) */}
+          {actions.length > 1 && (
+            <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-slate-600">Acciones a imprimir:</span>
+                <span className="bg-blue-100 text-blue-800 font-bold px-1.5 py-0.5 rounded text-[11px]">
+                  {displayedActions.length} de {actions.length}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={selectAll}
+                  className="px-2 py-0.5 rounded border border-slate-300 text-[11px] text-slate-700 hover:bg-slate-100"
+                >
+                  Marcar todas
+                </button>
+                <button
+                  type="button"
+                  onClick={selectOnlyLast}
+                  className="px-2 py-0.5 rounded border border-blue-300 bg-blue-50 text-[11px] text-blue-700 hover:bg-blue-100"
+                  title="Imprime solo la última atención registrada hoy"
+                >
+                  Solo la última (hoy)
+                </button>
+              </div>
             </div>
-          </label>
+          )}
         </div>
       </div>
 
@@ -142,7 +216,11 @@ export default function SeguimientoPrintView({
       <div id="printable-content" className="p-8 print:p-0 text-sm">
         <DocumentHeader
           title="Seguimiento de la Atención Psicosocial"
-          subtitle="Bitácora Oficial — Departamento de Consejería Estudiantil (DECE)"
+          subtitle={
+            folioNumber > 1
+              ? `Bitácora Oficial — Hoja de Continuación N° ${folioNumber} — Departamento de Consejería Estudiantil (DECE)`
+              : "Bitácora Oficial — Departamento de Consejería Estudiantil (DECE)"
+          }
           institutionName={institution?.name}
           sealImage={institution?.seal_image}
         />
@@ -155,15 +233,20 @@ export default function SeguimientoPrintView({
           <div><strong>Representante legal:</strong> {representative.name || student.representative || "No registra"}</div>
           <div><strong>Teléfono contacto:</strong> {representative.phone || student.rep_phone || "No registra"}</div>
           <div><strong>Profesional DECE responsable:</strong> {professional.name}</div>
-          <div><strong>Institución:</strong> {institution?.name || "—"}</div>
+          <div>
+            <strong>Folio / Página del expediente:</strong>{" "}
+            <span className="font-semibold text-slate-800">
+              {folioNumber === 1 ? "Hoja 1 (Apertura de seguimiento)" : `Hoja N° ${folioNumber} (Continuación de seguimiento)`}
+            </span>
+          </div>
         </section>
 
         <div className="flex items-center justify-between mb-1.5">
           <p className="font-bold text-xs uppercase text-slate-800">
-            Acciones implementadas para la atención psicosocial
+            Acciones implementadas para la atención psicosocial {folioNumber > 1 ? `(Continuación ${folioNumber})` : ""}
           </p>
           <span className="text-[10px] text-slate-500 no-print">
-            {actions.length} acción(es) registrada(s) {blankRowsCount > 0 ? `+ ${blankRowsCount} filas en blanco` : ""}
+            {displayedActions.length} acción(es) visible(s) {blankRowsCount > 0 ? `+ ${blankRowsCount} filas en blanco` : ""}
           </span>
         </div>
 
@@ -183,10 +266,19 @@ export default function SeguimientoPrintView({
             </tr>
           </thead>
           <tbody>
-            {actions.map((a) => (
+            {displayedActions.map((a) => (
               <tr key={a.id} className="align-top">
                 <td className="border border-slate-400 p-1.5 text-[11px]">
-                  {a.intervention_type ? INTERVENTION_TYPE_LABELS[a.intervention_type] || a.intervention_type : a.type}
+                  <div className="flex items-start gap-1">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(a.id)}
+                      onChange={() => toggleAction(a.id)}
+                      title="Incluir/excluir de la impresión"
+                      className="no-print mt-0.5 rounded text-blue-600 shrink-0"
+                    />
+                    <span>{a.intervention_type ? INTERVENTION_TYPE_LABELS[a.intervention_type] || a.intervention_type : a.type}</span>
+                  </div>
                 </td>
                 <td className="border border-slate-400 p-1.5 text-[11px] whitespace-pre-wrap leading-snug">
                   {a.description}
@@ -209,10 +301,10 @@ export default function SeguimientoPrintView({
               </tr>
             ))}
 
-            {actions.length === 0 && blankRowsCount === 0 && (
+            {displayedActions.length === 0 && blankRowsCount === 0 && (
               <tr>
                 <td colSpan={showPerRowSign ? 6 : 5} className="border border-slate-400 p-4 text-center text-slate-400 italic">
-                  Sin acciones registradas en el expediente digital.
+                  No hay acciones seleccionadas para imprimir. Marca las casillas de las acciones deseadas.
                 </td>
               </tr>
             )}
@@ -221,7 +313,7 @@ export default function SeguimientoPrintView({
             {Array.from({ length: blankRowsCount }).map((_, idx) => (
               <tr key={`blank-${idx}`} className="align-top">
                 <td className="border border-slate-400 p-1.5 h-16 text-[10px] text-slate-300">
-                  <span className="no-print italic">Reg. físico #{actions.length + idx + 1}</span>
+                  <span className="no-print italic">Reg. físico #{displayedActions.length + idx + 1}</span>
                 </td>
                 <td className="border border-slate-400 p-1.5 h-16" />
                 <td className="border border-slate-400 p-1.5 h-16" />
