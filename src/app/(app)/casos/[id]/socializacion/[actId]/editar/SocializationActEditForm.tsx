@@ -51,12 +51,27 @@ export default function SocializationActEditForm({
   );
   const [nextAgreementKey, setNextAgreementKey] = useState(existingAgreements.length + 1);
 
+  interface TeacherRowState {
+    key: number;
+    asignatura: string;
+    docente: string;
+  }
+
   const existingTeacherSignatures = parseJsonArray<TeacherSignatureEntry>(act.teacher_signatures);
-  const [teacherSignatures, setTeacherSignatures] = useState<TeacherSignatureEntry[]>(() =>
-    existingTeacherSignatures.length > 0
-      ? existingTeacherSignatures
-      : Array.from({ length: 4 }).map(() => ({ asignatura: "", docente: "" }))
-  );
+  const [teacherSignatures, setTeacherSignatures] = useState<TeacherRowState[]>(() => {
+    const base = existingTeacherSignatures.length > 0 ? existingTeacherSignatures : [];
+    const count = Math.max(18, base.length);
+    const initial: TeacherRowState[] = [];
+    for (let i = 0; i < count; i++) {
+      initial.push({
+        key: i,
+        asignatura: base[i]?.asignatura || "",
+        docente: base[i]?.docente || "",
+      });
+    }
+    return initial;
+  });
+  const [nextTeacherKey, setNextTeacherKey] = useState(() => Math.max(18, existingTeacherSignatures.length) + 1);
 
   function addAgreementRow() {
     setAgreementRows((rows) => [...rows, { key: nextAgreementKey, defaultValue: "" }]);
@@ -87,12 +102,50 @@ export default function SocializationActEditForm({
     }
   }
 
-  function addTeacherRow() {
-    setTeacherSignatures((rows) => [...rows, { asignatura: "", docente: "" }]);
+  function setTeacherRowCount(targetCount: number) {
+    const clamped = Math.max(6, Math.min(20, targetCount));
+    setTeacherSignatures((prev) => {
+      const next = prev.map((item) => {
+        const subInput = document.getElementById(`edit-teacher-subj-${item.key}`) as HTMLInputElement | null;
+        const nameInput = document.getElementById(`edit-teacher-name-${item.key}`) as HTMLInputElement | null;
+        return {
+          key: item.key,
+          asignatura: subInput ? subInput.value : item.asignatura,
+          docente: nameInput ? nameInput.value : item.docente,
+        };
+      });
+
+      if (next.length < clamped) {
+        let curKey = nextTeacherKey;
+        while (next.length < clamped) {
+          next.push({ key: curKey++, asignatura: "", docente: "" });
+        }
+        setNextTeacherKey(curKey);
+      } else if (next.length > clamped) {
+        next.splice(clamped);
+      }
+      return next;
+    });
   }
 
-  function removeTeacherRow(idx: number) {
-    setTeacherSignatures((rows) => rows.filter((_, i) => i !== idx));
+  function addTeacherRow() {
+    setTeacherRowCount(teacherSignatures.length + 1);
+  }
+
+  function removeTeacherRow(key: number) {
+    if (teacherSignatures.length <= 6) return;
+    setTeacherSignatures((prev) => {
+      const filtered = prev.filter((item) => item.key !== key);
+      return filtered.map((item) => {
+        const subInput = document.getElementById(`edit-teacher-subj-${item.key}`) as HTMLInputElement | null;
+        const nameInput = document.getElementById(`edit-teacher-name-${item.key}`) as HTMLInputElement | null;
+        return {
+          key: item.key,
+          asignatura: subInput ? subInput.value : item.asignatura,
+          docente: nameInput ? nameInput.value : item.docente,
+        };
+      });
+    });
   }
 
   return (
@@ -248,28 +301,85 @@ export default function SocializationActEditForm({
 
       {/* Firmas de docentes */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-xs font-semibold text-slate-500 uppercase">Docentes que reciben la socialización</h3>
-          <button type="button" onClick={addTeacherRow} className="text-xs text-brand-700 hover:underline">
-            + Agregar docente
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <div>
+            <h3 className="text-xs font-semibold text-slate-500 uppercase">Docentes que reciben la socialización</h3>
+            <p className="text-xs text-slate-400">
+              Filas visibles: <span className="font-semibold text-slate-700">{teacherSignatures.length}</span> (por defecto 18, mín. 6, máx. 20). Las filas vacías se imprimirán con renglones en blanco para firma a mano.
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs text-slate-400 mr-0.5">Filas:</span>
+            <button
+              type="button"
+              onClick={() => setTeacherRowCount(6)}
+              className={`px-2 py-0.5 text-xs rounded border transition-colors ${teacherSignatures.length === 6 ? "bg-brand-50 border-brand-500 text-brand-700 font-semibold" : "border-slate-300 hover:bg-slate-50 text-slate-700"}`}
+            >
+              6
+            </button>
+            <button
+              type="button"
+              onClick={() => setTeacherRowCount(12)}
+              className={`px-2 py-0.5 text-xs rounded border transition-colors ${teacherSignatures.length === 12 ? "bg-brand-50 border-brand-500 text-brand-700 font-semibold" : "border-slate-300 hover:bg-slate-50 text-slate-700"}`}
+            >
+              12
+            </button>
+            <button
+              type="button"
+              onClick={() => setTeacherRowCount(18)}
+              className={`px-2 py-0.5 text-xs rounded border transition-colors ${teacherSignatures.length === 18 ? "bg-brand-50 border-brand-500 text-brand-700 font-semibold" : "border-slate-300 hover:bg-slate-50 text-slate-700"}`}
+            >
+              18 (estándar)
+            </button>
+            <button
+              type="button"
+              onClick={addTeacherRow}
+              disabled={teacherSignatures.length >= 20}
+              className="px-2 py-0.5 text-xs rounded border border-brand-600 text-brand-700 hover:bg-brand-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium ml-1"
+            >
+              + Añadir
+            </button>
+            <button
+              type="button"
+              onClick={() => setTeacherRowCount(teacherSignatures.length - 1)}
+              disabled={teacherSignatures.length <= 6}
+              className="px-2 py-0.5 text-xs rounded border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              - Quitar
+            </button>
+          </div>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1 border border-slate-200 rounded-md p-2 bg-slate-50/50">
           {teacherSignatures.map((item, i) => (
-            <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-2 relative">
-              <input name="teacher_subject" defaultValue={item.asignatura} placeholder="Asignatura (ej: Matemáticas)" className="input" />
-              <div className="flex gap-2">
-                <input name="teacher_name" defaultValue={item.docente} placeholder="Nombre del docente" className="input flex-1" />
-                {teacherSignatures.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeTeacherRow(i)}
-                    className="text-red-500 hover:text-red-700 text-xs px-2"
-                    title="Eliminar fila"
-                  >
-                    ✕
-                  </button>
-                )}
+            <div key={item.key} className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 font-mono w-6 text-right shrink-0">#{i + 1}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1">
+                <input
+                  id={`edit-teacher-subj-${item.key}`}
+                  name="teacher_subject"
+                  defaultValue={item.asignatura}
+                  placeholder={`Asignatura ${i + 1} (ej: Matemáticas)`}
+                  className="input bg-white text-xs"
+                />
+                <div className="flex gap-1.5">
+                  <input
+                    id={`edit-teacher-name-${item.key}`}
+                    name="teacher_name"
+                    defaultValue={item.docente}
+                    placeholder={`Nombre del docente ${i + 1}`}
+                    className="input bg-white text-xs flex-1"
+                  />
+                  {teacherSignatures.length > 6 && (
+                    <button
+                      type="button"
+                      onClick={() => removeTeacherRow(item.key)}
+                      className="text-red-500 hover:text-red-700 text-xs px-2"
+                      title="Eliminar fila"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}

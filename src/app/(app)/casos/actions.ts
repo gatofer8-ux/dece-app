@@ -1030,9 +1030,11 @@ export async function createSocializationAct(
 
     const subjectNames = getAllStr(formData, "teacher_subject");
     const teacherNames = getAllStr(formData, "teacher_name");
-    const teacherSignatures = subjectNames
-      .map((asignatura, i) => ({ asignatura: asignatura.trim(), docente: (teacherNames[i] || "").trim() }))
-      .filter((t) => t.asignatura.length > 0 || t.docente.length > 0);
+    const maxTeacherRows = Math.max(subjectNames.length, teacherNames.length);
+    const teacherSignatures = Array.from({ length: maxTeacherRows }).map((_, i) => ({
+      asignatura: (subjectNames[i] || "").trim(),
+      docente: (teacherNames[i] || "").trim(),
+    }));
 
     db.prepare(
       `INSERT INTO socialization_acts
@@ -2693,9 +2695,11 @@ export async function updateSocializationAct(
 
     const subjectNames = getAllStr(formData, "teacher_subject");
     const teacherNames = getAllStr(formData, "teacher_name");
-    const teacherSignatures = subjectNames
-      .map((asignatura, i) => ({ asignatura: asignatura.trim(), docente: (teacherNames[i] || "").trim() }))
-      .filter((t) => t.asignatura.length > 0 || t.docente.length > 0);
+    const maxTeacherRows = Math.max(subjectNames.length, teacherNames.length);
+    const teacherSignatures = Array.from({ length: maxTeacherRows }).map((_, i) => ({
+      asignatura: (subjectNames[i] || "").trim(),
+      docente: (teacherNames[i] || "").trim(),
+    }));
 
     db.prepare(
       `UPDATE socialization_acts SET

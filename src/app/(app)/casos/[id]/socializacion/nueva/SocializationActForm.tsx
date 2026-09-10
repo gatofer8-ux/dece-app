@@ -43,7 +43,7 @@ export default function SocializationActForm({
   ]);
   const [nextAgreementKey, setNextAgreementKey] = useState(DEFAULT_AGREEMENTS.length + 1);
 
-  const [teacherRowCount, setTeacherRowCount] = useState(5);
+  const [teacherRowCount, setTeacherRowCount] = useState(18);
 
   function addAgreementRow() {
     setAgreementRows((rows) => [...rows, { key: nextAgreementKey, defaultValue: "" }]);
@@ -217,17 +217,62 @@ export default function SocializationActForm({
 
       {/* Firmas de docentes */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-xs font-semibold text-slate-500 uppercase">Docentes que reciben la socialización</h3>
-          <button type="button" onClick={() => setTeacherRowCount((n) => n + 1)} className="text-xs text-brand-700 hover:underline">
-            + Agregar docente
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <div>
+            <h3 className="text-xs font-semibold text-slate-500 uppercase">Docentes que reciben la socialización</h3>
+            <p className="text-xs text-slate-400">
+              Filas visibles: <span className="font-semibold text-slate-700">{teacherRowCount}</span> (por defecto 18, mín. 6, máx. 20). Las filas vacías se imprimirán con renglones en blanco para firma a mano.
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs text-slate-400 mr-0.5">Filas:</span>
+            <button
+              type="button"
+              onClick={() => setTeacherRowCount(6)}
+              className={`px-2 py-0.5 text-xs rounded border transition-colors ${teacherRowCount === 6 ? "bg-brand-50 border-brand-500 text-brand-700 font-semibold" : "border-slate-300 hover:bg-slate-50 text-slate-700"}`}
+            >
+              6
+            </button>
+            <button
+              type="button"
+              onClick={() => setTeacherRowCount(12)}
+              className={`px-2 py-0.5 text-xs rounded border transition-colors ${teacherRowCount === 12 ? "bg-brand-50 border-brand-500 text-brand-700 font-semibold" : "border-slate-300 hover:bg-slate-50 text-slate-700"}`}
+            >
+              12
+            </button>
+            <button
+              type="button"
+              onClick={() => setTeacherRowCount(18)}
+              className={`px-2 py-0.5 text-xs rounded border transition-colors ${teacherRowCount === 18 ? "bg-brand-50 border-brand-500 text-brand-700 font-semibold" : "border-slate-300 hover:bg-slate-50 text-slate-700"}`}
+            >
+              18 (estándar)
+            </button>
+            <button
+              type="button"
+              onClick={() => setTeacherRowCount((n) => Math.min(20, n + 1))}
+              disabled={teacherRowCount >= 20}
+              className="px-2 py-0.5 text-xs rounded border border-brand-600 text-brand-700 hover:bg-brand-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium ml-1"
+            >
+              + Añadir
+            </button>
+            <button
+              type="button"
+              onClick={() => setTeacherRowCount((n) => Math.max(6, n - 1))}
+              disabled={teacherRowCount <= 6}
+              className="px-2 py-0.5 text-xs rounded border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              - Quitar
+            </button>
+          </div>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1 border border-slate-200 rounded-md p-2 bg-slate-50/50">
           {Array.from({ length: teacherRowCount }).map((_, i) => (
-            <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <input name="teacher_subject" placeholder="Asignatura (ej: Matemáticas)" className="input" />
-              <input name="teacher_name" placeholder="Nombre del docente" className="input" />
+            <div key={i} className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 font-mono w-6 text-right shrink-0">#{i + 1}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1">
+                <input name="teacher_subject" placeholder={`Asignatura ${i + 1} (ej: Matemáticas)`} className="input bg-white text-xs" />
+                <input name="teacher_name" placeholder={`Nombre del docente ${i + 1}`} className="input bg-white text-xs" />
+              </div>
             </div>
           ))}
         </div>

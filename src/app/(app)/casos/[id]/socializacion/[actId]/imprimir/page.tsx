@@ -34,8 +34,13 @@ export default async function ImprimirActaSocializacionPage({ params }: { params
 
   const courseFormatted = formatStudentCourseFull(student);
   const agreements = parseJsonArray<string>(act.agreements);
-  const teacherSignatures = parseJsonArray<TeacherSignatureEntry>(act.teacher_signatures);
-  const blankSignatureRows = 3;
+  const rawTeacherSignatures = parseJsonArray<TeacherSignatureEntry>(act.teacher_signatures);
+  const teacherSignatures = rawTeacherSignatures.length >= 6
+    ? rawTeacherSignatures
+    : [
+        ...rawTeacherSignatures,
+        ...Array.from({ length: 6 - rawTeacherSignatures.length }).map(() => ({ asignatura: "", docente: "" })),
+      ];
 
   return (
     <div className="max-w-4xl mx-auto bg-white">
@@ -136,22 +141,21 @@ export default async function ImprimirActaSocializacionPage({ params }: { params
           <table className="w-full text-xs border border-slate-300 border-collapse">
             <thead>
               <tr className="bg-[#2F5496] text-white">
-                <th className="border border-slate-300 px-2 py-1 text-left">Asignatura</th>
-                <th className="border border-slate-300 px-2 py-1 text-left">Docente</th>
-                <th className="border border-slate-300 px-2 py-1 text-left">Firma</th>
+                <th className="border border-slate-300 px-2 py-1.5 text-left w-3/12">Asignatura</th>
+                <th className="border border-slate-300 px-2 py-1.5 text-left w-4/12">Nombre del docente</th>
+                <th className="border border-slate-300 px-2 py-1.5 text-left w-3/12">Firma</th>
+                <th className="border border-slate-300 px-2 py-1.5 text-left w-2/12">Cédula</th>
               </tr>
             </thead>
             <tbody>
               {teacherSignatures.map((t, i) => (
-                <tr key={i}>
-                  <td className="border border-slate-300 px-2 py-1">{t.asignatura || "—"}</td>
-                  <td className="border border-slate-300 px-2 py-1">{t.docente || "—"}</td>
-                  <td className="border border-slate-300 px-2 py-1">&nbsp;</td>
-                </tr>
-              ))}
-              {Array.from({ length: blankSignatureRows }).map((_, i) => (
-                <tr key={`blank-${i}`}>
-                  <td className="border border-slate-300 px-2 py-1">&nbsp;</td>
+                <tr key={i} className="h-7">
+                  <td className="border border-slate-300 px-2 py-1 font-normal text-slate-800">
+                    {t.asignatura || <span className="text-slate-300">&nbsp;</span>}
+                  </td>
+                  <td className="border border-slate-300 px-2 py-1 font-normal text-slate-800">
+                    {t.docente || (t.asignatura ? <span className="text-slate-400">................................................</span> : <span className="text-slate-300">&nbsp;</span>)}
+                  </td>
                   <td className="border border-slate-300 px-2 py-1">&nbsp;</td>
                   <td className="border border-slate-300 px-2 py-1">&nbsp;</td>
                 </tr>

@@ -4633,65 +4633,84 @@ export async function generateSocializationActDocx(opts: {
 
   const teacherRows = [
     new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
         new TableCell({
-          width: { size: 3200, type: WidthType.DXA },
+          width: { size: 2800, type: WidthType.DXA },
           shading: { fill: HEADER_BLUE },
           margins: { top: 40, bottom: 40, left: 60, right: 60 },
           children: [new Paragraph({ children: [new TextRun({ text: "Asignatura", bold: true, font: FONT_NAME, size: FONT_SIZE_XS, color: "FFFFFF" })] })],
         }),
         new TableCell({
-          width: { size: 3800, type: WidthType.DXA },
+          width: { size: 3400, type: WidthType.DXA },
           shading: { fill: HEADER_BLUE },
           margins: { top: 40, bottom: 40, left: 60, right: 60 },
-          children: [new Paragraph({ children: [new TextRun({ text: "Docente", bold: true, font: FONT_NAME, size: FONT_SIZE_XS, color: "FFFFFF" })] })],
+          children: [new Paragraph({ children: [new TextRun({ text: "Nombre del docente", bold: true, font: FONT_NAME, size: FONT_SIZE_XS, color: "FFFFFF" })] })],
         }),
         new TableCell({
-          width: { size: 2500, type: WidthType.DXA },
+          width: { size: 1800, type: WidthType.DXA },
           shading: { fill: HEADER_BLUE },
           margins: { top: 40, bottom: 40, left: 60, right: 60 },
           children: [new Paragraph({ children: [new TextRun({ text: "Firma", bold: true, font: FONT_NAME, size: FONT_SIZE_XS, color: "FFFFFF" })] })],
+        }),
+        new TableCell({
+          width: { size: 1500, type: WidthType.DXA },
+          shading: { fill: HEADER_BLUE },
+          margins: { top: 40, bottom: 40, left: 60, right: 60 },
+          children: [new Paragraph({ children: [new TextRun({ text: "Cédula", bold: true, font: FONT_NAME, size: FONT_SIZE_XS, color: "FFFFFF" })] })],
         }),
       ],
     }),
   ];
 
-  teacherSignatures.forEach((t) => {
+  const rowsToExport = teacherSignatures.length >= 6
+    ? teacherSignatures
+    : [
+        ...teacherSignatures,
+        ...Array.from({ length: 6 - teacherSignatures.length }).map(() => ({ asignatura: "", docente: "" })),
+      ];
+
+  rowsToExport.forEach((t) => {
     teacherRows.push(
       new TableRow({
+        cantSplit: true,
         children: [
           new TableCell({
-            width: { size: 3200, type: WidthType.DXA },
-            margins: { top: 40, bottom: 40, left: 60, right: 60 },
-            children: [new Paragraph({ children: [new TextRun({ text: t.asignatura || "—", font: FONT_NAME, size: FONT_SIZE_XS })] })],
+            width: { size: 2800, type: WidthType.DXA },
+            margins: { top: 60, bottom: 60, left: 60, right: 60 },
+            children: [new Paragraph({ children: [new TextRun({ text: t.asignatura || "", font: FONT_NAME, size: FONT_SIZE_XS })] })],
           }),
           new TableCell({
-            width: { size: 3800, type: WidthType.DXA },
-            margins: { top: 40, bottom: 40, left: 60, right: 60 },
-            children: [new Paragraph({ children: [new TextRun({ text: t.docente || "—", font: FONT_NAME, size: FONT_SIZE_XS })] })],
+            width: { size: 3400, type: WidthType.DXA },
+            margins: { top: 60, bottom: 60, left: 60, right: 60 },
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: t.docente || (t.asignatura ? "................................................" : ""),
+                    font: FONT_NAME,
+                    size: FONT_SIZE_XS,
+                    color: t.docente ? "000000" : "94A3B8",
+                  }),
+                ],
+              }),
+            ],
           }),
           new TableCell({
-            width: { size: 2500, type: WidthType.DXA },
-            margins: { top: 40, bottom: 40, left: 60, right: 60 },
+            width: { size: 1800, type: WidthType.DXA },
+            margins: { top: 60, bottom: 60, left: 60, right: 60 },
+            children: [new Paragraph({ text: "" })],
+          }),
+          new TableCell({
+            width: { size: 1500, type: WidthType.DXA },
+            margins: { top: 60, bottom: 60, left: 60, right: 60 },
             children: [new Paragraph({ text: "" })],
           }),
         ],
       })
     );
   });
-
-  // 3 filas en blanco
-  for (let i = 0; i < 3; i++) {
-    teacherRows.push(
-      new TableRow({
-        children: [
-          new TableCell({ width: { size: 3200, type: WidthType.DXA }, margins: { top: 40, bottom: 40, left: 60, right: 60 }, children: [new Paragraph({ text: "" })] }),
-          new TableCell({ width: { size: 3800, type: WidthType.DXA }, margins: { top: 40, bottom: 40, left: 60, right: 60 }, children: [new Paragraph({ text: "" })] }),
-          new TableCell({ width: { size: 2500, type: WidthType.DXA }, margins: { top: 40, bottom: 40, left: 60, right: 60 }, children: [new Paragraph({ text: "" })] }),
-        ],
-      })
-    );
-  }
 
   children.push(
     new Table({
