@@ -295,6 +295,7 @@ export interface CaseChecklistItemRow {
   item_text: string;
   status: ChecklistStatus | null;
   observations: string | null;
+  attachment_id: string | null;
   updated_at: string;
 }
 
@@ -830,6 +831,7 @@ export interface AttachmentRow {
   presented_by_name?: string | null;
   document_type?: string | null;
   ocr_extracted_at?: string | null;
+  checklist_item_id?: string | null;
 }
 
 export type PresenterRole =

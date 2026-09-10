@@ -66,6 +66,13 @@ export async function deleteAttachment(attachmentId: string, caseId: string) {
   db.prepare("DELETE FROM attachments WHERE id = ?").run(attachmentId);
   deleteAttachmentFile(attachment.path);
 
+  // Si el archivo era el respaldo de un ítem del checklist, se desmarca el ítem.
+  if (attachment.checklist_item_id) {
+    db.prepare(
+      "UPDATE case_checklist_items SET attachment_id = NULL, status = NULL, updated_at = datetime('now') WHERE id = ? AND case_file_id = ?"
+    ).run(attachment.checklist_item_id, caseId);
+  }
+
   logAudit({ userId: session.user.id, action: "BORRAR_ARCHIVO", entityType: "Attachment", entityId: attachmentId, institutionId });
   revalidatePath(`/casos/${caseId}`);
 }

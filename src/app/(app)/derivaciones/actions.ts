@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { requireOwnedCase } from "@/lib/scopedDb";
 import { logAudit } from "@/lib/audit";
+import { autoMarkChecklistItems } from "@/lib/checklistAutoMark";
 
 export type ActionState = { error: string | null };
 
@@ -65,6 +66,8 @@ function insertReferral(
   db.prepare(
     `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Derivación', ?)`
   ).run(randomUUID(), caseId, userId, `Derivación registrada hacia: ${str(formData, "institution")}`);
+
+  autoMarkChecklistItems(caseId, ["ficha de derivacion"], "Ficha de derivación");
 
   db.prepare(`UPDATE case_files SET status='DERIVADO', updated_at=datetime('now') WHERE id=? AND status != 'CERRADO'`).run(caseId);
 

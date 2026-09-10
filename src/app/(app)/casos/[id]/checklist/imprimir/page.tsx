@@ -41,6 +41,13 @@ export default async function ImprimirChecklistPage({
     .all(caseFile.id) as CaseChecklistReviewRow[];
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
   const institution = db.prepare("SELECT * FROM institutions WHERE id = ?").get(institutionId) as InstitutionRow;
+  const itemsWithRespaldo = new Set(
+    (
+      db
+        .prepare("SELECT checklist_item_id FROM attachments WHERE case_file_id = ? AND checklist_item_id IS NOT NULL")
+        .all(caseFile.id) as { checklist_item_id: string }[]
+    ).map((a) => a.checklist_item_id)
+  );
 
   return (
     <div className="max-w-4xl mx-auto bg-white">
@@ -81,7 +88,12 @@ export default async function ImprimirChecklistPage({
                 <td className="border border-slate-400 p-1 text-center">{item.status === "SI" ? "✓" : ""}</td>
                 <td className="border border-slate-400 p-1 text-center">{item.status === "NO" ? "✓" : ""}</td>
                 <td className="border border-slate-400 p-1 text-center">{!item.status ? "—" : ""}</td>
-                <td className="border border-slate-400 p-1">{item.observations || ""}</td>
+                <td className="border border-slate-400 p-1">
+                  {item.observations || ""}
+                  {itemsWithRespaldo.has(item.id) ? (
+                    <span className="font-semibold"> {item.observations ? "· " : ""}Respaldo documental adjunto en el expediente.</span>
+                  ) : null}
+                </td>
               </tr>
             ))}
           </tbody>
