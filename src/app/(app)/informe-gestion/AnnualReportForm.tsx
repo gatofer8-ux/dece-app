@@ -39,6 +39,7 @@ interface Props {
   report?: AnnualManagementReportRow;
   schoolYears: SchoolYearRow[];
   selectedYearId?: string;
+  defaultReportCode?: string;
   currentUserId: string;
   currentUserName: string;
   currentUserEmail?: string;
@@ -52,6 +53,7 @@ export default function AnnualReportForm({
   report,
   schoolYears,
   selectedYearId,
+  defaultReportCode,
   currentUserId,
   currentUserName,
   currentUserEmail,
@@ -84,7 +86,7 @@ export default function AnnualReportForm({
 
   // Código correlativo y Fecha
   const [reportCode, setReportCode] = useState(
-    report?.report_code || `INF-GESTION-DECE-${schoolYearText.replace(/\s+/g, "")}-001`
+    report?.report_code || defaultReportCode || `Mineduc-CZ3-18D02-UESR-DECE-MJ-${schoolYearText.replace(/\s+/g, "")}-001`
   );
   const [reportDate, setReportDate] = useState(
     report?.report_date || new Date().toISOString().split("T")[0]
@@ -745,13 +747,15 @@ export default function AnnualReportForm({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Código del Informe</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Código del Informe (Oficial)</label>
             <input
               type="text"
               value={reportCode}
-              onChange={(e) => setReportCode(e.target.value)}
-              className="w-full text-xs p-2 border border-slate-300 rounded-lg font-mono font-bold"
+              readOnly
+              className="w-full text-xs p-2 border border-slate-300 rounded-lg font-mono font-bold bg-slate-100 text-slate-800 cursor-not-allowed select-all"
+              title="Generado automáticamente según la codificación oficial DECE"
             />
+            <p className="text-[10px] text-slate-400 mt-0.5">Consecutivo oficial inmutable</p>
           </div>
 
           <div>

@@ -1,6 +1,5 @@
 import { randomUUID } from "crypto";
 import type Database from "better-sqlite3";
-import { db as defaultDb } from "./db";
 import type { InstitutionRow, UserRow } from "./types";
 import {
   type ReportConfigParts,
@@ -13,6 +12,13 @@ import {
 } from "./reportNumberingShared";
 
 export * from "./reportNumberingShared";
+
+function getDb(dbInstance?: Database.Database): Database.Database {
+  if (dbInstance) return dbInstance;
+  // eslint-disable-next-line
+  const { db } = require("./db");
+  return db;
+}
 
 /**
  * Obtiene los componentes de configuración para numeración de informes
@@ -67,8 +73,9 @@ export function previewNextReportNumber(
     professionalCode?: string | null;
     schoolYearText?: string | null;
   },
-  dbInstance: Database.Database = defaultDb
+  dbInstance?: Database.Database
 ): { reportNumber: string; sequenceNumber: number; schoolYearCode: string } {
+  const resolvedDb = getDb(dbInstance);
   const { institutionId, userId, userName, professionalCode, schoolYearText } = params;
 
   let userParam: { id?: string; name?: string; professional_code?: string | null } | string | null = null;
@@ -78,9 +85,9 @@ export function previewNextReportNumber(
     userParam = { name: userName || undefined, professional_code: professionalCode };
   }
 
-  const config = getReportConfigParts(dbInstance, institutionId, userParam, schoolYearText);
+  const config = getReportConfigParts(resolvedDb, institutionId, userParam, schoolYearText);
 
-  const seqRow = dbInstance
+  const seqRow = resolvedDb
     .prepare(
       "SELECT last_number FROM dece_report_sequences WHERE institution_id = ? AND school_year_code = ?"
     )
@@ -126,8 +133,9 @@ export function assignNextReportNumber(
     caseFileId?: string | null;
     studentId?: string | null;
   },
-  dbInstance: Database.Database = defaultDb
+  dbInstance?: Database.Database
 ): { reportNumber: string; sequenceNumber: number; schoolYearCode: string } {
+  const resolvedDb = getDb(dbInstance);
   const {
     institutionId,
     userId,
@@ -147,11 +155,11 @@ export function assignNextReportNumber(
     userParam = { name: userName, professional_code: professionalCode };
   }
 
-  const config = getReportConfigParts(dbInstance, institutionId, userParam, schoolYearText);
+  const config = getReportConfigParts(resolvedDb, institutionId, userParam, schoolYearText);
 
-  const executeAssignment = dbInstance.transaction(() => {
+  const executeAssignment = resolvedDb.transaction(() => {
     // 1. Asegura o incrementa la secuencia atómicamente
-    dbInstance
+    resolvedDb
       .prepare(
         `INSERT INTO dece_report_sequences (institution_id, school_year_code, last_number, updated_at)
          VALUES (?, ?, 1, datetime('now'))
@@ -162,7 +170,7 @@ export function assignNextReportNumber(
       .run(institutionId, config.schoolYearCode);
 
     // 2. Obtiene el consecutivo asignado
-    const updatedSeq = dbInstance
+    const updatedSeq = resolvedDb
       .prepare(
         "SELECT last_number FROM dece_report_sequences WHERE institution_id = ? AND school_year_code = ?"
       )
@@ -182,7 +190,7 @@ export function assignNextReportNumber(
     });
 
     // 3. Registra en el log inmutable de informes emitidos
-    dbInstance
+    resolvedDb
       .prepare(
         `INSERT INTO dece_issued_reports (
            id, institution_id, school_year_code, sequence_number, report_number,

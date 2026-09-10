@@ -603,9 +603,13 @@ export default async function CasoDetallePage({
             <div className="space-y-2">
               {violenceReports.map((r) => (
                 <div key={r.id} className="text-sm border-b border-slate-100 pb-2 flex justify-between items-center">
-                  <div>
-                    <div className="font-medium">Reporte — {formatDate(r.report_date)}</div>
-                    <div className="text-xs text-slate-400">{r.report_number || "s/n"}</div>
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                        {r.report_number || "Sin codificar"}
+                      </span>
+                      <span className="text-xs text-slate-500">• {formatDate(r.report_date)}</span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <a
@@ -860,9 +864,14 @@ export default async function CasoDetallePage({
             <div className="space-y-2">
               {situationalReports.map((r) => (
                 <div key={r.id} className="text-sm border-b border-slate-100 pb-2 flex justify-between items-center">
-                  <div className="min-w-0">
-                    <div className="font-medium truncate max-w-md">{r.tema || r.situation_type}</div>
-                    <div className="text-xs text-slate-400">{formatDate(r.report_date)}</div>
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                        {r.report_number || "Sin codificar"}
+                      </span>
+                      <span className="text-xs text-slate-500">• {formatDate(r.report_date)}</span>
+                    </div>
+                    <div className="font-medium truncate max-w-md text-slate-700">{r.tema || r.situation_type}</div>
                   </div>
                   <div className="flex items-center gap-3">
                     <Link href={`/casos/${caseFile.id}/informe-situacional/${r.id}/editar`} className="text-xs text-blue-600 hover:underline whitespace-nowrap">
@@ -906,9 +915,14 @@ export default async function CasoDetallePage({
             <div className="space-y-2">
               {bimonthlyReports.map((r) => (
                 <div key={r.id} className="text-sm border-b border-slate-100 pb-2 flex justify-between items-center">
-                  <div>
-                    <div className="font-medium">
-                      Bimestre: {r.period_months} ({r.school_year_text})
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                        {r.report_number || "Sin codificar"}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-700">
+                        Bimestre: {r.period_months} ({r.school_year_text})
+                      </span>
                     </div>
                     <div className="text-xs text-slate-400">
                       Víctima: {r.victim_initials} • Registrado el {formatDate(r.created_at)}

@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { runMigrations } from "./migrations";
 import { recodifyExistingCases } from "./recodifyCases";
+import { recodifyExistingReports } from "./recodifyReports";
 
 // Ubicación del archivo de base de datos SQLite.
 // Por defecto se guarda en /data/dece.db (pensado para volumen persistente en Docker);
@@ -844,6 +845,14 @@ CREATE INDEX IF NOT EXISTS idx_rep_gen_hist_inst ON report_generation_history(in
     recodifyExistingCases(db);
   } catch (err) {
     console.error("[db] Error recodificando casos existentes:", err);
+  }
+
+  // Recodifica retroactivamente e idempotente todos los informes DECE existentes
+  // al formato oficial: Mineduc-CZ3-18D02-UESR-DECE-MJ-2025/2026-001
+  try {
+    recodifyExistingReports(db);
+  } catch (err) {
+    console.error("[db] Error recodificando informes existentes:", err);
   }
 
   return db;
