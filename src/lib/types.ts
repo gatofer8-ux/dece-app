@@ -801,6 +801,7 @@ export interface RestorativeCircleFichaRow {
   district_name: string | null;
   facilitator_name: string | null;
   circle_type: string | null;
+  circle_modality: string | null;
   participants_count: string | null;
   participant_type: string | null;
   problematica: string | null;

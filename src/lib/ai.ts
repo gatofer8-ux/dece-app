@@ -25,11 +25,15 @@ import { REPRESENTATIVE_AWARENESS_NOTE } from "./interviewDefaults";
 // error legible para mostrar en la interfaz, sin romper el resto del
 // formulario donde se use.
 
+// Se prioriza el modelo Flash completo (mejor calidad de redacción). Los
+// modelos "-lite" solo se usan como último recurso cuando los completos están
+// saturados o no disponibles para la clave. Para máxima calidad, configurar
+// GEMINI_MODEL con un modelo Pro (requiere facturación activa en la clave).
 const MODEL_FALLBACK_CHAIN = [
   "gemini-3.6-flash",
+  "gemini-3.7-flash",
   "gemini-3.5-flash-lite",
   "gemini-3.1-flash-lite",
-  "gemini-3.7-flash",
 ];
 
 let currentKeyIndex = 0;
@@ -331,6 +335,13 @@ REGLAS DE FORMATO Y ESTILO ESTRICTAS (OBLIGATORIAS):
 4. No dejes líneas en blanco al inicio ni al final del texto. Deja un máximo de una sola línea en blanco entre párrafos o secciones.
 5. Si son conclusiones o recomendaciones, redacta al menos 4 puntos enumerados de forma independiente.
 
+EXIGENCIA DE CALIDAD DEL CONTENIDO (OBLIGATORIA):
+A. Aporta contenido sustantivo y específico, NO frases genéricas ni de relleno. Cada oración debe decir algo concreto y útil para el expediente.
+B. Integra activamente TODOS los datos disponibles del contexto (tipo de riesgo, curso y nivel del estudiante, antecedentes, entrevistas, observaciones, acciones previas, fechas). Conecta los hechos entre sí; no te limites a repetirlos.
+C. Usa terminología técnica precisa del enfoque psicosocial y de derechos del MinEduc (factores de riesgo y protectores, corresponsabilidad, interés superior, no revictimización, restitución de derechos, acompañamiento socioemocional).
+D. Cuando el campo lo permita, desarrolla el contenido con la profundidad propia de un documento oficial: 1 a 3 párrafos bien articulados o una lista de puntos concretos y accionables; evita respuestas de una sola línea salvo que la regla específica lo pida.
+E. Sé preciso y realista: propuestas y compromisos verificables, con responsables y plazos cuando corresponda. No inventes datos, nombres, fechas ni hechos que no aparezcan en el contexto.
+
   ${socializationRule}
   ${socializationAgreementsRule}
   ${bimonthlyRule}
@@ -365,6 +376,7 @@ Responde ÚNICAMENTE con el texto final del campo, en español, en texto plano s
       const response = await ai.models.generateContent({
         model,
         contents: prompt,
+        config: { temperature: 0.65, topP: 0.95, maxOutputTokens: 4096 },
       });
       let text = (response.text || "").trim();
       if (!text) {
@@ -423,7 +435,7 @@ Responde ÚNICAMENTE con el texto final del campo, en español, en texto plano s
   console.error("[ai] Error al generar borrador (todos los modelos probados fallaron):", lastError);
   const message = String(lastError?.message || lastError || "");
   if (message.includes("429") || message.toLowerCase().includes("quota") || message.toLowerCase().includes("resource_exhausted")) {
-    return { error: "Se alcanzó el límite de la clave de IA (posiblemente por minuto). Espera 1 minuto y vuelve a intentar. Si el error persiste, el límite diario se agotó." };
+    return { error: "Se alcanzó el límite de uso de la clave de IA. Si es por minuto, espera 1 minuto; si el límite diario del plan gratuito se agotó, se restablece al día siguiente. Para uso intensivo, activa la facturación de la clave de Gemini o configura varias claves separadas por comas." };
   }
   if (message.toUpperCase().includes("UNAVAILABLE") || message.toLowerCase().includes("high demand")) {
     return { error: "Los servidores de Gemini están saturados en este momento. Intenta de nuevo en unos minutos, o escribe el texto manualmente." };
@@ -1644,6 +1656,11 @@ export async function generateRestorativeCircleQuestions(opts: {
   problematica: string;
   circleType?: string;
   participantType?: string;
+  /** grupal | individual | mixto — orienta si las preguntas van al grupo o a personas con rol. */
+  modality?: string;
+  participantsCount?: string;
+  /** Contexto del caso vinculado (tipo de riesgo, descripción), si lo hay. */
+  caseContext?: string;
 }): Promise<
   | {
       questions: {
@@ -1660,6 +1677,22 @@ export async function generateRestorativeCircleQuestions(opts: {
     return { error: "La ayuda de IA todavía no está configurada en este sistema." };
   }
 
+  const modality = (opts.modality || "").toLowerCase().trim();
+  const modalityInstruction =
+    modality === "individual"
+      ? `MODALIDAD: INDIVIDUAL / ENTRE PARTES.
+El círculo reúne a pocas personas con roles concretos. La MAYORÍA de las preguntas de las fases 3 y 4 deben ir DIRIGIDAS POR ROL, con prefijo explícito al inicio: "Para quien causó el daño:", "Para quien fue afectado/a:", "Para ambas partes:". Enfócate en el relato de lo ocurrido, el reconocimiento del impacto, las necesidades de la persona afectada, la responsabilidad activa y los acuerdos concretos de reparación entre las partes. Incluye 1 o 2 preguntas para la comunidad/aula solo si el daño la involucra.`
+      : modality === "grupal"
+      ? `MODALIDAD: GRUPAL / DE AULA O COMUNIDAD.
+El círculo se realiza con un curso o grupo completo. Las preguntas deben ser COLECTIVAS y dirigidas a "el grupo", "el curso", "todas y todos" — NO uses prefijos de rol individual ("para quien causó el daño"). Enfócate en cómo la problemática afecta la convivencia del grupo, las emociones compartidas, la corresponsabilidad, los acuerdos de aula y la construcción de un entorno seguro para todas y todos.`
+      : `MODALIDAD: MIXTA.
+Combina preguntas dirigidas a las personas directamente implicadas (con prefijo de rol: "Para quien causó el daño:", "Para quien fue afectado/a:") con preguntas colectivas para el grupo/aula. Distribuye ambos tipos en las fases 3 y 4.`;
+
+  const analysisStep =
+    modality
+      ? `El profesional ya definió la modalidad (ver abajo). Respétala estrictamente.`
+      : `PRIMERO ANALIZA si el círculo es GRUPAL (un curso/grupo completo, p. ej. "Estudiantes de 3° B", número alto de participantes) o INDIVIDUAL/ENTRE PARTES (pocas personas con roles: quien causó el daño y quien fue afectado). Deduce esto de la problemática, del tipo de participantes y del número de participantes, y adapta TODAS las preguntas en consecuencia (colectivas para grupal; dirigidas por rol para individual).`;
+
   const prompt = `Eres un/a profesional del Departamento de Consejería Estudiantil (DECE) del Ministerio de Educación del Ecuador, especialista en prácticas restaurativas y círculos de diálogo con estudiantes.
 
 Tu tarea es proponer un BANCO DE PREGUNTAS RESTAURATIVAS para planificar un Círculo Restaurativo, a partir de la problemática que describe el profesional. El profesional escogerá después cuáles usar.
@@ -1670,16 +1703,23 @@ MARCO OBLIGATORIO (enfoque de justicia restaurativa, NO punitivo):
 - Las preguntas deben ser abiertas, respetuosas, adecuadas a la edad, no acusatorias ni culpabilizantes, y favorecer la reflexión, la empatía y el compromiso.
 - NO incluyas nombres propios de estudiantes ni datos personales. Habla de "la persona afectada", "la persona que causó el daño", "el grupo", etc.
 
+ANÁLISIS DE MODALIDAD (paso previo obligatorio):
+${analysisStep}
+
+${modalityInstruction}
+
 DATOS:
 - Problemática descrita por el profesional: "${opts.problematica.trim() || "(no especificada)"}"
 - Tipo de círculo: ${opts.circleType || "Reactivo"}
 - Tipo de participantes: ${opts.participantType || "Estudiantes"}
+- N.º de participantes: ${opts.participantsCount || "(no especificado)"}
+${opts.caseContext ? `- Contexto del caso vinculado: ${opts.caseContext}` : ""}
 
 Debes generar preguntas para las CUATRO fases del círculo:
 1. "q_icebreaker": pregunta o dinámica breve para romper el hielo y generar confianza (3 a 5 opciones).
 2. "q_intro": preguntas para introducir la temática y reflexionar sobre cómo nos sentimos y sobre nuestras acciones (4 a 6 opciones).
-3. "q_develop": preguntas para desarrollar la temática a profundidad, contemplando distintos roles según la problemática (por ejemplo, para la persona que causó el daño, para la persona afectada, para el grupo). Puedes usar prefijos como "Para quien causó el daño:" al inicio de la pregunta cuando corresponda (6 a 10 opciones).
-4. "q_actions": preguntas para definir acciones, acuerdos y compromisos de reparación y prevención, incluyendo el rol del grupo y de la comunidad educativa (5 a 8 opciones).
+3. "q_develop": preguntas para desarrollar la temática a profundidad, siguiendo estrictamente la modalidad indicada arriba (6 a 10 opciones).
+4. "q_actions": preguntas para definir acciones, acuerdos y compromisos de reparación y prevención, siguiendo la modalidad indicada arriba (5 a 8 opciones).
 
 Responde ÚNICAMENTE con un objeto JSON válido, sin markdown ni texto adicional, con esta estructura exacta:
 {
@@ -1704,7 +1744,11 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin markdown ni texto adicional
 
   for (const model of modelsToTry) {
     try {
-      const response = await ai.models.generateContent({ model, contents: prompt });
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: { temperature: 0.8, topP: 0.95, maxOutputTokens: 4096 },
+      });
       const text = (response.text || "").trim();
       const match = text.match(/\{[\s\S]*\}/);
       if (match) {
@@ -1733,7 +1777,7 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin markdown ni texto adicional
       ) {
         return {
           error:
-            "Se alcanzó el límite de la clave de IA (posiblemente por minuto). Espera 1 minuto y vuelve a intentar.",
+            "Se alcanzó el límite de uso de la clave de IA. Si es por minuto, espera 1 minuto; si el límite diario del plan gratuito se agotó, se restablece al día siguiente. Para uso intensivo, activa la facturación de la clave de Gemini o configura varias claves separadas por comas.",
         };
       }
       console.warn(`[ai circulo restaurativo] Falló modelo ${model}:`, message);

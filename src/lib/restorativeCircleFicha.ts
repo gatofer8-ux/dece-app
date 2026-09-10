@@ -15,6 +15,35 @@
 export const CIRCLE_TYPES = ["Reactivo", "Proactivo"] as const;
 export type CircleType = (typeof CIRCLE_TYPES)[number];
 
+/**
+ * Modalidad del círculo. Determina si la IA formula preguntas dirigidas al
+ * grupo/comunidad (aula completa) o a personas concretas con roles definidos
+ * (quien causó el daño / quien fue afectado), o una combinación de ambas.
+ */
+export const CIRCLE_MODALITIES = [
+  {
+    value: "grupal",
+    label: "Grupal / de aula o comunidad",
+    hint: "Todo un curso o grupo. Preguntas colectivas, construcción de convivencia y acuerdos comunes.",
+  },
+  {
+    value: "individual",
+    label: "Individual / entre partes",
+    hint: "Pocas personas con roles concretos (quien causó el daño y quien fue afectado). Preguntas dirigidas por rol y reparación.",
+  },
+  {
+    value: "mixto",
+    label: "Mixto",
+    hint: "Parte del trabajo es entre las personas directamente implicadas y parte con el grupo.",
+  },
+] as const;
+
+export type CircleModality = (typeof CIRCLE_MODALITIES)[number]["value"];
+
+export function circleModalityLabel(value: string | null | undefined): string {
+  return CIRCLE_MODALITIES.find((m) => m.value === value)?.label || "";
+}
+
 /** Las cuatro fases de preguntas del círculo, en el orden del formato. */
 export const QUESTION_STAGES = [
   {
