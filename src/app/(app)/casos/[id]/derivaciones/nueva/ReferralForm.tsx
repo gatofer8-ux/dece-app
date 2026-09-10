@@ -194,11 +194,13 @@ export default function ReferralForm({
             <AIAssistButton targetId="referral-observations" caseId={caseId} fieldLabel="Observaciones de la ficha de derivación" />
           </div>
         </div>
+        <p className="text-xs text-slate-400 mb-1">Pautas e indicaciones directas (lista con viñetas •, 2 a 5 líneas breves; incluye cita si existe).</p>
         <textarea
           id="referral-observations"
           name="observations"
           defaultValue={initialData?.observations || ""}
-          rows={2}
+          placeholder="• Brindar atención psicológica al estudiante.&#10;• Favor enviar certificado de asistencia.&#10;• N° cita: 91665562; Fecha: 22/10/2024; Hora: 10h00"
+          rows={3}
           className="textarea"
         />
       </div>

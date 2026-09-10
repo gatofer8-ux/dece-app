@@ -246,6 +246,19 @@ export async function draftText(opts: {
       "5. NO emitas juicios de valor ni diagnósticos clínicos nosológicos definitivos.\n"
     : "";
 
+  const isReferralObservations =
+    opts.fieldLabel.toLowerCase().includes("observaciones") &&
+    (opts.fieldLabel.toLowerCase().includes("derivaci") ||
+      opts.fieldLabel.toLowerCase().includes("ficha"));
+
+  const referralObservationsRule = isReferralObservations
+    ? "\nEXCEPCIÓN Y REGLA OBLIGATORIA PARA 'OBSERVACIONES' EN FICHA DE DERIVACIÓN:\n" +
+      "1. Debes generar EXCLUSIVAMENTE una lista de 2 a 5 líneas con viñeta de punto '• ' al inicio de cada línea.\n" +
+      "2. Redacta oraciones imperativas o directivas breves, formales y directas (ejemplos exactos del formato oficial: '• Brindar atención psicológica al adolescente.', '• Favor enviar certificado de asistencia.', '• Realizar seguimiento conjunto del caso.').\n" +
+      "3. Si en el contexto del caso aparece información de una cita ('CITA_DETALLE' o N° de cita, fecha, hora), incluye al final una línea con la información de la cita: '• N° cita: ...; Fecha: ...; Hora: ...'.\n" +
+      "4. NO agregues introducciones ni explicaciones. Devuelve ÚNICAMENTE las líneas con viñeta '• '.\n"
+    : "";
+
   const prompt = `Eres un asistente que ayuda a un profesional del Departamento de Consejería Estudiantil (DECE) en Ecuador a redactar documentos técnicos oficiales de gestión de casos. Usa lenguaje profesional, claro, objetivo, respetuoso y con enfoque de derechos, sin emitir juicios de valor ni diagnósticos clínicos que no correspondan a un informe DECE.
 
 REGLAS DE FORMATO Y ESTILO ESTRICTAS (OBLIGATORIAS):
@@ -260,6 +273,7 @@ REGLAS DE FORMATO Y ESTILO ESTRICTAS (OBLIGATORIAS):
   ${bimonthlyRule}
   ${referralActionsRule}
   ${currentSituationRule}
+  ${referralObservationsRule}
   Vas a redactar o mejorar el siguiente campo de un documento: "${opts.fieldLabel}".
 
 Contexto del caso (datos ya registrados en el sistema; úsalos para dar coherencia, pero NO inventes datos, nombres, fechas ni hechos que no aparezcan aquí):
@@ -296,6 +310,14 @@ Responde ÚNICAMENTE con el texto final del campo, en español, en texto plano s
           .map((l) => l.trim())
           .filter(Boolean)
           .map((l) => (l.startsWith("-") ? l : `- ${l.replace(/^(\d+[\.\)]|[•\*\+])\s*/, "")}`))
+          .join("\n");
+      }
+      if (isReferralObservations) {
+        text = text
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean)
+          .map((l) => (l.startsWith("•") ? l : `• ${l.replace(/^(\d+[\.\)]|[\*\-\+])\s*/, "")}`))
           .join("\n");
       }
       return { text };

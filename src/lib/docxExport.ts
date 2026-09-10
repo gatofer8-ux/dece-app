@@ -2881,7 +2881,18 @@ export async function generateReferralDocx(opts: {
               new TableRow({
                 children: [
                   lbl("Observaciones", 1),
-                  val(referral.observations || "—", 5, false),
+                  val(
+                    referral.observations
+                      ? referral.observations
+                          .split("\n")
+                          .map((line) => line.trim())
+                          .filter(Boolean)
+                          .map((line) => (line.startsWith("•") ? line : `• ${line.replace(/^(\d+[\.\)]|[\*\-\+])\s*/, "")}`))
+                          .join("\n")
+                      : "—",
+                    5,
+                    false
+                  ),
                 ],
               }),
             ],
