@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { studentGradeOnly } from "@/lib/studentCourse";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
@@ -57,7 +58,7 @@ export default async function NuevaAlertaPage({
         representativeName={student.representative || student.mother_name || student.father_name || ""}
         representativeAddress={student.address || student.representative_address || ""}
         representativePhone={student.rep_phone || student.mother_phone || student.father_phone || ""}
-        studentGrade={student.course || ""}
+        studentGrade={studentGradeOnly(student)}
         studentParallel={student.parallel || ""}
         studentJornada={student.jornada || "MATUTINA"}
         docenteTutor={tutorName}

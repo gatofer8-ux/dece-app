@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { studentGradeLabel } from "@/lib/studentCourse";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { formatDate, formatDateTime } from "@/components/ui";
@@ -51,7 +52,7 @@ export default async function ImprimirCasoPage({ params }: { params: { id: strin
           <div><strong>Código de caso:</strong> {caseFile.code}</div>
           <div><strong>Estado:</strong> {CASE_STATUS_LABELS[caseFile.status]}</div>
           <div><strong>Estudiante:</strong> {student.full_name}</div>
-          <div><strong>Curso:</strong> {student.course} {student.parallel || ""}</div>
+          <div><strong>Curso:</strong> {studentGradeLabel(student)}</div>
           <div><strong>Cédula:</strong> {student.document_id || "—"}</div>
           <div><strong>Fecha de nacimiento:</strong> {formatDate(student.birth_date)}</div>
           <div><strong>Representante:</strong> {student.representative || "—"}</div>

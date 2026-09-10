@@ -8,6 +8,7 @@ import { draftText, draftBimonthlyMatrixDraft, draftObservationComment, draftObs
 import { pseudonymize, isHeightenedConfidentiality, isHeightenedRiskType, minimalCaseContext, type CaseEntities } from "@/lib/aiPrivacy";
 import type { CorresponsibilityConflictType } from "@/lib/types";
 import type { CaseFileRow, StudentRow, ViolenceReportRow, CaseActionRow } from "@/lib/types";
+import { studentGradeLabel } from "@/lib/studentCourse";
 
 const RISK_TYPE_LABELS: Record<string, string> = {
   VIOLENCIA_INTRAFAMILIAR: "Violencia intrafamiliar",
@@ -83,7 +84,7 @@ function buildCaseContext(caseId: string, institutionId: string): string {
 
   // 1. Datos del Estudiante y Expediente
   if (student) {
-    const courseFull = [student.course, student.parallel ? `"${student.parallel}"` : "", (student as any).specialty || ""].filter(Boolean).join(" ");
+    const courseFull = studentGradeLabel(student) || [student.course, student.parallel].filter(Boolean).join(" ");
     lines.push(`ESTUDIANTE: ${student.full_name} | Documento: ${student.document_id || "s/n"} | Curso: ${courseFull} | Representante: ${student.representative || "s/n"} (Tel: ${student.rep_phone || "s/n"})`);
   }
   lines.push(`EXPEDIENTE: Código ${caseFile.code} | Estado: ${caseFile.status} | Prioridad: ${caseFile.priority} | Eje de acción: ${caseFile.action_axis || "s/n"}`);

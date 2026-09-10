@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { studentGradeLabel } from "@/lib/studentCourse";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
@@ -361,7 +362,7 @@ export default async function CasoDetallePage({
             <Link href={`/estudiantes/${student.id}`} className="text-brand-700 hover:underline font-medium">
               {student.full_name}
             </Link>{" "}
-            · {student.course} {student.parallel || ""}
+            · {studentGradeLabel(student)}
             {caseFile.legacy_code ? (
               <>
                 {" "}

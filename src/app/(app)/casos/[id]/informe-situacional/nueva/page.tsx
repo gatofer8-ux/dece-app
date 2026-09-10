@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { studentGradeLabel } from "@/lib/studentCourse";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
@@ -30,8 +31,8 @@ export default async function NuevoInformeSituacionalPage({ params }: { params: 
       <SituationalReportForm
         caseId={caseFile.id}
         studentName={student.full_name}
-        studentCourse={student.course}
-        studentParallel={student.parallel || ""}
+        studentCourse={studentGradeLabel(student)}
+        studentParallel=""
         defaultResponsibleName={defaults?.deceProfessional.fullName || session.user.name || ""}
         defaultReportNumber={preview.reportNumber}
       />

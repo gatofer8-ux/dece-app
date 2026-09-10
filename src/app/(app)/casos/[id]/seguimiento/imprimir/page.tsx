@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { studentGradeLabel } from "@/lib/studentCourse";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { formatDate, formatDateTime } from "@/components/ui";
@@ -38,7 +39,7 @@ export default async function ImprimirSeguimientoPage({ params }: { params: { id
         <section className="grid grid-cols-2 gap-x-8 gap-y-1 mb-4 text-xs mt-4">
           <div><strong>Estudiante:</strong> {student.full_name}</div>
           <div><strong>Código de caso:</strong> {caseFile.code}</div>
-          <div><strong>Curso:</strong> {student.course} {student.parallel || ""}</div>
+          <div><strong>Curso:</strong> {studentGradeLabel(student)}</div>
           <div><strong>Institución:</strong> {institution?.name || "—"}</div>
         </section>
 

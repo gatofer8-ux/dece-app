@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
+import { studentGradeLabel } from "@/lib/studentCourse";
 import type { CaseRestitutionPlanRow } from "@/lib/types";
 
 interface SessionLike {
@@ -66,7 +67,7 @@ export function getAccompanimentPrefill(
       student_age: d?.studentAge != null ? `${d.studentAge} años` : "",
       student_nationality: st?.nationality || "Ecuatoriano/a",
       student_document_id: st?.document_id || "",
-      student_grade: [st?.course, st?.parallel ? `"${st.parallel}"` : ""].filter(Boolean).join(" "),
+      student_grade: studentGradeLabel(st) || [st?.course, st?.parallel].filter(Boolean).join(" "),
       student_jornada: st?.jornada || "",
       rep_full_name: st?.representative || "",
       rep_document_id: st?.representative_document_id || "",

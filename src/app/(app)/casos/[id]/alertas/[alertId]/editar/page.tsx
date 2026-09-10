@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { studentGradeOnly } from "@/lib/studentCourse";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
