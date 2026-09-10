@@ -48,7 +48,7 @@ export default async function DistributivoPage() {
           <div className="flex flex-wrap items-center gap-2">
             {distributivo && (
               <Link
-                href="/distributivo/imprimir"
+                href={`/distributivo/imprimir?id=${distributivo.id}`}
                 target="_blank"
                 className="btn-secondary flex items-center gap-1.5"
               >

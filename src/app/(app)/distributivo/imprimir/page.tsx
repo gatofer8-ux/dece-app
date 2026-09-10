@@ -6,6 +6,7 @@ import {
   getActiveDistributivo,
   getDistributivoById,
   getInstitutionCoursesWithCounts,
+  getInstitutionDeceTeam,
   normalizeCourseKey,
 } from "@/lib/distributivo";
 import { compareCoursesDescending, compareCoursesAscending } from "@/lib/courseOrder";
@@ -44,6 +45,34 @@ export default async function ImprimirDistributivoPage({
 
   const { distributivo, assignments } = distributivoData;
 
+  // Asegurar que todos los profesionales del equipo DECE de la institución se reflejen en la previsualización/impresión
+  const deceTeam = getInstitutionDeceTeam(institutionId);
+  const combinedAssignments = [...assignments];
+  for (const user of deceTeam) {
+    if (!combinedAssignments.some((a) => a.user_id === user.id || a.user_name.trim().toLowerCase() === user.name.trim().toLowerCase())) {
+      combinedAssignments.push({
+        id: `auto-${user.id}`,
+        distributivo_id: distributivo.id,
+        user_id: user.id,
+        user_name: user.name,
+        user_role_label: user.role === "ADMIN" ? "COORDINADOR/A DECE" : "ANALISTA DECE",
+        jornada: "Matutina",
+        subniveles: "[]",
+        courses: "[]",
+        parallels: "[]",
+        estimated_students_count: 0,
+        specific_responsibilities: null,
+        created_at: distributivo.created_at,
+        updated_at: distributivo.updated_at,
+        has_enlazada: 0,
+        enlazada_name: null,
+        enlazada_dias: null,
+        lunch_schedule: null,
+        color: null,
+      });
+    }
+  }
+
   // Obtener conteos detallados por curso para mostrar paralelos y alumnos reales por curso
   const coursesInfo = getInstitutionCoursesWithCounts(institutionId, distributivo.school_year_id);
   const courseMap = new Map(coursesInfo.courseSummaries.map((c) => [c.course, c]));
@@ -52,7 +81,7 @@ export default async function ImprimirDistributivoPage({
   const defaultPalette = ["#FEF08A", "#BAE6FD", "#BBF7D0", "#FED7AA", "#E9D5FF"];
 
   // Iniciales y metadatos de los profesionales
-  const analystMeta = assignments.map((a, idx) => {
+  const analystMeta = combinedAssignments.map((a, idx) => {
     const parts = a.user_name.trim().split(/\s+/);
     let initials = "P" + (idx + 1);
     if (parts.length >= 2) {
@@ -237,14 +266,15 @@ export default async function ImprimirDistributivoPage({
         </div>
       </div>
 
-      {/* Official Header */}
-      <DocumentHeader
-        title="MATRIZ OFICIAL DE DISTRIBUTIVO DE COBERTURA DE ATENCIÓN PSICOSOCIAL"
-        subtitle="DEPARTAMENTO DE CONSEJERÍA ESTUDIANTIL (DECE)"
-        institutionName={institution.name}
-        sealImage={institution.seal_image}
-        schoolYear={distributivo.school_year_text || "2025 - 2026"}
-      />
+      <div id="printable-content">
+        {/* Official Header */}
+        <DocumentHeader
+          title="MATRIZ OFICIAL DE DISTRIBUTIVO DE COBERTURA DE ATENCIÓN PSICOSOCIAL"
+          subtitle="DEPARTAMENTO DE CONSEJERÍA ESTUDIANTIL (DECE)"
+          institutionName={institution.name}
+          sealImage={institution.seal_image}
+          schoolYear={distributivo.school_year_text || "2025 - 2026"}
+        />
 
       {/* Institutional Metadata Grid */}
       <div className="border border-slate-300 rounded p-3 mb-4 bg-slate-50/50 text-[11px] leading-tight">
@@ -920,6 +950,7 @@ export default async function ImprimirDistributivoPage({
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
