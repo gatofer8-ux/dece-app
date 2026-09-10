@@ -161,7 +161,7 @@ export default function EsquelaPrintClient({
 
         {/* Casillas de Quién Recibió */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-800 font-medium">
-          <span className="font-bold text-slate-700">Esquela recibida por:</span>
+          <span className="font-bold text-slate-700">Convocatoria recibida por:</span>
           <span>[&nbsp;&nbsp;&nbsp;] Estudiante</span>
           <span>[&nbsp;&nbsp;&nbsp;] Representante Legal</span>
           <span>[&nbsp;&nbsp;&nbsp;] Familiar (Parentesco: __________________)</span>

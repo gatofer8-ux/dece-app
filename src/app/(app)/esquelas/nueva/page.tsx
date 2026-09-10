@@ -30,7 +30,7 @@ export default async function NuevaEsquelaPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Emitir Esquela de Citación"
+        title="Emitir Convocatoria de Asistencia"
         description="Convocatoria formal a representantes legales o estudiantes del DECE (independiente o fuera de caso)."
       />
 

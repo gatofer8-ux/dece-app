@@ -58,7 +58,7 @@ export default async function EsquelaDetailPage({
             href={`/esquelas/${esquela.id}/imprimir`}
             className="btn-primary text-xs flex items-center gap-1.5 font-semibold bg-brand-700 hover:bg-brand-800"
           >
-            <span>🖨️</span> Imprimir Esquela y Talón
+            <span>🖨️</span> Imprimir Convocatoria y Talón
           </Link>
 
           <DeleteEsquelaButton
