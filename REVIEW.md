@@ -238,14 +238,19 @@ documentación (`SECURITY.md`, `CONTRIBUTING.md`, este archivo).
 - Eliminados nombres de persona reales que estaban hardcodeados como valores
   por defecto en 5 formularios.
 
+**[hecho] — segunda tanda**
+- Menú lateral agrupado por secciones (Principal / Acompañamiento / Informes /
+  Administración / Cuenta).
+- Precarga cableada en 15+ formularios: todos los documentos de caso y los
+  institucionales (plan de acción, juntas de curso, informe de gestión).
+  `getSignatureDefaults()` para los que no tienen caso.
+
 **Pendiente**
 - Adoptar `useToast()` en las server actions (hoy solo `DeleteButton`).
 - Formularios oficiales por pasos/pestañas (son muy largos).
-- Dashboard con mini-gráficos (sparklines).
-- Menú agrupado por secciones; buscador global más visible.
+- Dashboard con mini-gráficos (sparklines); buscador global más visible.
 - Modo oscuro; revisión de uso en móvil; auditoría de accesibilidad.
-- Terminar de cablear la precarga (`getCaseDocumentDefaults`) en los ~30
-  formularios restantes.
+- Precarga en los formularios de edición y en los ~5 restantes menores.
 
 ## 8. Privacidad de la IA — configuración
 
