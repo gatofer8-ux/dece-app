@@ -45,6 +45,11 @@ export function runMigrations(db: Database.Database, migrationsDir: string): voi
       .readFileSync(path.join(migrationsDir, file), "utf-8")
       .replace(/^﻿/, ""); // BOM: algunos editores guardan .sql con BOM y SQLite no lo tolera al inicio
     const statements = sql
+      // Se quitan las líneas de comentario "--" ANTES de partir por ";" para que
+      // un ";" dentro de un comentario no rompa la migración.
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("--"))
+      .join("\n")
       .split(";")
       .map((s) => s.trim())
       .filter((s) => s.length > 0);

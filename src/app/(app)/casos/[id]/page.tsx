@@ -51,6 +51,8 @@ import {
   updatePlanStatus,
   ensureChecklist,
   saveChecklist,
+  uploadChecklistItemAttachment,
+  unlinkChecklistItemAttachment,
   createCallLog,
   createCareFollowup,
   createAdvisoryLog,
@@ -121,6 +123,15 @@ export default async function CasoDetallePage({
   const checklistItems = db
     .prepare("SELECT * FROM case_checklist_items WHERE case_file_id = ? ORDER BY item_order ASC")
     .all(caseFile.id) as CaseChecklistItemRow[];
+  const checklistAttachmentsById = new Map(
+    (
+      db
+        .prepare(
+          "SELECT id, filename, checklist_item_id FROM attachments WHERE case_file_id = ? AND checklist_item_id IS NOT NULL"
+        )
+        .all(caseFile.id) as { id: string; filename: string; checklist_item_id: string }[]
+    ).map((a) => [a.checklist_item_id, a])
+  );
   const checklistReviews = db
     .prepare("SELECT * FROM case_checklist_reviews WHERE case_file_id = ?")
     .all(caseFile.id) as CaseChecklistReviewRow[];
@@ -1236,7 +1247,7 @@ export default async function CasoDetallePage({
                       🖨️ Imprimir
                     </Link>
                   </div>
-                  <form action={boundSaveChecklist} className="space-y-4">
+                  <form action={boundSaveChecklist} encType="multipart/form-data" className="space-y-4">
                     <div className="overflow-x-auto -mx-1">
                       <table className="w-full text-xs border-collapse">
                         <thead>
@@ -1244,11 +1255,14 @@ export default async function CasoDetallePage({
                             <th className="py-1 px-1 w-8">N°</th>
                             <th className="py-1 px-1">Ítem</th>
                             <th className="py-1 px-1 w-28 text-center">Sí / No</th>
-                            <th className="py-1 px-1 w-48">Observaciones</th>
+                            <th className="py-1 px-1 w-40">Observaciones</th>
+                            <th className="py-1 px-1 w-52">Respaldo (archivo)</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {items.map((it) => (
+                          {items.map((it) => {
+                            const respaldo = checklistAttachmentsById.get(it.id);
+                            return (
                             <tr key={it.id} className="border-b border-slate-100 align-top">
                               <td className="py-2 px-1 text-slate-400">{it.item_order}</td>
                               <td className="py-2 px-1">{it.item_text}</td>
@@ -1265,8 +1279,46 @@ export default async function CasoDetallePage({
                               <td className="py-2 px-1">
                                 <input name={`obs_${it.id}`} defaultValue={it.observations || ""} className="input !py-1 text-xs" />
                               </td>
+                              <td className="py-2 px-1">
+                                {respaldo ? (
+                                  <div className="flex items-center gap-2">
+                                    <a
+                                      href={`/api/attachments/${respaldo.id}`}
+                                      target="_blank"
+                                      className="text-brand-700 hover:underline truncate max-w-[9rem]"
+                                      title={respaldo.filename}
+                                    >
+                                      📎 {respaldo.filename}
+                                    </a>
+                                    <button
+                                      type="submit"
+                                      formAction={unlinkChecklistItemAttachment.bind(null, caseFile.id, it.id)}
+                                      className="text-[11px] text-red-600 hover:underline shrink-0"
+                                    >
+                                      quitar
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="file"
+                                      name={`checklist_file_${it.id}`}
+                                      accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx"
+                                      className="text-[11px] w-32 file:mr-1 file:rounded file:border-0 file:bg-slate-100 file:px-1.5 file:py-0.5 file:text-[10px]"
+                                    />
+                                    <button
+                                      type="submit"
+                                      formAction={uploadChecklistItemAttachment.bind(null, caseFile.id, it.id)}
+                                      className="text-[11px] font-semibold text-brand-700 hover:underline shrink-0"
+                                    >
+                                      adjuntar
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

@@ -16,6 +16,13 @@ import type { ChecklistCategory, ObservationContext, ObservationSubnivel, Observ
 import { z } from "zod";
 import { str, int, getAllStr } from "@/lib/formData";
 import { requireOwnedCase, requireOwnedStudent } from "@/lib/scopedDb";
+import { autoMarkChecklistItems } from "@/lib/checklistAutoMark";
+import {
+  saveAttachmentFile,
+  deleteAttachmentFile,
+  isAllowedAttachmentType,
+  MAX_ATTACHMENT_SIZE,
+} from "@/lib/uploads";
 
 // Valores de catálogo aceptados. Un valor fuera de rango (formulario manipulado)
 // se coacciona al valor por defecto en vez de propagarse a la base.
@@ -264,6 +271,110 @@ export async function saveChecklist(caseId: string, formData: FormData) {
   redirect(`/casos/${caseId}?checklist_guardado=1#checklist`);
 }
 
+/**
+ * Adjunta un archivo de respaldo (p.ej. oficio a instancia externa + acuse de
+ * recibo) a un ítem concreto del checklist del expediente. Al adjuntarlo, el
+ * ítem queda marcado como "SÍ".
+ */
+export async function uploadChecklistItemAttachment(caseId: string, itemId: string, formData: FormData) {
+  const session = await requireRole(["ADMIN", "DECE"]);
+  const institutionId = requireInstitutionId(session);
+  requireOwnedCase(caseId, institutionId);
+
+  const item = db
+    .prepare("SELECT id, attachment_id FROM case_checklist_items WHERE id = ? AND case_file_id = ?")
+    .get(itemId, caseId) as { id: string; attachment_id: string | null } | undefined;
+  if (!item) throw new Error("Ítem de checklist no encontrado.");
+
+  const file = formData.get(`checklist_file_${itemId}`);
+  if (!(file instanceof File) || file.size === 0) throw new Error("Selecciona un archivo.");
+  if (file.size > MAX_ATTACHMENT_SIZE) {
+    throw new Error(`El archivo supera el máximo permitido (${Math.round(MAX_ATTACHMENT_SIZE / 1024 / 1024)} MB).`);
+  }
+  if (file.type && !isAllowedAttachmentType(file.type)) {
+    throw new Error("Tipo de archivo no permitido (PDF, imágenes o Word/Excel).");
+  }
+
+  // Si el ítem ya tenía un respaldo, se reemplaza.
+  if (item.attachment_id) {
+    const prev = db
+      .prepare("SELECT path FROM attachments WHERE id = ? AND case_file_id = ?")
+      .get(item.attachment_id, caseId) as { path: string } | undefined;
+    if (prev) {
+      db.prepare("DELETE FROM attachments WHERE id = ?").run(item.attachment_id);
+      deleteAttachmentFile(prev.path);
+    }
+  }
+
+  const { relativePath, size } = await saveAttachmentFile(file, caseId);
+  const attachmentId = randomUUID();
+  db.prepare(
+    `INSERT INTO attachments (id, institution_id, filename, path, mime_type, size, uploaded_by_id, case_file_id, checklist_item_id, document_type)
+     VALUES (@id, @institution_id, @filename, @path, @mime_type, @size, @uploaded_by_id, @case_file_id, @checklist_item_id, 'RESPALDO_CHECKLIST')`
+  ).run({
+    id: attachmentId,
+    institution_id: institutionId,
+    filename: file.name || "respaldo",
+    path: relativePath,
+    mime_type: file.type || null,
+    size,
+    uploaded_by_id: session.user.id,
+    case_file_id: caseId,
+    checklist_item_id: itemId,
+  });
+
+  const itemText = (
+    db.prepare("SELECT item_text FROM case_checklist_items WHERE id = ?").get(itemId) as { item_text: string } | undefined
+  )?.item_text || "Documento del expediente";
+
+  db.prepare(
+    "UPDATE case_checklist_items SET attachment_id = ?, status = 'SI', updated_at = datetime('now') WHERE id = ? AND case_file_id = ?"
+  ).run(attachmentId, itemId, caseId);
+
+  // Se registra en la bitácora del caso para que quede en el historial y esté
+  // disponible al generar informes (bimensual, técnico situacional, etc.).
+  db.prepare(
+    "INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Documento de expediente', ?)"
+  ).run(
+    randomUUID(),
+    caseId,
+    session.user.id,
+    `Respaldo adjuntado al checklist — "${itemText}" (archivo: ${file.name || "respaldo"}).`
+  );
+  db.prepare("UPDATE case_files SET updated_at = datetime('now') WHERE id = ?").run(caseId);
+
+  logAudit({ userId: session.user.id, action: "SUBIR_ARCHIVO", entityType: "CaseChecklistItem", entityId: itemId, institutionId });
+  revalidatePath(`/casos/${caseId}`);
+  redirect(`/casos/${caseId}?checklist_guardado=1#checklist`);
+}
+
+/** Quita el respaldo documental de un ítem del checklist (borra el archivo y desmarca el ítem). */
+export async function unlinkChecklistItemAttachment(caseId: string, itemId: string) {
+  const session = await requireRole(["ADMIN", "DECE"]);
+  const institutionId = requireInstitutionId(session);
+  requireOwnedCase(caseId, institutionId);
+
+  const item = db
+    .prepare("SELECT attachment_id FROM case_checklist_items WHERE id = ? AND case_file_id = ?")
+    .get(itemId, caseId) as { attachment_id: string | null } | undefined;
+  if (item?.attachment_id) {
+    const att = db
+      .prepare("SELECT path FROM attachments WHERE id = ? AND case_file_id = ?")
+      .get(item.attachment_id, caseId) as { path: string } | undefined;
+    if (att) {
+      db.prepare("DELETE FROM attachments WHERE id = ?").run(item.attachment_id);
+      deleteAttachmentFile(att.path);
+    }
+  }
+  db.prepare(
+    "UPDATE case_checklist_items SET attachment_id = NULL, status = NULL, updated_at = datetime('now') WHERE id = ? AND case_file_id = ?"
+  ).run(itemId, caseId);
+
+  logAudit({ userId: session.user.id, action: "BORRAR_ARCHIVO", entityType: "CaseChecklistItem", entityId: itemId, institutionId });
+  revalidatePath(`/casos/${caseId}`);
+  redirect(`/casos/${caseId}#checklist`);
+}
+
 /** Registra una entrevista semiestructurada a estudiante o representante, vinculada al caso. */
 export async function createInterview(caseId: string, formData: FormData) {
   const session = await requireRole(["ADMIN", "DECE"]);
@@ -381,6 +492,7 @@ export async function createObservationSheet(
       db.prepare(
         `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Ficha de observación psicosocial', ?)`
       ).run(randomUUID(), caseId, session.user.id, `Ficha Oficial de Observación registrada — Profesional: ${parsed.professional_name || session.user.name}.`);
+      autoMarkChecklistItems(caseId, ["ficha de observacion"], "Ficha de observación");
 
       logAudit({ userId: session.user.id, action: "CREAR", entityType: "CaseObservationSheet", entityId: id, details: caseId, institutionId });
       revalidatePath(`/casos/${caseId}`);
@@ -432,6 +544,7 @@ export async function createObservationSheet(
       db.prepare(
         `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Ficha de observación psicosocial', ?)`
       ).run(randomUUID(), caseId, session.user.id, `Ficha registrada — nivel de riesgo: ${riskLevel}.`);
+      autoMarkChecklistItems(caseId, ["ficha de observacion"], "Ficha de observación");
 
       logAudit({ userId: session.user.id, action: "CREAR", entityType: "CaseObservationSheet", entityId: id, details: caseId, institutionId });
       revalidatePath(`/casos/${caseId}`);
@@ -592,6 +705,7 @@ export async function createCarePlan(
     db.prepare(
       `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Plan de atención', ?)`
     ).run(randomUUID(), caseId, session.user.id, `Plan de atención psicosocial y seguimiento registrado.`);
+    autoMarkChecklistItems(caseId, ["plan", "atencion psicosocial"], "Plan de Atención Psicosocial");
 
     logAudit({ userId: session.user.id, action: "CREAR", entityType: "CaseCarePlan", entityId: id, details: caseId, institutionId });
     revalidatePath(`/casos/${caseId}`);
@@ -716,6 +830,7 @@ export async function createRestitutionPlan(
     db.prepare(
       `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Plan de acompañamiento', ?)`
     ).run(randomUUID(), caseId, session.user.id, `Plan de acompañamiento y restitución de derechos registrado.`);
+    autoMarkChecklistItems(caseId, ["plan de acompanamiento"], "Plan de acompañamiento y restitución");
 
     logAudit({ userId: session.user.id, action: "CREAR", entityType: "CaseRestitutionPlan", entityId: id, details: caseId, institutionId });
     revalidatePath(`/casos/${caseId}`);
@@ -859,6 +974,7 @@ export async function updateRestitutionPlan(
     db.prepare(
       `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Plan de acompañamiento', ?)`
     ).run(randomUUID(), caseId, session.user.id, `Plan de acompañamiento y restitución de derechos actualizado.`);
+    autoMarkChecklistItems(caseId, ["plan de acompanamiento"], "Plan de acompañamiento y restitución");
 
     logAudit({ userId: session.user.id, action: "ACTUALIZAR", entityType: "CaseRestitutionPlan", entityId: planId, details: caseId, institutionId });
     revalidatePath(`/casos/${caseId}`);
@@ -1001,6 +1117,7 @@ export async function createViolenceReport(
     db.prepare(
       `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Reporte de hecho de violencia', ?)`
     ).run(randomUUID(), caseId, session.user.id, `Informe de reporte del hecho de violencia registrado.`);
+    autoMarkChecklistItems(caseId, ["reporte", "hecho de violencia"], "Ficha de reporte del hecho de violencia");
 
     logAudit({ userId: session.user.id, action: "CREAR", entityType: "ViolenceReport", entityId: id, details: caseId, institutionId });
     revalidatePath(`/casos/${caseId}`);
@@ -1064,6 +1181,7 @@ export async function createSocializationAct(
     db.prepare(
       `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Acta de socialización', ?)`
     ).run(randomUUID(), caseId, session.user.id, `Acta de socialización de vulnerabilidad registrada.`);
+    autoMarkChecklistItems(caseId, ["socializacion"], "Acta de socialización a docentes");
 
     logAudit({ userId: session.user.id, action: "CREAR", entityType: "SocializationAct", entityId: id, details: caseId, institutionId });
     revalidatePath(`/casos/${caseId}`);
@@ -1514,6 +1632,7 @@ export async function createBimonthlyReport(
       session.user.id,
       `Informe bimensual de acompañamiento registrado (Período: ${periodMonths} ${schoolYearText}).`
     );
+    autoMarkChecklistItems(caseId, ["seguimiento al plan"], "Informe bimensual de seguimiento");
 
     logAudit({
       userId: session.user.id,
