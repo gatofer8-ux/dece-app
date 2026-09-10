@@ -23,6 +23,7 @@ function ctx() {
     problematica: getVal("f-problematica"),
     participantType: getVal("f-participant_type"),
     circleType: getVal("f-circle_type"),
+    circleModality: getVal("f-circle_modality"),
     circleDate: getVal("f-circle_date"),
     circleTime: getVal("f-circle_time"),
   };
@@ -60,33 +61,64 @@ function AiButton({ fieldKey, targetId }: { fieldKey: AiFieldKey; targetId: stri
 }
 
 const STAGE_LABELS: Record<string, string> = {
-  q_icebreaker: "Preguntas para romper el hielo",
-  q_intro: "Preguntas para introducir la temática",
-  q_develop: "Preguntas para desarrollar la temática",
-  q_actions: "Preguntas para definir acciones y compromisos",
+  q_icebreaker: "5.1 Preguntas para romper el hielo",
+  q_intro: "5.2 Preguntas para introducir la temática",
+  q_develop: "5.3 Preguntas para desarrollar la temática",
+  q_actions: "5.4 Preguntas para definir acciones y compromisos",
 };
 
 function QuestionGenerator({ caseFileId }: { caseFileId?: string }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [banks, setBanks] = useState<Record<string, string[]>>({});
   const [checked, setChecked] = useState<Record<string, boolean>>({});
 
   async function generate() {
+    const prob = getVal("f-problematica").trim();
+    if (!prob) {
+      setErr("Escribe primero la problemática en Datos Generales para generar las preguntas.");
+      return;
+    }
     setLoading(true);
     setErr(null);
+    setSuccess(null);
     try {
-      const res = await suggestCircleQuestions(getVal("f-problematica"), {
+      const res = await suggestCircleQuestions(prob, {
         circleType: getVal("f-circle_type"),
         participantType: getVal("f-participant_type"),
         modality: getVal("f-circle_modality"),
         participantsCount: getVal("f-participants_count"),
         caseFileId: caseFileId || undefined,
       });
-      if ("error" in res) setErr(res.error);
-      else {
+      if ("error" in res) {
+        setErr(res.error);
+      } else {
         setBanks(res.questions);
         setChecked({});
+
+        // Auto-llenar DIRECTAMENTE cada uno de los 4 recuadros con sus preguntas respectivas
+        let filledCount = 0;
+        if (res.questions.q_icebreaker?.length) {
+          setVal("f-q_icebreaker", res.questions.q_icebreaker.join("\n"));
+          filledCount++;
+        }
+        if (res.questions.q_intro?.length) {
+          setVal("f-q_intro", res.questions.q_intro.join("\n"));
+          filledCount++;
+        }
+        if (res.questions.q_develop?.length) {
+          setVal("f-q_develop", res.questions.q_develop.join("\n"));
+          filledCount++;
+        }
+        if (res.questions.q_actions?.length) {
+          setVal("f-q_actions", res.questions.q_actions.join("\n"));
+          filledCount++;
+        }
+
+        setSuccess(
+          `✅ ¡Se generaron e insertaron preguntas en los ${filledCount} recuadros automáticamente según lo que solicita cada uno! Puedes ajustarlas en cada recuadro o seleccionar alternativas del banco abajo.`
+        );
       }
     } catch {
       setErr("Error al conectar con la IA.");
@@ -97,13 +129,13 @@ function QuestionGenerator({ caseFileId }: { caseFileId?: string }) {
 
   function addSelected(stageKey: string) {
     const picked = (banks[stageKey] || []).filter((_, i) => checked[`${stageKey}:${i}`]);
-    if (picked.length === 0) return;
+    const itemsToAdd = picked.length > 0 ? picked : (banks[stageKey] || []);
+    if (itemsToAdd.length === 0) return;
     const targetId = `f-${stageKey}`;
     const cur = getVal(targetId).trim();
     const existing = new Set(cur.split("\n").map((s) => s.trim()));
-    const merged = [...cur.split("\n").filter(Boolean), ...picked.filter((p) => !existing.has(p.trim()))];
+    const merged = [...cur.split("\n").filter(Boolean), ...itemsToAdd.filter((p) => !existing.has(p.trim()))];
     setVal(targetId, merged.join("\n"));
-    // Limpiar los marcados de esa fase
     setChecked((prev) => {
       const next = { ...prev };
       (banks[stageKey] || []).forEach((_, i) => delete next[`${stageKey}:${i}`]);
@@ -111,63 +143,187 @@ function QuestionGenerator({ caseFileId }: { caseFileId?: string }) {
     });
   }
 
+  function replaceWithBank(stageKey: string) {
+    const list = banks[stageKey] || [];
+    if (list.length === 0) return;
+    setVal(`f-${stageKey}`, list.join("\n"));
+  }
+
+  function insertAllToAllStages() {
+    if (banks.q_icebreaker?.length) setVal("f-q_icebreaker", banks.q_icebreaker.join("\n"));
+    if (banks.q_intro?.length) setVal("f-q_intro", banks.q_intro.join("\n"));
+    if (banks.q_develop?.length) setVal("f-q_develop", banks.q_develop.join("\n"));
+    if (banks.q_actions?.length) setVal("f-q_actions", banks.q_actions.join("\n"));
+    setSuccess("✅ Los 4 recuadros han sido actualizados con todas las preguntas del banco.");
+  }
+
   const hasBanks = Object.values(banks).some((a) => a.length > 0);
 
   return (
     <div className="border border-violet-200 bg-violet-50/40 rounded-lg p-4 space-y-3">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <p className="text-sm font-semibold text-violet-900">Generar preguntas con IA</p>
+          <p className="text-sm font-semibold text-violet-900">Generar preguntas para los 4 recuadros con IA</p>
           <p className="text-xs text-slate-500">
-            Escribe la problemática arriba y la IA propone preguntas restaurativas (enfoque de la
-            ley: LOEI, Código de la Niñez, prácticas restaurativas). Marca las que quieras usar.
+            Formula preguntas para cada fase (romper el hielo, introducir, desarrollar la temática y definir acuerdos) según la problemática y modalidad.
           </p>
         </div>
         <button
           type="button"
           onClick={generate}
           disabled={loading}
-          className="shrink-0 inline-flex items-center gap-1 rounded-full border bg-violet-600 border-violet-600 text-white hover:bg-violet-700 disabled:opacity-60 text-xs px-3 py-1.5 font-semibold"
+          className="shrink-0 inline-flex items-center gap-1 rounded-full border bg-violet-600 border-violet-600 text-white hover:bg-violet-700 disabled:opacity-60 text-xs px-3.5 py-1.5 font-semibold shadow-sm"
         >
-          ✨ {loading ? "Generando…" : "Generar preguntas"}
+          ✨ {loading ? "Generando para los 4 recuadros…" : "Generar preguntas en los 4 recuadros"}
         </button>
       </div>
-      {err && <p className="text-xs text-red-600">⚠️ {err}</p>}
+      {err && <p className="text-xs text-red-600 font-medium">⚠️ {err}</p>}
+      {success && <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 p-2 rounded">{success}</p>}
 
-      {hasBanks &&
-        QUESTION_STAGES.map((stage) => {
-          const list = banks[stage.key] || [];
-          if (list.length === 0) return null;
-          return (
-            <div key={stage.key} className="rounded border border-violet-200 bg-white p-3">
-              <div className="flex items-center justify-between mb-1.5">
-                <p className="text-xs font-semibold text-slate-700">{STAGE_LABELS[stage.key]}</p>
-                <button
-                  type="button"
-                  onClick={() => addSelected(stage.key)}
-                  className="text-[11px] font-semibold text-violet-700 hover:underline"
-                >
-                  + Agregar seleccionadas
-                </button>
+      {hasBanks && (
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-violet-900">Banco de preguntas sugeridas por la IA:</span>
+            <button
+              type="button"
+              onClick={insertAllToAllStages}
+              className="text-[11px] font-semibold text-violet-700 hover:text-violet-900 underline"
+            >
+              ✨ Reinsertar todo el banco en los 4 recuadros
+            </button>
+          </div>
+          {QUESTION_STAGES.map((stage) => {
+            const list = banks[stage.key] || [];
+            if (list.length === 0) return null;
+            return (
+              <div key={stage.key} className="rounded border border-violet-200 bg-white p-3 shadow-xs">
+                <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
+                  <p className="text-xs font-semibold text-slate-800">{STAGE_LABELS[stage.key]}</p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => replaceWithBank(stage.key)}
+                      className="text-[11px] font-medium text-slate-600 hover:text-slate-900 underline"
+                      title="Reemplaza el texto del recuadro con estas preguntas"
+                    >
+                      Reemplazar en recuadro
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addSelected(stage.key)}
+                      className="text-[11px] font-semibold text-violet-700 hover:text-violet-900"
+                      title="Agrega las preguntas marcadas (o todas si ninguna está marcada) al recuadro"
+                    >
+                      + Agregar al recuadro
+                    </button>
+                  </div>
+                </div>
+                <ul className="space-y-1">
+                  {list.map((q, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 rounded text-violet-600"
+                        checked={!!checked[`${stage.key}:${i}`]}
+                        onChange={(e) =>
+                          setChecked((prev) => ({ ...prev, [`${stage.key}:${i}`]: e.target.checked }))
+                        }
+                      />
+                      <span className="text-slate-700">{q}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <ul className="space-y-1">
-                {list.map((q, i) => (
-                  <li key={i} className="flex items-start gap-2 text-xs">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5"
-                      checked={!!checked[`${stage.key}:${i}`]}
-                      onChange={(e) =>
-                        setChecked((prev) => ({ ...prev, [`${stage.key}:${i}`]: e.target.checked }))
-                      }
-                    />
-                    <span className="text-slate-700">{q}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AutoDraftAllFichaButton() {
+  const [drafting, setDrafting] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+
+  async function runAll() {
+    const prob = getVal("f-problematica").trim();
+    if (!prob) {
+      alert("Por favor escribe primero la Problemática en Datos Generales para redactar la ficha con IA.");
+      const el = document.getElementById("f-problematica");
+      el?.focus();
+      return;
+    }
+    setDrafting(true);
+    setStatus("Redactando diagnóstico, objetivos y declaraciones...");
+    try {
+      const c = ctx();
+      // 1. Diagnóstico, Objetivos y Declaración inicial
+      const [diagRes, objRes, initRes] = await Promise.all([
+        draftFichaField("diagnostico", getVal("f-diagnostico"), c),
+        draftFichaField("objetivos", getVal("f-objetivos"), c),
+        draftFichaField("declaracion_inicial", getVal("f-declaracion_inicial"), c),
+      ]);
+      if (diagRes.text) setVal("f-diagnostico", diagRes.text);
+      if (objRes.text) setVal("f-objetivos", objRes.text);
+      if (initRes.text) setVal("f-declaracion_inicial", initRes.text);
+
+      // 2. Preguntas restaurativas para los 4 recuadros
+      setStatus("Generando preguntas para los 4 recuadros...");
+      const questRes = await suggestCircleQuestions(prob, {
+        circleType: c.circleType,
+        participantType: c.participantType,
+        modality: c.circleModality,
+        participantsCount: getVal("f-participants_count"),
+      });
+      if ("questions" in questRes) {
+        if (questRes.questions.q_icebreaker?.length) setVal("f-q_icebreaker", questRes.questions.q_icebreaker.join("\n"));
+        if (questRes.questions.q_intro?.length) setVal("f-q_intro", questRes.questions.q_intro.join("\n"));
+        if (questRes.questions.q_develop?.length) setVal("f-q_develop", questRes.questions.q_develop.join("\n"));
+        if (questRes.questions.q_actions?.length) setVal("f-q_actions", questRes.questions.q_actions.join("\n"));
+      }
+
+      // 3. Declaración de cierre y conclusiones
+      setStatus("Redactando declaración de cierre y conclusiones...");
+      const [closeRes, concRes] = await Promise.all([
+        draftFichaField("declaracion_cierre", getVal("f-declaracion_cierre"), c),
+        draftFichaField("conclusion", getVal("f-conclusion"), c),
+      ]);
+      if (closeRes.text) setVal("f-declaracion_cierre", closeRes.text);
+      if (concRes.text) setVal("f-conclusion", concRes.text);
+
+      setStatus("✅ ¡Toda la ficha ha sido completada con IA según la problemática!");
+      setTimeout(() => setStatus(null), 6000);
+    } catch {
+      setStatus("⚠️ Ocurrió un error al redactar con IA.");
+    } finally {
+      setDrafting(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-violet-50/90 border border-violet-200 rounded-xl shadow-xs">
+      <div className="space-y-0.5">
+        <p className="text-xs font-bold text-violet-950 flex items-center gap-1.5">
+          <span>✨</span>
+          <span>Asistente Integral de la Ficha Restaurativa</span>
+        </p>
+        <p className="text-[11px] text-slate-600">
+          Completa todos los recuadros de la ficha (Diagnóstico, Objetivos, Declaraciones, las 4 fases de preguntas y Conclusiones) según la problemática.
+        </p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={runAll}
+          disabled={drafting}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-violet-400 bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60 text-xs px-3.5 py-1.5 font-semibold shadow-sm transition-colors"
+        >
+          <span>✨</span>
+          <span>{drafting ? "Redactando con IA..." : "Completar toda la ficha con IA"}</span>
+        </button>
+      </div>
+      {status && <p className="text-xs text-violet-900 font-medium w-full mt-1">{status}</p>}
     </div>
   );
 }
@@ -235,6 +391,8 @@ export default function FichaCirculoForm({
       <input type="hidden" name="case_file_id" defaultValue={v("case_file_id")} />
       <input type="hidden" name="student_id" defaultValue={v("student_id")} />
       <input type="hidden" name="ficha_code" defaultValue={v("ficha_code")} />
+
+      <AutoDraftAllFichaButton />
 
       {mode === "create" && (
         <p className="text-xs text-slate-500">
@@ -326,7 +484,10 @@ export default function FichaCirculoForm({
                 <Label>
                   {stage.numeral}. {stage.title}
                 </Label>
-                <VoiceDictationButton targetId={`f-${stage.key}`} />
+                <div className="flex items-center gap-2">
+                  <VoiceDictationButton targetId={`f-${stage.key}`} />
+                  <AiButton fieldKey={stage.key as AiFieldKey} targetId={`f-${stage.key}`} />
+                </div>
               </div>
               <textarea
                 id={`f-${stage.key}`}

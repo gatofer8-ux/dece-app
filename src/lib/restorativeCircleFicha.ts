@@ -79,6 +79,14 @@ export const AI_FIELD_LABELS = {
     "Objetivo(s) del Círculo Restaurativo del DECE (1 a 3 objetivos formativos, iniciando con verbo en infinitivo, enfoque restaurativo y de derechos, sin datos personales)",
   declaracion_inicial:
     "Declaración afectiva / declaración inicial del facilitador para abrir un Círculo Restaurativo con estudiantes (bienvenida cálida, agradecimiento, encuadre de normas y del objeto de la palabra, tono cercano y respetuoso)",
+  q_icebreaker:
+    "Pregunta o dinámica para romper el hielo en la Ficha de Círculo Restaurativo del DECE (3 a 5 preguntas o dinámicas lúdicas y breves para distensión y generar confianza antes de abordar la temática difícil, una por línea)",
+  q_intro:
+    "Preguntas para introducir a la temática en la Ficha de Círculo Restaurativo del DECE (4 a 6 preguntas reflexivas sobre cómo nos sentimos frente a la situación y sobre nuestras acciones iniciales, una por línea)",
+  q_develop:
+    "Preguntas para desarrollar la temática a profundidad en la Ficha de Círculo Restaurativo del DECE (5 a 8 preguntas sustantivas sobre el impacto del daño, necesidades de las partes, empatía y corresponsabilidad, una por línea)",
+  q_actions:
+    "Preguntas para definir acciones y compromisos en la Ficha de Círculo Restaurativo del DECE (4 a 6 preguntas enfocadas en acuerdos de reparación del daño, restitución y compromisos de convivencia pacífica, una por línea)",
   declaracion_cierre:
     "Declaración de cierre de un Círculo Restaurativo con estudiantes (agradecimiento y mensaje breve de esperanza y compromiso con la convivencia)",
   informe_circulo:

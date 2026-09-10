@@ -124,18 +124,36 @@ export async function deleteCircleFicha(id: string) {
 export async function draftFichaField(
   fieldKey: keyof typeof AI_FIELD_LABELS,
   currentText: string,
-  ctx: { problematica?: string; participantType?: string; circleDate?: string; circleTime?: string }
+  ctx: {
+    problematica?: string;
+    participantType?: string;
+    circleType?: string;
+    circleModality?: string;
+    circleDate?: string;
+    circleTime?: string;
+  }
 ): Promise<{ text?: string; error?: string }> {
   await requireRole(["ADMIN", "DECE"]);
   if (!isAiConfigured()) return { error: "La ayuda de IA todavía no está configurada." };
   const label = AI_FIELD_LABELS[fieldKey];
   if (!label) return { error: "Campo no válido." };
+
+  const modalityText =
+    ctx.circleModality === "individual"
+      ? "Modalidad: Individual / entre partes (enfocar en preguntas dirigidas por rol: 'Para quien causó el daño:', 'Para quien fue afectado/a:')."
+      : ctx.circleModality === "mixto"
+      ? "Modalidad: Mixta (combinar preguntas dirigidas por rol y preguntas colectivas de grupo)."
+      : "Modalidad: Grupal / de aula (preguntas colectivas para el grupo o curso completo, sin señalar culpables individuales).";
+
   const context = [
     ctx.problematica ? `Problemática del círculo restaurativo: ${ctx.problematica}` : "",
+    ctx.circleType ? `Tipo de círculo: ${ctx.circleType}` : "",
     ctx.participantType ? `Participantes: ${ctx.participantType}` : "",
+    modalityText,
     ctx.circleDate ? `Fecha del círculo: ${ctx.circleDate}` : "",
     ctx.circleTime ? `Horario del círculo: ${ctx.circleTime}` : "",
-    "Es una Ficha de Círculo Restaurativo del DECE. Redacción formal, en tercera persona (salvo la declaración inicial y de cierre, que van en primera persona del facilitador), enfoque de justicia restaurativa (LOEI, Código de la Niñez y Adolescencia, prácticas restaurativas MinEduc), sin nombres de estudiantes ni datos personales.",
+    "Es una Ficha de Círculo Restaurativo del DECE. Redacción formal institucional, enfoque de justicia restaurativa (LOEI, Código de la Niñez y Adolescencia, prácticas restaurativas MinEduc: reparación del daño, no revictimización, responsabilidad activa), sin nombres de estudiantes ni datos personales.",
+    fieldKey.startsWith("q_") ? "Responde ÚNICAMENTE con la lista de preguntas, una pregunta por línea, comenzando cada pregunta con signo ¿ y terminando con ?." : "",
   ]
     .filter(Boolean)
     .join("\n");

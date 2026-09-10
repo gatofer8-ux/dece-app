@@ -1610,7 +1610,7 @@ export async function generateRestorativeCircleQuestions(opts: {
   participantType?: string;
   /** grupal | individual | mixto — orienta si las preguntas van al grupo o a personas con rol. */
   modality?: string;
-  participantsCount?: string;
+  participantsCount?: string | number;
   /** Contexto del caso vinculado (tipo de riesgo, descripción), si lo hay. */
   caseContext?: string;
 }): Promise<
@@ -1676,13 +1676,22 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin markdown ni texto adicional
   "q_actions": ["¿...?", "¿...?"]
 }`;
 
-  const clean = (arr: unknown): string[] =>
-    Array.isArray(arr)
-      ? arr
-          .map((q) => String(q).replace(/^\s*[-•*\d.)]+\s*/, "").trim())
-          .filter(Boolean)
-          .slice(0, 12)
-      : [];
+  const clean = (arr: unknown): string[] => {
+    if (typeof arr === "string") {
+      return arr
+        .split("\n")
+        .map((q) => String(q).replace(/^\s*[-•*\d.)]+\s*/, "").trim())
+        .filter(Boolean)
+        .slice(0, 12);
+    }
+    if (Array.isArray(arr)) {
+      return arr
+        .map((q) => String(q).replace(/^\s*[-•*\d.)]+\s*/, "").trim())
+        .filter(Boolean)
+        .slice(0, 12);
+    }
+    return [];
+  };
 
   const res = await generateWithFallback({
     prompt,
@@ -1692,22 +1701,158 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin markdown ni texto adicional
   if ("error" in res) {
     return { error: res.error };
   }
+
   const match = res.text.match(/\{[\s\S]*\}/);
   if (match) {
     try {
-      const parsed = JSON.parse(match[0]);
-      const questions = {
-        q_icebreaker: clean(parsed.q_icebreaker),
-        q_intro: clean(parsed.q_intro),
-        q_develop: clean(parsed.q_develop),
-        q_actions: clean(parsed.q_actions),
+      const rawParsed = JSON.parse(match[0]);
+      const root: Record<string, unknown> =
+        rawParsed && typeof rawParsed === "object" && !Array.isArray(rawParsed)
+          ? (rawParsed.preguntas || rawParsed.questions || rawParsed.data || rawParsed)
+          : {};
+
+      const findList = (...candidateKeys: string[]): string[] => {
+        // 1. Coincidencia directa
+        for (const k of candidateKeys) {
+          const val = root[k];
+          const cl = clean(val);
+          if (cl.length > 0) return cl;
+        }
+        // 2. Coincidencia insensible a mayúsculas y guiones
+        const keys = Object.keys(root);
+        for (const c of candidateKeys) {
+          const normCandidate = c.toLowerCase().replace(/[-_]/g, "");
+          const foundKey = keys.find(
+            (k) => k.toLowerCase().replace(/[-_]/g, "") === normCandidate
+          );
+          if (foundKey) {
+            const cl = clean(root[foundKey]);
+            if (cl.length > 0) return cl;
+          }
+        }
+        return [];
       };
+
+      const q_icebreaker = findList(
+        "q_icebreaker",
+        "icebreaker",
+        "romper_el_hielo",
+        "romper_hielo",
+        "rompehielo",
+        "dinamica_inicial",
+        "fase_1",
+        "fase1",
+        "etapa_1",
+        "etapa1",
+        "1",
+        "q1"
+      );
+
+      const q_intro = findList(
+        "q_intro",
+        "intro",
+        "introduccion",
+        "q_introduction",
+        "tematica",
+        "introducir_tematica",
+        "fase_2",
+        "fase2",
+        "etapa_2",
+        "etapa2",
+        "2",
+        "q2"
+      );
+
+      const q_develop = findList(
+        "q_develop",
+        "develop",
+        "desarrollo",
+        "q_development",
+        "desarrollo_tematica",
+        "profundizacion",
+        "fase_3",
+        "fase3",
+        "etapa_3",
+        "etapa3",
+        "3",
+        "q3"
+      );
+
+      const q_actions = findList(
+        "q_actions",
+        "actions",
+        "acciones",
+        "q_action",
+        "compromisos",
+        "acciones_compromisos",
+        "acuerdos",
+        "reparacion",
+        "fase_4",
+        "fase4",
+        "etapa_4",
+        "etapa4",
+        "4",
+        "q4"
+      );
+
+      // Si al menos una fase tiene preguntas, asegurar que ninguna fase quede vacía
       if (
-        questions.q_icebreaker.length ||
-        questions.q_intro.length ||
-        questions.q_develop.length ||
-        questions.q_actions.length
+        q_icebreaker.length ||
+        q_intro.length ||
+        q_develop.length ||
+        q_actions.length
       ) {
+        const isIndividual = modality === "individual";
+        const questions = {
+          q_icebreaker:
+            q_icebreaker.length > 0
+              ? q_icebreaker
+              : [
+                  "¿Cómo te sientes en este momento al estar en este espacio de diálogo?",
+                  "Si pudieras describir en una sola palabra cómo ha sido tu día, ¿cuál sería?",
+                  "¿Qué es lo que más valoras de tener un espacio seguro donde poder expresarte?",
+                ],
+          q_intro:
+            q_intro.length > 0
+              ? q_intro
+              : [
+                  "¿Qué fue lo que ocurrió y cómo comenzó la situación que nos reúne hoy?",
+                  "¿Qué pensaste o qué sentiste en el momento exacto en que ocurrieron los hechos?",
+                  "¿De qué manera esta situación ha afectado la tranquilidad y convivencia entre nosotros?",
+                ],
+          q_develop:
+            q_develop.length > 0
+              ? q_develop
+              : isIndividual
+              ? [
+                  "Para quien causó el daño: ¿En qué momento te diste cuenta de que tus acciones estaban lastimando a la otra persona?",
+                  "Para quien causó el daño: ¿Qué crees que necesitabas en ese instante para haber actuado de una manera diferente?",
+                  "Para quien fue afectado/a: ¿Qué fue lo más difícil para ti durante y después de esta situación?",
+                  "Para quien fue afectado/a: ¿Qué necesitas escuchar o recibir hoy para sentirte tranquilo/a y respetado/a?",
+                  "Para ambas partes: ¿Cómo creen que podemos reconstruir la confianza mutua a partir de ahora?",
+                ]
+              : [
+                  "¿Cómo se sintió el grupo frente a esta situación y de qué manera nos ha impactado a todas y todos?",
+                  "¿Qué necesidades emocionales o de apoyo creemos que no fueron atendidas a tiempo?",
+                  "¿Qué papel asumió cada uno de nosotros cuando ocurrió la situación y cómo podemos mejorar nuestra empatía?",
+                  "¿Qué valores y principios de aula necesitamos fortalecer para que nadie se sienta excluido o vulnerado?",
+                ],
+          q_actions:
+            q_actions.length > 0
+              ? q_actions
+              : isIndividual
+              ? [
+                  "¿Qué compromisos concretos asume quien causó el daño para reparar la afectación y no volver a repetirla?",
+                  "¿Qué acuerdos mutuos establecemos hoy para garantizar una convivencia pacífica y de respeto?",
+                  "¿Cómo nos aseguraremos de cumplir estos acuerdos en el aula y en los recreos?",
+                ]
+              : [
+                  "¿Qué compromisos colectivos asume el grupo para mantener un ambiente seguro y de respeto en el aula?",
+                  "¿Qué acciones de reparación y acompañamiento realizaremos como comunidad para apoyar a quienes fueron afectados?",
+                  "¿Cómo daremos seguimiento a estos acuerdos para verificar que se cumplan en el día a día?",
+                ],
+        };
+
         return { questions };
       }
     } catch {}
