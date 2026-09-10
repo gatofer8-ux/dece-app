@@ -5,6 +5,12 @@ import { useFormState, useFormStatus } from "react-dom";
 import { updateOwnInstitutionDetails, type ActionState } from "../instituciones/actions";
 import { useToastOnChange } from "@/components/Toast";
 import type { InstitutionRow } from "@/lib/types";
+import {
+  formatZoneCode,
+  formatDistrictCode,
+  formatInstitutionAcronym,
+  buildReportNumberString,
+} from "@/lib/reportNumberingShared";
 
 const initialState: ActionState = { error: null };
 
@@ -25,8 +31,29 @@ export default function InstitutionSettingsForm({ institution }: { institution: 
   const [state, formAction] = useFormState(updateOwnInstitutionDetails, initialState);
   const [preview, setPreview] = useState<string | null>(institution.seal_image);
   const [instName, setInstName] = useState(institution.name);
+  const [acronym, setAcronym] = useState((institution as any).acronym || "");
+  const [district, setDistrict] = useState(institution.district || "");
+  const [zona, setZona] = useState(institution.zona || "");
+  const [mineducCode, setMineducCode] = useState((institution as any).mineduc_code || "Mineduc");
+  const [zoneCode, setZoneCode] = useState((institution as any).zone_code || "");
+  const [districtCode, setDistrictCode] = useState((institution as any).district_code || "");
+  const [deceCode, setDeceCode] = useState((institution as any).dece_code || "DECE");
   const [savedSuccess, setSavedSuccess] = useState(false);
   useToastOnChange(state.error, "error");
+
+  const effZone = formatZoneCode(zona, zoneCode);
+  const effDist = formatDistrictCode(district, districtCode);
+  const effAcr = formatInstitutionAcronym(instName, acronym);
+  const reportCodePreview = buildReportNumberString({
+    mineduc: mineducCode || "Mineduc",
+    zone: effZone,
+    district: effDist,
+    institution: effAcr,
+    dece: deceCode || "DECE",
+    professional: "MJ",
+    schoolYear: "2025/2026",
+    sequence: 1,
+  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -199,13 +226,14 @@ export default function InstitutionSettingsForm({ institution }: { institution: 
             <input
               type="text"
               name="acronym"
-              defaultValue={(institution as any).acronym || ""}
+              value={acronym}
+              onChange={(e) => setAcronym(e.target.value)}
               maxLength={8}
               placeholder="Ej. UESR"
               className="input text-xs uppercase"
             />
             <p className="text-[10px] text-slate-400 mt-0.5">
-              Se usan en el código de cada caso: <span className="font-mono">SIGLAS-CÉDULA-AÑO-Nº</span>. Si se deja vacío, se generan del nombre.
+              Se usan en el código de cada caso y en la numeración de informes DECE.
             </p>
           </div>
 
@@ -214,7 +242,8 @@ export default function InstitutionSettingsForm({ institution }: { institution: 
             <input
               type="text"
               name="district"
-              defaultValue={institution.district || ""}
+              value={district}
+              onChange={(e) => setDistrict(e.target.value)}
               placeholder="Ej. 18D02 AMBATO 2"
               className="input text-xs"
             />
@@ -236,7 +265,8 @@ export default function InstitutionSettingsForm({ institution }: { institution: 
             <input
               type="text"
               name="zona"
-              defaultValue={institution.zona || ""}
+              value={zona}
+              onChange={(e) => setZona(e.target.value)}
               placeholder="Ej. ZONA 3"
               className="input text-xs"
             />
@@ -262,6 +292,88 @@ export default function InstitutionSettingsForm({ institution }: { institution: 
               placeholder="Ej. (03) 2844-123"
               className="input text-xs"
             />
+          </div>
+        </div>
+
+        {/* Sección Configuración de Numeración Oficial de Informes DECE */}
+        <div className="mt-6 pt-4 border-t border-slate-200 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <span>🔢</span> Numeración Automática de Informes del DECE
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Estructura oficial estandarizada: <span className="font-mono font-semibold text-slate-700">[Mineduc]-[Zona]-[Distrito]-[Institución]-[DECE]-[Profesional]-[Año]-[Consecutivo]</span>
+              </p>
+            </div>
+            <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full uppercase self-start sm:self-auto">
+              Oficial MinEduc
+            </span>
+          </div>
+
+          {/* Banner de previsualización en vivo */}
+          <div className="p-4 bg-slate-900 rounded-lg text-white space-y-2 shadow-xs border border-slate-800">
+            <div className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase flex items-center gap-1.5">
+              <span>👁️</span> Previsualización del primer informe del año lectivo:
+            </div>
+            <div className="text-sm sm:text-base font-mono font-extrabold text-emerald-400 tracking-wide break-all">
+              {reportCodePreview}
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              * Consecutivo de 3 dígitos (<span className="text-emerald-300 font-mono">001, 002, 003...</span>) generado automáticamente y de manera inmutable al guardar. Se reinicia a 001 al cambiar de año lectivo.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 pt-1">
+            <div>
+              <label className="label text-xs">Entidad rectora (Mineduc)</label>
+              <input
+                type="text"
+                name="mineduc_code"
+                value={mineducCode}
+                onChange={(e) => setMineducCode(e.target.value)}
+                placeholder="Mineduc"
+                className="input text-xs font-semibold"
+              />
+            </div>
+
+            <div>
+              <label className="label text-xs">Código Coordinación Zonal</label>
+              <input
+                type="text"
+                name="zone_code"
+                value={zoneCode}
+                onChange={(e) => setZoneCode(e.target.value)}
+                placeholder={`Ej. CZ3 (Auto: ${effZone})`}
+                className="input text-xs uppercase font-mono"
+              />
+              <p className="text-[10px] text-slate-400 mt-0.5">Calculado: {effZone}</p>
+            </div>
+
+            <div>
+              <label className="label text-xs">Código de Distrito</label>
+              <input
+                type="text"
+                name="district_code"
+                value={districtCode}
+                onChange={(e) => setDistrictCode(e.target.value)}
+                placeholder={`Ej. 18D02 (Auto: ${effDist})`}
+                className="input text-xs uppercase font-mono"
+              />
+              <p className="text-[10px] text-slate-400 mt-0.5">Calculado: {effDist}</p>
+            </div>
+
+            <div>
+              <label className="label text-xs">Código Departamento DECE</label>
+              <input
+                type="text"
+                name="dece_code"
+                value={deceCode}
+                onChange={(e) => setDeceCode(e.target.value)}
+                placeholder="DECE"
+                className="input text-xs uppercase font-semibold"
+              />
+            </div>
           </div>
         </div>
 

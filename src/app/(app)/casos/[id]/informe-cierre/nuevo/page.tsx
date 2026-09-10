@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow, InstitutionRow, SchoolYearRow } from "@/lib/types";
-import { generateReportNumber } from "@/lib/caseClosureReport";
+import { previewNextReportNumber } from "@/lib/reportNumbering";
 import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
 import {
   getCaseBimonthlyReports,
@@ -36,8 +36,13 @@ export default async function NuevoInformeCierrePage({
     .prepare("SELECT * FROM school_years WHERE institution_id = ? AND is_active = 1")
     .get(institutionId) as SchoolYearRow | undefined;
 
-  const schoolYearText = activeYear?.name || "2024 - 2025";
-  const defaultReportNumber = generateReportNumber(institution?.name || "UE", schoolYearText);
+  const schoolYearText = activeYear?.name || "2025/2026";
+  const preview = previewNextReportNumber({
+    institutionId,
+    schoolYearText,
+    userId: session.user.id,
+  });
+  const defaultReportNumber = preview.reportNumber;
   const defaultPsychosocialSummary = getCasePsychosocialActionsSummary(caseFile.id);
   const bimonthlyItems = getCaseBimonthlyReports(caseFile.id);
   const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);

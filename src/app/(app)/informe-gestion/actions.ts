@@ -11,6 +11,7 @@ import {
   aggregateAnnualStats,
   generateAnnualManagementReportCode,
 } from "@/lib/informeGestion";
+import { assignNextReportNumber } from "@/lib/reportNumbering";
 import {
   draftAnnualSituationalDiagnosis,
   draftAnnualComparativeAnalysis,
@@ -66,6 +67,19 @@ export async function saveAnnualReportAction(formData: {
     const isNew = !formData.id;
     const reportId = formData.id || crypto.randomUUID();
 
+    let finalReportCode = formData.report_code;
+    if (isNew) {
+      const assigned = assignNextReportNumber({
+        institutionId,
+        userId: session.user.id,
+        userName: session.user.name,
+        schoolYearText: formData.school_year_text,
+        reportType: "GESTION_ANUAL",
+        recordId: reportId,
+      });
+      finalReportCode = assigned.reportNumber;
+    }
+
     if (isNew) {
       db.prepare(`
         INSERT INTO annual_management_reports (
@@ -102,7 +116,7 @@ export async function saveAnnualReportAction(formData: {
         session.user.name,
         session.user.role === "ADMIN" ? "COORDINADORA DECE" : "ANALISTA DECE",
         formData.report_type,
-        formData.report_code,
+        finalReportCode,
         formData.report_date,
         formData.title_topic,
         formData.recipients_json || "[]",

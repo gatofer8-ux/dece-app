@@ -2,9 +2,10 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
-import type { CaseFileRow, StudentRow, ReferralRow } from "@/lib/types";
+import type { CaseFileRow, StudentRow, ReferralRow, SchoolYearRow } from "@/lib/types";
 import { formatStudentCourseFull } from "@/lib/studentCourse";
 import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
+import { previewNextReportNumber } from "@/lib/reportNumbering";
 import ViolenceReportForm from "./ViolenceReportForm";
 
 export default async function NuevoInformeHechoViolenciaPage({ params }: { params: { id: string } }) {
@@ -16,6 +17,16 @@ export default async function NuevoInformeHechoViolenciaPage({ params }: { param
   if (!caseFile) notFound();
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
   const defaults = getCaseDocumentDefaults(caseFile.id, session, institutionId);
+
+  const activeYear = db
+    .prepare("SELECT * FROM school_years WHERE institution_id = ? AND is_active = 1")
+    .get(institutionId) as SchoolYearRow | undefined;
+
+  const preview = previewNextReportNumber({
+    institutionId,
+    schoolYearText: activeYear?.name,
+    userId: session.user.id,
+  });
 
   // Rector/a: primero el perfil de la institución, luego el usuario con rol AUTORIDAD.
   const authorityUser = db
@@ -45,6 +56,7 @@ export default async function NuevoInformeHechoViolenciaPage({ params }: { param
         caseId={caseFile.id}
         studentName={student.full_name}
         studentCourseFormatted={formattedCourse}
+        defaultReportNumber={preview.reportNumber}
         defaultRepresentativeName={student.representative || ""}
         defaultRepresentativeRelationship={student.lives_with || "Representante legal"}
         defaultRepresentativeAddress={student.representative_address || student.address || ""}

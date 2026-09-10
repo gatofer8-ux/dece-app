@@ -74,8 +74,20 @@ export default function ViolenceReportEditForm({
           1. Datos generales de identificación del estudiante
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-2">
-          <input value={studentName} disabled className="input bg-slate-50 font-medium" />
-          <input name="report_number" defaultValue={report.report_number || ""} placeholder="N° de informe (ej. 001)" className="input" />
+          <div>
+            <label className="label text-xs">Estudiante</label>
+            <input value={studentName} disabled className="input bg-slate-50 font-medium" />
+          </div>
+          <div>
+            <label className="label text-xs">N° de informe (Oficial)</label>
+            <input
+              name="report_number"
+              defaultValue={report.report_number || ""}
+              readOnly
+              className="input bg-slate-100 font-mono font-bold text-slate-800 border-slate-300 cursor-not-allowed select-all text-xs"
+            />
+            <p className="text-[10px] text-slate-400 mt-0.5">Consecutivo oficial inmutable</p>
+          </div>
           <div>
             <label className="label text-xs">Fecha del informe</label>
             <input type="date" name="report_date" defaultValue={report.report_date} className="input" />

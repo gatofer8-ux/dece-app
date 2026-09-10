@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { getSignatureDefaults } from "@/lib/caseDocumentDefaults";
 import { getInstitutionDeceTeam } from "@/lib/distributivo";
+import { previewNextReportNumber } from "@/lib/reportNumbering";
 import AnnualReportForm from "../AnnualReportForm";
 import type { SchoolYearRow, InstitutionRow } from "@/lib/types";
 
@@ -29,10 +30,18 @@ export default async function NewAnnualReportPage() {
   const sig = getSignatureDefaults(session, institutionId);
   const deceTeam = getInstitutionDeceTeam(institutionId);
 
+  const preview = previewNextReportNumber({
+    institutionId,
+    userId: session.user.id,
+    userName: sig.deceProfessional.fullName || session.user.name,
+    schoolYearText: activeYear?.name,
+  });
+
   return (
     <AnnualReportForm
       schoolYears={schoolYears}
       selectedYearId={activeYear?.id}
+      defaultReportCode={preview.reportNumber}
       currentUserId={session.user.id}
       currentUserName={sig.deceProfessional.fullName || session.user.name || ""}
       currentUserEmail={session.user.email || undefined}

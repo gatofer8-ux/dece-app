@@ -62,9 +62,11 @@ export interface AggregateStatsResult {
   signatures: ManagementReportSignatureItem[];
 }
 
+import { previewNextReportNumber } from "./reportNumbering";
+
 /**
  * Genera el código oficial correlativo del informe anual.
- * Ej: INF-GESTION-DECE-2025-2026-001 ó INF-IND-DECE-2025-2026-001-MJ
+ * Estructura oficial: Mineduc-CZ3-18D02-UESR-DECE-MJ-2025/2026-001
  */
 export function generateAnnualManagementReportCode(
   institutionId: string,
@@ -73,27 +75,14 @@ export function generateAnnualManagementReportCode(
   userName: string
 ): string {
   try {
-    const countRow = db
-      .prepare(
-        "SELECT COUNT(*) as count FROM annual_management_reports WHERE institution_id = ?"
-      )
-      .get(institutionId) as { count: number } | undefined;
-    const nextSeq = ((countRow?.count || 0) + 1).toString().padStart(3, "0");
-    const yearClean = (schoolYearText || "2025-2026").replace(/\s+/g, "");
-
-    if (reportType === "INDIVIDUAL") {
-      const initials = userName
-        .split(" ")
-        .filter(Boolean)
-        .map((w) => w[0].toUpperCase())
-        .join("")
-        .slice(0, 3) || "PROF";
-      return `INF-IND-DECE-${yearClean}-${nextSeq}-${initials}`;
-    }
-
-    return `INF-GESTION-DECE-${yearClean}-${nextSeq}`;
+    const preview = previewNextReportNumber({
+      institutionId,
+      schoolYearText,
+      userName,
+    });
+    return preview.reportNumber;
   } catch {
-    return `INF-GESTION-DECE-001`;
+    return "Mineduc-CZ3-18D02-UESR-DECE-MJ-2025/2026-001";
   }
 }
 

@@ -27,6 +27,7 @@ export default function ProfileForm({
     document_id: string | null;
     phone: string | null;
     phone_ext: string | null;
+    professional_code?: string | null;
   };
 }) {
   const [state, formAction] = useFormState(updateOwnProfile, initialState);
@@ -70,6 +71,18 @@ export default function ProfileForm({
           <input type="text" name="job_title" defaultValue={user.job_title || ""} placeholder="ANALISTA DECE / COORDINADOR/A DECE / TRABAJADOR/A SOCIAL" className="input text-xs" />
         </div>
         <div>
+          <label className="label text-xs">Iniciales / Código de informe</label>
+          <input
+            type="text"
+            name="professional_code"
+            defaultValue={user.professional_code || ""}
+            placeholder="Ej. MJ (Auto)"
+            maxLength={6}
+            className="input text-xs uppercase font-mono font-bold"
+          />
+          <p className="text-[10px] text-slate-400 mt-0.5">Si se deja vacío, se usan tus iniciales ({user.name.split(/\s+/).filter(Boolean).map(w=>w[0]).join("").toUpperCase().slice(0, 4) || "MJ"})</p>
+        </div>
+        <div>
           <label className="label text-xs">Cédula</label>
           <input type="text" name="document_id" defaultValue={user.document_id || ""} placeholder="1800000000" className="input text-xs" />
         </div>
@@ -81,7 +94,7 @@ export default function ProfileForm({
           <label className="label text-xs">Extensión</label>
           <input type="text" name="phone_ext" defaultValue={user.phone_ext || ""} placeholder="Ej. 102" className="input text-xs" />
         </div>
-        <div>
+        <div className="sm:col-span-2">
           <label className="label text-xs">Correo (no editable aquí)</label>
           <input type="text" value={user.email} disabled className="input text-xs bg-slate-100 text-slate-500" />
         </div>

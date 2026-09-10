@@ -9,7 +9,7 @@ export default async function PerfilPage() {
 
   const user = db
     .prepare(
-      "SELECT name, email, role, title_prefix, job_title, document_id, phone, phone_ext FROM users WHERE id = ?"
+      "SELECT name, email, role, title_prefix, job_title, document_id, phone, phone_ext, professional_code FROM users WHERE id = ?"
     )
     .get(session.user.id) as {
     name: string;
@@ -20,6 +20,7 @@ export default async function PerfilPage() {
     document_id: string | null;
     phone: string | null;
     phone_ext: string | null;
+    professional_code: string | null;
   };
 
   return (
