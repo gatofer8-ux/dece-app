@@ -62,10 +62,16 @@ export function formatStudentCourseFull(
         formattedSpecialty = " Técnico en Informática";
       } else if (lowerSpec === "contabilidad") {
         formattedSpecialty = " Técnico en Contabilidad";
+      } else if (/^(general|unificado|bgu|general unificado)$/i.test(lowerSpec)) {
+        formattedSpecialty = " General Unificado";
       } else if (lowerSpec.startsWith("en ")) {
         formattedSpecialty = ` ${rawSpecialty}`;
+      } else if (/t[eé]cnic/i.test(lowerSpec)) {
+        // La figura profesional ya contiene "Técnico" (p.ej. "Soporte Técnico
+        // de Equipos Informáticos"): se evita el doble "Técnico en Técnico".
+        formattedSpecialty = ` Técnico, figura profesional “${rawSpecialty}”`;
       } else {
-        formattedSpecialty = ` en ${rawSpecialty}`;
+        formattedSpecialty = ` Técnico en ${rawSpecialty}`;
       }
     } else {
       if (/ciencias/i.test(rawCourse)) {
