@@ -789,6 +789,42 @@ export interface MeetingMinutesRow {
   updated_at: string;
 }
 
+export interface TapasSessionRow {
+  id: string;
+  institution_id: string;
+  created_by_id: string | null;
+  school_year_id: string | null;
+  title: string;
+  course: string | null;
+  parallel: string | null;
+  jornada: string | null;
+  access_code: string;
+  status: "ABIERTA" | "CERRADA";
+  opens_at: string | null;
+  closes_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TapasApplicationRow {
+  id: string;
+  session_id: string;
+  institution_id: string;
+  student_id: string | null;
+  student_name: string;
+  course_snapshot: string | null;
+  parallel_snapshot: string | null;
+  status: "EN_PROGRESO" | "FINALIZADA";
+  classification_json: string;
+  groups_json: string;
+  reflection: string | null;
+  future_letter: string | null;
+  result_json: string | null;
+  started_at: string;
+  finished_at: string | null;
+  updated_at: string;
+}
+
 export interface OvpSessionRow {
   id: string;
   institution_id: string;
