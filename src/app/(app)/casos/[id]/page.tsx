@@ -450,41 +450,96 @@ export default async function CasoDetallePage({
               </Link>
             </div>
             <form action={boundAddAction} className="space-y-3 mb-5 border-b border-slate-100 pb-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <select name="type" className="select" defaultValue="Entrevista">
-                  <option>Entrevista</option>
-                  <option>Visita domiciliaria</option>
-                  <option>Llamada telefónica</option>
-                  <option>Coordinación interinstitucional</option>
-                  <option>Seguimiento académico</option>
-                  <option>Comunicación con representante</option>
-                  <option>Acta de compromiso y corresponsabilidad</option>
-                  <option>Otro</option>
-                </select>
-                <select name="intervention_type" className="select" defaultValue="">
-                  <option value="">Tipo de intervención (opcional)</option>
-                  {Object.entries(INTERVENTION_TYPE_LABELS).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Tipo de actividad</label>
+                  <select name="type" className="select" defaultValue="Entrevista">
+                    <option>Entrevista</option>
+                    <option>Visita domiciliaria</option>
+                    <option>Llamada telefónica</option>
+                    <option>Coordinación interinstitucional</option>
+                    <option>Seguimiento académico</option>
+                    <option>Comunicación con representante</option>
+                    <option>Acta de compromiso y corresponsabilidad</option>
+                    <option>Otro</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Tipo de intervención (opcional)</label>
+                  <select name="intervention_type" className="select" defaultValue="">
+                    <option value="">Seleccionar tipo...</option>
+                    {Object.entries(INTERVENTION_TYPE_LABELS).map(([k, v]) => (
+                      <option key={k} value={k}>{v}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha</label>
+                  <input type="date" name="date" defaultValue={new Date().toISOString().slice(0, 10)} className="input" />
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input type="date" name="date" defaultValue={new Date().toISOString().slice(0, 10)} className="input" />
-                <input name="observations" placeholder="Observaciones (opcional)" className="input" />
+
+              {/* Descripción breve */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <span>Descripción de la atención psicosocial</span>
+                    <span className="text-[11px] font-normal text-slate-500">(Breve síntesis)</span>
+                  </label>
+                  <div className="flex items-center">
+                    <AIAssistButton
+                      targetId={`case-action-description-${caseFile.id}`}
+                      caseId={caseFile.id}
+                      fieldLabel="Descripción breve de la atención psicosocial"
+                    />
+                    <VoiceDictationButton targetId={`case-action-description-${caseFile.id}`} />
+                  </div>
+                </div>
+                <input
+                  id={`case-action-description-${caseFile.id}`}
+                  name="description"
+                  required
+                  placeholder="Pequeña descripción (ej. Diálogo presencial con representante sobre compromisos académicos)..."
+                  className="input text-xs sm:text-sm"
+                />
               </div>
-              <div className="flex items-center justify-end">
-                <AIAssistButton targetId={`case-action-description-${caseFile.id}`} caseId={caseFile.id} fieldLabel="Descripción de la acción en bitácora" /><VoiceDictationButton targetId={`case-action-description-${caseFile.id}`} />
+
+              {/* Observaciones / Acuerdos (Parte medular) */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <span>Observaciones / Acuerdos</span>
+                    <span className="text-[11px] font-bold text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded border border-brand-200">
+                      Parte medular, resumen y compromisos
+                    </span>
+                  </label>
+                  <div className="flex items-center">
+                    <AIAssistButton
+                      targetId={`case-action-observations-${caseFile.id}`}
+                      caseId={caseFile.id}
+                      fieldLabel="Observaciones y acuerdos de la atención psicosocial"
+                    />
+                    <VoiceDictationButton targetId={`case-action-observations-${caseFile.id}`} />
+                  </div>
+                </div>
+                <textarea
+                  id={`case-action-observations-${caseFile.id}`}
+                  name="observations"
+                  rows={3}
+                  placeholder="Detalla lo más destacable de la intervención: aspectos centrales tratados, compromisos adquiridos, acuerdos y resumen psicosocial..."
+                  className="textarea text-xs sm:text-sm"
+                />
               </div>
-              <textarea id={`case-action-description-${caseFile.id}`} name="description" required rows={2} placeholder="Describe la acción realizada..." className="textarea" />
-              <div className="flex justify-end">
-                <button type="submit" className="btn-primary">+ Registrar acción</button>
+
+              <div className="flex justify-end pt-1">
+                <button type="submit" className="btn-primary">+ Registrar acción en bitácora</button>
               </div>
             </form>
             <ol className="space-y-4">
               {actions.map((a) => (
-                <li key={a.id} className="text-sm border-l-2 border-brand-200 pl-3">
+                <li key={a.id} className="text-sm border-l-2 border-brand-300 pl-3.5 py-1.5 bg-slate-50/40 rounded-r">
                   <div className="flex justify-between text-xs text-slate-400">
-                    <span className="font-medium text-slate-600">
+                    <span className="font-semibold text-slate-700">
                       {a.type}{a.intervention_type ? ` — ${INTERVENTION_TYPE_LABELS[a.intervention_type] || a.intervention_type}` : ""}
                     </span>
                     <div className="flex items-center gap-2">
@@ -498,8 +553,19 @@ export default async function CasoDetallePage({
                       />
                     </div>
                   </div>
-                  <p className="text-slate-700 mt-1 whitespace-pre-wrap">{a.description}</p>
-                  {a.observations && <p className="text-slate-400 text-xs mt-1">Obs: {a.observations}</p>}
+                  <p className="text-slate-800 text-xs mt-1.5">
+                    <span className="font-semibold text-slate-600">Descripción: </span>
+                    {a.description}
+                  </p>
+                  {a.observations && (
+                    <div className="mt-2 p-2.5 bg-white border border-slate-200 border-l-4 border-l-brand-600 rounded-r text-xs text-slate-800 whitespace-pre-wrap leading-relaxed shadow-sm">
+                      <div className="font-bold text-brand-900 text-[11px] uppercase tracking-wide mb-1 flex items-center gap-1">
+                        <span>📌</span>
+                        <span>Observaciones / Acuerdos (Parte medular):</span>
+                      </div>
+                      {a.observations}
+                    </div>
+                  )}
                 </li>
               ))}
               {actions.length === 0 && <p className="text-sm text-slate-400">Sin acciones registradas.</p>}

@@ -291,6 +291,37 @@ export async function draftText(opts: {
       "4. NO agregues introducciones ni explicaciones. Devuelve ÚNICAMENTE las líneas con viñeta '• '.\n"
     : "";
 
+  const isActionDescription =
+    opts.fieldLabel.toLowerCase().includes("descripción") &&
+    (opts.fieldLabel.toLowerCase().includes("atención psicosocial") ||
+      opts.fieldLabel.toLowerCase().includes("bitácora") ||
+      opts.fieldLabel.toLowerCase().includes("acción"));
+
+  const actionDescriptionRule = isActionDescription
+    ? "\nREGLA OBLIGATORIA PARA 'DESCRIPCIÓN DE LA ATENCIÓN PSICOSOCIAL' EN BITÁCORA:\n" +
+      "1. Redacta ÚNICAMENTE una descripción breve, concisa y ejecutiva de 1 a 2 oraciones (máximo 20 a 35 palabras).\n" +
+      "2. Debe sintetizar únicamente la modalidad y el propósito directo de la sesión (por ejemplo: 'Entrevista presencial con la representante legal para socializar el reporte de novedades áulicas y coordinar compromisos formativos.').\n" +
+      "3. NO detalles aquí acuerdos extensos, análisis ni conclusiones; todo lo medular y los compromisos van en el campo de 'Observaciones / Acuerdos'.\n"
+    : "";
+
+  const isActionObservations =
+    (opts.fieldLabel.toLowerCase().includes("observaciones") ||
+      opts.fieldLabel.toLowerCase().includes("acuerdos")) &&
+    (opts.fieldLabel.toLowerCase().includes("atención psicosocial") ||
+      opts.fieldLabel.toLowerCase().includes("bitácora") ||
+      opts.fieldLabel.toLowerCase().includes("acción en bitácora")) &&
+    !opts.fieldLabel.toLowerCase().includes("derivaci");
+
+  const actionObservationsRule = isActionObservations
+    ? "\nREGLA OBLIGATORIA PARA 'OBSERVACIONES / ACUERDOS' DE LA ACCIÓN EN BITÁCORA:\n" +
+      "1. Esta es la PARTE MEDULAR de la acción: contiene lo más destacable, el resumen de la intervención y los acuerdos/compromisos establecidos.\n" +
+      "2. Estructura el contenido de forma clara y profesional:\n" +
+      "   - Resumen y puntos más destacables tratados durante la sesión con el estudiante, representante o docentes.\n" +
+      "   - Acuerdos y compromisos concretos asumidos por las partes para garantizar el bienestar y seguimiento escolar.\n" +
+      "3. Extensión: 1 a 2 párrafos sólidos o lista numerada de acuerdos (entre 40 y 100 palabras).\n" +
+      "4. Lenguaje técnico psicosocial DECE, empático, sin juicios de valor y con enfoque de corresponsabilidad.\n"
+    : "";
+
   const prompt = `Eres un asistente que ayuda a un profesional del Departamento de Consejería Estudiantil (DECE) en Ecuador a redactar documentos técnicos oficiales de gestión de casos. Usa lenguaje profesional, claro, objetivo, respetuoso y con enfoque de derechos, sin emitir juicios de valor ni diagnósticos clínicos que no correspondan a un informe DECE.
 
 REGLAS DE FORMATO Y ESTILO ESTRICTAS (OBLIGATORIAS):
@@ -308,6 +339,8 @@ REGLAS DE FORMATO Y ESTILO ESTRICTAS (OBLIGATORIAS):
   ${referralActionsRule}
   ${currentSituationRule}
   ${referralObservationsRule}
+  ${actionDescriptionRule}
+  ${actionObservationsRule}
   Vas a redactar o mejorar el siguiente campo de un documento: "${opts.fieldLabel}".
 
 Contexto del caso (datos ya registrados en el sistema; úsalos para dar coherencia, pero NO inventes datos, nombres, fechas ni hechos que no aparezcan aquí):

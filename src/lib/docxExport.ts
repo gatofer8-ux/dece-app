@@ -787,6 +787,12 @@ export async function generateCaseDocx(opts: {
                   new TextRun({ text: `[${formatDate(a.date)}] `, bold: true }),
                   new TextRun({ text: `(${a.type}) `, bold: true }),
                   new TextRun({ text: a.description }),
+                  ...(a.observations
+                    ? [
+                        new TextRun({ text: " — Observaciones / Acuerdos: ", bold: true }),
+                        new TextRun({ text: a.observations }),
+                      ]
+                    : []),
                 ],
                 spacing: { after: 60 },
               })
