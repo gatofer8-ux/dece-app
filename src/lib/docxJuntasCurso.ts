@@ -227,6 +227,7 @@ export async function generateCourseBoardReportDocx(opts: {
     paragraphLoop: true,
     linebreaks: true,
     delimiters: { start: "{", end: "}" },
+    nullGetter: () => "",
   });
 
   const data = formatCourseBoardReportTemplateData(opts.report, opts.institution);

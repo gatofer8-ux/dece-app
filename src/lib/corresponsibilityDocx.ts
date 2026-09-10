@@ -78,8 +78,8 @@ export function formatCorresponsibilityTemplateData(
     cedula_representante_legal: repId,
     nombre_estudiante: studentName,
     curso: cursoFull,
-    jornada_m: isMatutina ? "X" : " ",
-    jornada_v: isVespertina ? "X" : " ",
+    jornada_m: isMatutina ? "X" : "",
+    jornada_v: isVespertina ? "X" : "",
     dificultad_detectada: dificultad,
     acuerdos_y_compromisos: compromisos,
     telefono_representante_legal: repPhone,
@@ -107,6 +107,7 @@ export async function generateCorresponsibilityDocxBuffer(
     paragraphLoop: true,
     linebreaks: true,
     delimiters: { start: "{", end: "}" },
+    nullGetter: () => "",
   });
 
   const data = formatCorresponsibilityTemplateData(act, student);

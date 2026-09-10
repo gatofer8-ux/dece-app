@@ -20,6 +20,7 @@ export async function fillDocxTemplate(opts: {
   const doc = new Docxtemplater(zip, {
     paragraphLoop: true,
     linebreaks: true,
+    nullGetter: () => "",
   });
 
   // 1. Transformar la lista de casos usando el mapeo de campos

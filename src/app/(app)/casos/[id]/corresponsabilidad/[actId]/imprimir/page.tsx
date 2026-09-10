@@ -30,6 +30,30 @@ export default async function ImprimirActaCorresponsabilidadPage({
 
   return (
     <div className="max-w-4xl mx-auto bg-white my-4 print:my-0 print:max-w-none">
+      {/* CSS para impresión profesional A4 */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        @page {
+          size: A4 portrait;
+          margin: 0;
+        }
+        @media print {
+          html, body {
+            background: #ffffff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `,
+        }}
+      />
+
       {/* Barra de control en pantalla */}
       <div className="flex items-center justify-between gap-3 p-4 bg-slate-50 border-b border-slate-200 print:hidden">
         <div className="flex items-center gap-2">
