@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import Link from "next/link";
 import { updateCarePlan, type ActionState } from "../../../../actions";
 import { INTERVENTION_TYPE_OPTIONS, parseCarePlanActions, parseStringList } from "@/lib/carePlan";
@@ -31,6 +32,7 @@ export default function CarePlanEditForm({
 }) {
   const updateForThisPlan = updateCarePlan.bind(null, caseId, plan.id);
   const [state, formAction] = useFormState(updateForThisPlan, initialState);
+  useToastOnChange(state.error, "error");
 
   const initialActions = parseCarePlanActions(plan.actions);
   const selectedInterventionTypes = parseStringList(plan.intervention_types);

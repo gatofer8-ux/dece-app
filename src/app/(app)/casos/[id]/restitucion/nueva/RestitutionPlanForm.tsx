@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import Link from "next/link";
 import { createRestitutionPlan, updateRestitutionPlan, type ActionState } from "../../../actions";
 import {
@@ -92,6 +93,7 @@ export default function RestitutionPlanForm({
     : createRestitutionPlan.bind(null, caseId);
 
   const [state, formAction] = useFormState(actionFn, initialState);
+  useToastOnChange(state.error, "error");
 
   // Parse initial arrays or compute preloaded defaults
   const parsedViolenceTypes = initialData ? parseJsonArray<string>(initialData.violence_types) : [];

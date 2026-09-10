@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import { createAppointmentRequest, getAvailableSlotsForProfessional, type RequestActionState } from "./actions";
 import { REQUESTER_ROLE_OPTIONS } from "@/lib/appointmentRequest";
 import { findProfessionalForCourse, parseCoverageCourses } from "@/lib/coverage";
@@ -35,6 +36,7 @@ export default function PublicBookingClient({
 }) {
   const boundAction = createAppointmentRequest.bind(null, institution.id);
   const [state, formAction] = useFormState(boundAction, initialState);
+  useToastOnChange(state.error, "error");
   const [isPending, startTransition] = useTransition();
 
   const defaultProf = professionals.length > 0 ? professionals[0] : null;

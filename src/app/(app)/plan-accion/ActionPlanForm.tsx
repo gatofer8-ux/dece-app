@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useMemo } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import Link from "next/link";
 import { createActionPlan, updateActionPlan, type ActionState } from "./actions";
 import { generateActionPlanAiSuggestion, generateActionPlanGlobalAiSuggestion } from "./ai-actions";
@@ -76,6 +77,7 @@ export default function ActionPlanForm({
 }) {
   const actionToUse = isEditing ? updateActionPlan.bind(null, planId!) : createActionPlan;
   const [state, formAction] = useFormState(actionToUse, initialState);
+  useToastOnChange(state.error, "error");
 
   // Estados de cabecera institucional
   const [schoolYearId, setSchoolYearId] = useState(defaultSchoolYearId);

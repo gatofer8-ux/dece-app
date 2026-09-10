@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useToast } from "@/components/Toast";
 
 type ActionState = { error: string | null };
 
@@ -28,6 +30,15 @@ export default function ConfirmDeleteForm({
   label?: string;
 }) {
   const [state, formAction] = useFormState(action, { error: null });
+  const toast = useToast();
+  const seen = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (state.error && state.error !== seen.current) {
+      seen.current = state.error;
+      toast.error(state.error);
+    }
+  }, [state.error, toast]);
 
   return (
     <form

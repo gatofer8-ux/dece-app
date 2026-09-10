@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import { uploadAttachment, deleteAttachment, type ActionState } from "./attachments-actions";
 import Link from "next/link";
 import { formatDateTime } from "@/components/ui";
@@ -28,6 +29,7 @@ function SubmitButton() {
 export default function AttachmentsSection({ caseId, attachments }: { caseId: string; attachments: AttachmentRow[] }) {
   const uploadForThisCase = uploadAttachment.bind(null, caseId);
   const [state, formAction] = useFormState(uploadForThisCase, initialState);
+  useToastOnChange(state.error, "error");
   const formRef = useRef<HTMLFormElement>(null);
 
   async function handleDelete(attachmentId: string, filename: string) {

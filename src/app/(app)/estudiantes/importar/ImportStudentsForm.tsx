@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import { importStudents, type ImportActionState } from "./actions";
 
 const initialState: ImportActionState = { error: null, result: null };
@@ -18,6 +19,7 @@ function SubmitButton() {
 
 export default function ImportStudentsForm() {
   const [state, formAction] = useFormState(importStudents, initialState);
+  useToastOnChange(state.error, "error");
   const formRef = useRef<HTMLFormElement>(null);
 
   return (

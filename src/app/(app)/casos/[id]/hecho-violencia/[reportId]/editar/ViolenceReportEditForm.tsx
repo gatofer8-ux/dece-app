@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import Link from "next/link";
 import { updateViolenceReport, type ActionState } from "../../../../actions";
 import {
@@ -44,6 +45,7 @@ export default function ViolenceReportEditForm({
 }) {
   const updateForThisReport = updateViolenceReport.bind(null, caseId, report.id);
   const [state, formAction] = useFormState(updateForThisReport, initialState);
+  useToastOnChange(state.error, "error");
 
   const selectedTypes: string[] = (() => {
     try { return JSON.parse(report.violence_types || "[]"); } catch { return []; }

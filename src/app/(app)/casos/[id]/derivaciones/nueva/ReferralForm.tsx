@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import { createOfficialReferral, type ActionState } from "../../../../derivaciones/actions";
 import { DESTINATION_OPTIONS, DESTINATION_GROUP_LABELS } from "@/lib/referral";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
@@ -31,6 +32,7 @@ export default function ReferralForm({
 }) {
   const createForThisCase = createOfficialReferral.bind(null, caseId);
   const [state, formAction] = useFormState(createForThisCase, initialState);
+  useToastOnChange(state.error, "error");
 
   return (
     <form action={formAction} className="card p-6 space-y-6 max-w-3xl">

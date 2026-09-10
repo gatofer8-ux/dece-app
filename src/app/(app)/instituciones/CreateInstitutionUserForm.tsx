@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import { createInstitutionUser, type ActionState } from "./actions";
 import { ROLE_LABELS } from "@/lib/types";
 
@@ -18,6 +19,7 @@ function SubmitButton() {
 export default function CreateInstitutionUserForm({ institutionId }: { institutionId: string }) {
   const createInstitutionUserForThisInstitution = createInstitutionUser.bind(null, institutionId);
   const [state, formAction] = useFormState(createInstitutionUserForThisInstitution, initialState);
+  useToastOnChange(state.error, "error");
 
   return (
     <form action={formAction} className="space-y-3">

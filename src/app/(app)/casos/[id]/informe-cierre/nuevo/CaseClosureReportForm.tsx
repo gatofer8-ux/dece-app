@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import Link from "next/link";
 import {
   createCaseClosureReport,
@@ -85,6 +86,7 @@ export default function CaseClosureReportForm({
     ? updateCaseClosureReport.bind(null, report.id, caseId)
     : createCaseClosureReport.bind(null, caseId);
   const [state, formAction] = useFormState(actionFn, initialState);
+  useToastOnChange(state.error, "error");
 
   const activeSchoolYear = schoolYearText || report?.school_year_text || "2024 - 2025";
   const calculatedAge = student.birth_date

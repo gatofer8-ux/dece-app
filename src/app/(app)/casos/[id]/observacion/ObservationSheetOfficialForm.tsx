@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import Link from "next/link";
 import { createObservationSheet, updateObservationSheet, type ActionState } from "../../actions";
 import { generateObservationCommentAi, generateObservationGlobalAnalysisAi } from "../ai-actions";
@@ -56,6 +57,7 @@ export default function ObservationSheetOfficialForm({
     : createObservationSheet.bind(null, caseId, "SUPERIOR_BACHILLERATO");
 
   const [state, formAction] = useFormState(actionToUse, initialState);
+  useToastOnChange(state.error, "error");
 
   // Estados locales de la Ficha Oficial
   const [studentNameVal, setStudentNameVal] = useState(studentName);

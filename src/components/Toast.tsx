@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 type ToastKind = "success" | "error" | "info";
 interface Toast {
@@ -29,6 +29,21 @@ export function useToast(): ToastContextValue {
     };
   }
   return ctx;
+}
+
+/**
+ * Muestra un toast cada vez que `message` cambia a un valor no vacío.
+ * Útil para el `state.error` / `state.ok` de un `useFormState`.
+ */
+export function useToastOnChange(message: string | null | undefined, kind: ToastKind = "error") {
+  const toast = useToast();
+  const seen = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (message && message !== seen.current) {
+      seen.current = message;
+      toast.toast(message, kind);
+    }
+  }, [message, kind, toast]);
 }
 
 const STYLES: Record<ToastKind, { bar: string; icon: string }> = {

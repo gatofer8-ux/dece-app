@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import { createCarePlan, type ActionState } from "../../../actions";
 import { INTERVENTION_TYPE_OPTIONS } from "@/lib/carePlan";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
@@ -21,6 +22,7 @@ function SubmitButton() {
 export default function CarePlanForm({ caseId, studentName }: { caseId: string; studentName: string }) {
   const createForThisCase = createCarePlan.bind(null, caseId);
   const [state, formAction] = useFormState(createForThisCase, initialState);
+  useToastOnChange(state.error, "error");
   const [rowCount, setRowCount] = useState(3);
 
   return (

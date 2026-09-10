@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { updateOwnInstitutionDetails, type ActionState } from "../instituciones/actions";
+import { useToastOnChange } from "@/components/Toast";
 import type { InstitutionRow } from "@/lib/types";
 
 const initialState: ActionState = { error: null };
@@ -25,6 +26,7 @@ export default function InstitutionSettingsForm({ institution }: { institution: 
   const [preview, setPreview] = useState<string | null>(institution.seal_image);
   const [instName, setInstName] = useState(institution.name);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  useToastOnChange(state.error, "error");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

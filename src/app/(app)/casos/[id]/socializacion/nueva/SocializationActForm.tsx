@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import { createSocializationAct, type ActionState } from "../../../actions";
 import { NORMATIVE_TEXT, CONFIDENTIALITY_TEXT, CURRICULAR_ADAPTATION_TEXT, DEFAULT_AGREEMENTS } from "@/lib/socializationAct";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
@@ -34,6 +35,7 @@ export default function SocializationActForm({
 }) {
   const createForThisCase = createSocializationAct.bind(null, caseId);
   const [state, formAction] = useFormState(createForThisCase, initialState);
+  useToastOnChange(state.error, "error");
 
   const [agreementRows, setAgreementRows] = useState<AgreementRow[]>(() => [
     ...DEFAULT_AGREEMENTS.map((text, i) => ({ key: i, defaultValue: text })),

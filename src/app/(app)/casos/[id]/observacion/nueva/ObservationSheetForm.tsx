@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import { createObservationSheet, type ActionState } from "../../../actions";
 import {
   CONTEXT_LABELS,
@@ -45,6 +46,7 @@ function IndicatorGroup({ title, name, options }: { title: string; name: string;
 export default function ObservationSheetForm({ caseId, subnivel }: { caseId: string; subnivel: ObservationSubnivel }) {
   const createForThisCase = createObservationSheet.bind(null, caseId, subnivel);
   const [state, formAction] = useFormState(createForThisCase, initialState);
+  useToastOnChange(state.error, "error");
   const catalog = INDICATOR_CATALOGS[subnivel];
 
   return (

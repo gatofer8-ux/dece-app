@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import { createSituationalReport, updateSituationalReport, type ActionState } from "../../../actions";
 import type { SituationalReportRow } from "@/lib/types";
 import { METHODOLOGY_OPTIONS, LEGAL_BASIS_TEXT } from "@/lib/situationalReport";
@@ -46,6 +47,7 @@ export default function SituationalReportForm({
 }) {
   const actionFn = report ? updateSituationalReport.bind(null, report.id, caseId) : createSituationalReport.bind(null, caseId);
   const [state, formAction] = useFormState(actionFn, initialState);
+  useToastOnChange(state.error, "error");
 
   return (
     <form action={formAction} className="card p-6 space-y-8 max-w-4xl">

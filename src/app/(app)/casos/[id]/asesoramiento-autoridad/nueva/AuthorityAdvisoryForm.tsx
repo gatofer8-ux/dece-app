@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import { createAuthorityAdvisoryAct, type ActionState } from "../../../actions";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
 import AIAssistButton from "@/components/AIAssistButton";
@@ -26,6 +27,7 @@ export default function AuthorityAdvisoryForm({
 }) {
   const createForThisCase = createAuthorityAdvisoryAct.bind(null, caseId);
   const [state, formAction] = useFormState(createForThisCase, initialState);
+  useToastOnChange(state.error, "error");
 
   const [participantCount, setParticipantCount] = useState(2);
   const [backgroundCount, setBackgroundCount] = useState(2);

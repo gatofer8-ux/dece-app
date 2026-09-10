@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import Link from "next/link";
 import { createCorresponsibilityAct, updateCorresponsibilityAct, type ActionState } from "../../actions";
 import {
@@ -72,6 +73,7 @@ export default function CorresponsibilityActForm({
     : createCorresponsibilityAct.bind(null, caseId);
 
   const [state, formAction] = useFormState(actionToUse, initialState);
+  useToastOnChange(state.error, "error");
 
   // Campos de Comparecencia
   const [city, setCity] = useState(initialData?.city || "Ambato");

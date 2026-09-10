@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import { resetInstitutionUserPassword, type ActionState } from "./actions";
 
 const initialState: ActionState = { error: null };
@@ -17,6 +18,7 @@ function SubmitButton() {
 export default function ResetInstitutionUserPasswordForm({ userId, institutionId }: { userId: string; institutionId: string }) {
   const resetPasswordForThisUser = resetInstitutionUserPassword.bind(null, userId, institutionId);
   const [state, formAction] = useFormState(resetPasswordForThisUser, initialState);
+  useToastOnChange(state.error, "error");
 
   return (
     <details className="relative inline-block">

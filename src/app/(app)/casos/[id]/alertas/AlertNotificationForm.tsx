@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import Link from "next/link";
 import { createAlertNotification, updateAlertNotification, type ActionState } from "../../actions";
 import { generateAlertInterventionAi } from "../ai-actions";
@@ -79,6 +80,7 @@ export default function AlertNotificationForm({
     : createAlertNotification.bind(null, caseId);
 
   const [state, dispatch] = useFormState(formAction, initialState);
+  useToastOnChange(state.error, "error");
 
   // Estados locales para los campos enriquecidos con IA y dictado por voz
   const [especificarAlerta, setEspecificarAlerta] = useState(initialData?.especificar_alerta || "");

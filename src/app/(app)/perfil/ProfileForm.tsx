@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { updateOwnProfile, type ProfileState } from "./actions";
+import { useToast, useToastOnChange } from "@/components/Toast";
 
 const initialState: ProfileState = { error: null };
 
@@ -28,6 +30,16 @@ export default function ProfileForm({
   };
 }) {
   const [state, formAction] = useFormState(updateOwnProfile, initialState);
+  const toast = useToast();
+  useToastOnChange(state.error, "error");
+  const okSeen = useRef(false);
+  useEffect(() => {
+    if (state.ok && !okSeen.current) {
+      okSeen.current = true;
+      toast.success("Perfil guardado.");
+    }
+    if (!state.ok) okSeen.current = false;
+  }, [state.ok, toast]);
 
   return (
     <form action={formAction} className="card p-6 space-y-4 max-w-2xl">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import { updateOwnInstitutionSeal, type ActionState } from "../instituciones/actions";
 
 const initialState: ActionState = { error: null };
@@ -16,6 +17,7 @@ function SubmitButton() {
 
 export default function SealUploadForm({ currentSeal }: { currentSeal: string | null }) {
   const [state, formAction] = useFormState(updateOwnInstitutionSeal, initialState);
+  useToastOnChange(state.error, "error");
 
   return (
     <form action={formAction} className="space-y-3">

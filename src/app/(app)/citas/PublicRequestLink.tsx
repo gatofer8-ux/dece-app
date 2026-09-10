@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useToast } from "@/components/Toast";
 
 export default function PublicRequestLink({
   institutionId,
@@ -12,6 +13,7 @@ export default function PublicRequestLink({
   const [networkUrl, setNetworkUrl] = useState("");
   const [localUrl, setLocalUrl] = useState("");
   const [copied, setCopied] = useState<"network" | "local" | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     const port = window.location.port ? `:${window.location.port}` : "";
@@ -29,9 +31,10 @@ export default function PublicRequestLink({
     try {
       await navigator.clipboard.writeText(text);
       setCopied(type);
+      toast.success("Enlace copiado al portapapeles.");
       setTimeout(() => setCopied(null), 2500);
     } catch {
-      // Si el navegador bloquea el portapapeles
+      toast.error("No se pudo copiar. Copia el enlace manualmente.");
     }
   }
 

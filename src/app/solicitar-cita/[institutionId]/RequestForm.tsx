@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import { createAppointmentRequest, type RequestActionState } from "./actions";
 import { REQUESTER_ROLE_OPTIONS } from "@/lib/appointmentRequest";
 
@@ -28,6 +29,7 @@ export default function RequestForm({
 }) {
   const boundAction = createAppointmentRequest.bind(null, institutionId);
   const [state, formAction] = useFormState(boundAction, initialState);
+  useToastOnChange(state.error, "error");
 
   return (
     <form action={formAction} className="space-y-3">

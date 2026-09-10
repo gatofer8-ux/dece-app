@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import { createViolenceReport, type ActionState } from "../../../actions";
 import {
   VIOLENCE_TYPE_OPTIONS,
@@ -54,6 +55,7 @@ export default function ViolenceReportForm({
 }) {
   const createForThisCase = createViolenceReport.bind(null, caseId);
   const [state, formAction] = useFormState(createForThisCase, initialState);
+  useToastOnChange(state.error, "error");
   const [relationship, setRelationship] = useState("");
 
   return (

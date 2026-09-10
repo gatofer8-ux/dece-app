@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import { createDistrictUser, type ActionState } from "./actions";
 
 const initialState: ActionState = { error: null };
@@ -16,6 +17,7 @@ function SubmitButton() {
 
 export default function CreateDistrictUserForm() {
   const [state, formAction] = useFormState(createDistrictUser, initialState);
+  useToastOnChange(state.error, "error");
 
   return (
     <form action={formAction} className="card p-4 flex flex-wrap gap-3 items-end max-w-3xl">

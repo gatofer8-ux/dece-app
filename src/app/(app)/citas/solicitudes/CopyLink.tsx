@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useToast } from "@/components/Toast";
 
 export function CopyLink({ path }: { path: string }) {
   const [url, setUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     setUrl(window.location.origin + path);
@@ -14,9 +16,11 @@ export function CopyLink({ path }: { path: string }) {
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
+      toast.success("Enlace copiado al portapapeles.");
       setTimeout(() => setCopied(false), 2000);
     } catch (e) {
       console.error(e);
+      toast.error("No se pudo copiar el enlace.");
     }
   };
 

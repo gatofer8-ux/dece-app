@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import Link from "next/link";
 import { updateSocializationAct, type ActionState } from "../../../../actions";
 import { NORMATIVE_TEXT, CONFIDENTIALITY_TEXT, CURRICULAR_ADAPTATION_TEXT, parseJsonArray, type TeacherSignatureEntry } from "@/lib/socializationAct";
@@ -36,6 +37,7 @@ export default function SocializationActEditForm({
 }) {
   const updateForThisAct = updateSocializationAct.bind(null, caseId, act.id);
   const [state, formAction] = useFormState(updateForThisAct, initialState);
+  useToastOnChange(state.error, "error");
 
   const existingAgreements = parseJsonArray<string>(act.agreements);
   const [agreementRows, setAgreementRows] = useState<AgreementRow[]>(() =>

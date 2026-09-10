@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import { createUser, type ActionState } from "./actions";
 import { ROLE_LABELS } from "@/lib/types";
 
@@ -17,6 +18,7 @@ function SubmitButton() {
 
 export default function CreateUserForm() {
   const [state, formAction] = useFormState(createUser, initialState);
+  useToastOnChange(state.error, "error");
 
   return (
     <form action={formAction} className="card p-6 space-y-4 max-w-xl">

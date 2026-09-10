@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useToastOnChange } from "@/components/Toast";
 import Link from "next/link";
 import { createBimonthlyReport, updateBimonthlyReport, type ActionState } from "../../../actions";
 import { generateBimonthlyMatrixSuggestions } from "../../ai-actions";
@@ -45,6 +46,7 @@ export default function BimonthlyReportForm({
     ? updateBimonthlyReport.bind(null, report.id, caseId)
     : createBimonthlyReport.bind(null, caseId);
   const [state, formAction] = useFormState(actionFn, initialState);
+  useToastOnChange(state.error, "error");
 
   const [processes, setProcesses] = useState<BimonthlyProcessItem[]>(() => {
     if (report && report.processes_data) {
