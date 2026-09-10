@@ -4,7 +4,7 @@ import {
   getReportConfigParts,
   buildReportNumberString,
   normalizeSchoolYearCode,
-} from "./reportNumbering";
+} from "./reportNumberingShared";
 
 /**
  * Recodifica de forma retroactiva e idempotente todos los informes existentes en la base de datos

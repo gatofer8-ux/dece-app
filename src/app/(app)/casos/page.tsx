@@ -15,13 +15,13 @@ import { getInactiveCases } from "@/lib/caseAlerts";
 export default async function CasosPage({
   searchParams,
 }: {
-  searchParams: { estado?: string; prioridad?: string; riesgo?: string; q?: string; alerta?: string };
+  searchParams?: { estado?: string; prioridad?: string; riesgo?: string; q?: string; alerta?: string };
 }) {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
   const coverage = await getUserCoverage(session.user.id, institutionId, session.user.role);
 
-  const { estado, prioridad, riesgo, q, alerta } = searchParams;
+  const { estado, prioridad, riesgo, q, alerta } = searchParams || {};
   let where = "WHERE cf.institution_id = ?";
   const params: any[] = [institutionId];
 

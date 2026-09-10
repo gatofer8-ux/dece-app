@@ -1,13 +1,11 @@
 import { randomUUID } from "crypto";
 import type Database from "better-sqlite3";
+import { db as defaultDb } from "./db";
 import type { DeceEsquelaRow, InstitutionRow } from "./types";
 import { formatInstitutionAcronym, normalizeSchoolYearCode } from "./reportNumberingShared";
 
 function getDb(dbInstance?: Database.Database): Database.Database {
-  if (dbInstance) return dbInstance;
-  // eslint-disable-next-line
-  const { db } = require("./db");
-  return db;
+  return dbInstance || defaultDb;
 }
 
 export function buildCitationNumberString(opts: {
