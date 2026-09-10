@@ -72,6 +72,12 @@ export async function generateRestorativeCircleDocx(
             font: FONT_FAMILY,
             size: FONT_SIZE,
           },
+          paragraph: {
+            spacing: {
+              line: 260,
+              after: 80,
+            },
+          },
         },
       },
     },
@@ -113,9 +119,10 @@ export async function generateRestorativeCircleDocx(
                   : [
                       new TextRun({
                         text: "Departamento de Consejería Estudiantil - DECE",
-                        font: "Brush Script MT",
-                        size: 36,
+                        font: FONT_FAMILY,
+                        size: 28,
                         italics: true,
+                        bold: true,
                       }),
                     ],
               }),
