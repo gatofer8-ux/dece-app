@@ -246,6 +246,47 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   ]);
 }
 
+// El plan gratuito de Gemini limita las solicitudes por minuto por modelo (ej. 5 RPM).
+// Lanzar todos los PDF de un .zip a la vez (Promise.all sin límite) los satura de
+// inmediato si son varios archivos, y la mayoría termina con error 429. Se procesan
+// con un cupo máximo de solicitudes simultáneas: sigue siendo mucho más rápido que
+// uno por uno, pero sin disparar toda la cuota de golpe.
+const MAX_CONCURRENT_PDF_EXTRACTIONS = 3;
+
+async function mapWithConcurrencyLimit<T, R>(items: T[], limit: number, fn: (item: T, index: number) => Promise<R>): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  async function worker() {
+    while (nextIndex < items.length) {
+      const current = nextIndex++;
+      results[current] = await fn(items[current], current);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+  return results;
+}
+
+/** El SDK de Gemini a veces entrega el error como un bloque JSON crudo en `.message` — se traduce a un mensaje legible. */
+function friendlyGeminiError(err: any): string {
+  const raw = String(err?.message || err || "");
+  let code: number | undefined;
+  let status: string | undefined;
+  try {
+    const parsed = JSON.parse(raw)?.error;
+    code = parsed?.code;
+    status = parsed?.status;
+  } catch {
+    /* el mensaje no era JSON, se usa tal cual más abajo */
+  }
+  if (code === 429 || status === "RESOURCE_EXHAUSTED") {
+    return "se alcanzó el límite de solicitudes gratuitas de la IA (Gemini). Espera un minuto y vuelve a intentar con los archivos que falten.";
+  }
+  if (code === 503 || status === "UNAVAILABLE") {
+    return "el modelo de IA está temporalmente saturado. Intenta de nuevo en un momento.";
+  }
+  return raw.length > 200 ? `${raw.slice(0, 200)}…` : raw || "error desconocido";
+}
+
 async function extractStudentsFromPdfWithAi(
   ai: GoogleGenAI,
   base64Data: string
@@ -279,7 +320,7 @@ async function extractStudentsFromPdfWithAi(
   }
 
   if (!text) {
-    return { error: lastErr?.message ? `No se pudo leer con la IA: ${lastErr.message}` : "No se pudo leer el documento con la IA." };
+    return { error: lastErr ? `No se pudo leer con la IA: ${friendlyGeminiError(lastErr)}` : "No se pudo leer el documento con la IA." };
   }
   const match = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
   if (!match) return { error: "La IA no devolvió una lista reconocible de estudiantes." };
@@ -369,7 +410,9 @@ export async function importStudentsFromPdfAi(
     // reintento y puede superar el tiempo máximo de una petición, cortando la
     // conexión a medio camino (el mismo síntoma que un cuerpo demasiado grande).
     // Si uno falla, no aborta a los demás.
-    const extractions = await Promise.all(pdfFiles.map((pdf) => extractStudentsFromPdfWithAi(ai, pdf.base64)));
+    const extractions = await mapWithConcurrencyLimit(pdfFiles, MAX_CONCURRENT_PDF_EXTRACTIONS, (pdf) =>
+      extractStudentsFromPdfWithAi(ai, pdf.base64)
+    );
 
     const skipped: SkippedRow[] = [...zipReadErrors];
     const rawStudents: { source: string; data: any }[] = [];
