@@ -21,7 +21,7 @@ import {
   ACTA_ALERTAS_NOTIFICACION_TEXT,
   ACTA_ALERTAS_ACEPTACION_NOTE,
   parseAttendees,
-  type AlertSessionAttendee,
+  mergeAttendeesWithReportingTeachers,
 } from "./alertIdentification";
 import { RISK_TYPE_LABELS, type RiskType } from "./types";
 
@@ -116,6 +116,7 @@ export interface AlertIdentificationEntryLike {
   student_name: string;
   risk_type: string;
   teacher_name: string;
+  description?: string | null;
 }
 
 export async function generateAlertIdentificationDocx(
@@ -123,9 +124,9 @@ export async function generateAlertIdentificationDocx(
   entries: AlertIdentificationEntryLike[],
   institutionName: string
 ): Promise<Buffer> {
-  const attendees: AlertSessionAttendee[] = parseAttendees(s.attendees_json);
+  const attendees = mergeAttendeesWithReportingTeachers(parseAttendees(s.attendees_json), entries);
   const attRows = [...attendees, ...Array(Math.max(2, 8 - attendees.length)).fill({ nombre: "", telefono: "" })];
-  const entryRows = [...entries, ...Array(Math.max(2, 8 - entries.length)).fill({ student_name: "", risk_type: "", teacher_name: "" })];
+  const entryRows = [...entries, ...Array(Math.max(2, 8 - entries.length)).fill({ student_name: "", risk_type: "", teacher_name: "", description: "" })];
 
   const rows: TableRow[] = [
     row([
@@ -153,12 +154,13 @@ export async function generateAlertIdentificationDocx(
     row([lbl("Lugar", 2), val(s.lugar || "", 4), val(institutionName, 2)]),
 
     bar("ESTUDIANTES EN ALERTA"),
-    row([lbl("Nombre", 3), lbl("Riesgo psicosocial", 2), lbl("Nombre y Firma del docente que alerta", 3)]),
+    row([lbl("Nombre", 2), lbl("Riesgo psicosocial", 2), lbl("Descripción del caso", 2), lbl("Nombre y Firma del docente que alerta", 2)]),
     ...entryRows.map((e) =>
       row([
-        val(e.student_name, 3),
+        val(e.student_name, 2),
         val(RISK_TYPE_LABELS[e.risk_type as RiskType] || e.risk_type || "", 2),
-        val(e.teacher_name, 3),
+        cell(multiP(e.description), { span: 2, valign: VerticalAlign.TOP }),
+        val(e.teacher_name, 2),
       ])
     ),
 

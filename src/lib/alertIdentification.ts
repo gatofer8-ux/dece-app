@@ -32,3 +32,26 @@ export const ACTA_ALERTAS_ACEPTACION_NOTE =
 export function defaultObservaciones(schoolYearText: string): string {
   return `Los docentes miembros de la junta de grado/curso conocen los casos de vulnerabilidad atendidos por el DECE durante el año lectivo ${schoolYearText}.`;
 }
+
+/**
+ * Todo docente que reporta un estudiante en alerta asistió a la junta y debe
+ * firmar el acta, así no lo haya agregado el DECE a mano en "Asistentes". Se
+ * combinan los asistentes registrados manualmente con los nombres únicos de
+ * los docentes que alertaron (sin duplicar por mayúsculas/espacios).
+ */
+export function mergeAttendeesWithReportingTeachers(
+  attendees: AlertSessionAttendee[],
+  entries: { teacher_name: string }[]
+): AlertSessionAttendee[] {
+  const seen = new Set(attendees.map((a) => a.nombre.trim().toLowerCase()).filter(Boolean));
+  const merged = [...attendees];
+  for (const e of entries) {
+    const nombre = e.teacher_name.trim();
+    if (!nombre) continue;
+    const key = nombre.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push({ nombre, telefono: "" });
+  }
+  return merged;
+}

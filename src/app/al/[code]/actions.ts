@@ -19,6 +19,7 @@ export async function submitAlertEntryAction(
   const studentName = String(formData.get("student_name") || "").trim();
   const riskType = String(formData.get("risk_type") || "").trim();
   const teacherName = String(formData.get("teacher_name") || "").trim();
+  const description = String(formData.get("description") || "").trim();
 
   if (!studentName) return { error: "Escribe el nombre del estudiante." };
   if (!riskType || !(riskType in RISK_TYPE_LABELS)) return { error: "Selecciona el tipo de riesgo psicosocial." };
@@ -31,6 +32,7 @@ export async function submitAlertEntryAction(
       studentName,
       riskType: riskType as RiskType,
       teacherName,
+      description: description || null,
     });
   } catch (err: unknown) {
     return { error: err instanceof Error ? err.message : "Ocurrió un error al guardar el registro. Intenta de nuevo." };

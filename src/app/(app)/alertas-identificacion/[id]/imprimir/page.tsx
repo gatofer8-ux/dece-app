@@ -6,6 +6,7 @@ import PrintButton from "@/components/PrintButton";
 import { getSession, listEntriesForSession } from "@/lib/alertIdentificationSessions";
 import {
   parseAttendees,
+  mergeAttendeesWithReportingTeachers,
   ACTA_ALERTAS_ACEPTACION_TEXT,
   ACTA_ALERTAS_NOTIFICACION_TEXT,
   ACTA_ALERTAS_ACEPTACION_NOTE,
@@ -30,9 +31,9 @@ export default async function ImprimirAlertaIdentificacionPage({ params }: { par
   const institution = db.prepare("SELECT * FROM institutions WHERE id = ?").get(institutionId) as InstitutionRow;
 
   const entries = listEntriesForSession(s.id);
-  const attendees = parseAttendees(s.attendees_json);
+  const attendees = mergeAttendeesWithReportingTeachers(parseAttendees(s.attendees_json), entries);
   const attRows = [...attendees, ...Array(Math.max(2, 8 - attendees.length)).fill({ nombre: "", telefono: "" })];
-  const entryRows = [...entries, ...Array(Math.max(2, 8 - entries.length)).fill({ student_name: "", risk_type: "", teacher_name: "" })];
+  const entryRows = [...entries, ...Array(Math.max(2, 8 - entries.length)).fill({ student_name: "", risk_type: "", description: "", teacher_name: "" })];
 
   const NAVY = "#366092";
   const cell = "border border-slate-500 px-2 py-1 align-top text-[10pt]";
@@ -91,15 +92,17 @@ export default async function ImprimirAlertaIdentificacionPage({ params }: { par
 
             <tr><td className={bar} colSpan={8}>ESTUDIANTES EN ALERTA</td></tr>
             <tr>
-              <td className={lbl} colSpan={3}>Nombre</td>
+              <td className={lbl} colSpan={2}>Nombre</td>
               <td className={lbl} colSpan={2}>Riesgo psicosocial</td>
-              <td className={lbl} colSpan={3}>Nombre y Firma del docente que alerta</td>
+              <td className={lbl} colSpan={2}>Descripción del caso</td>
+              <td className={lbl} colSpan={2}>Nombre y Firma del docente que alerta</td>
             </tr>
             {entryRows.map((e, i) => (
               <tr key={i}>
-                <td className={cell} colSpan={3}>{e.student_name || " "}</td>
+                <td className={cell} colSpan={2}>{e.student_name || " "}</td>
                 <td className={cell} colSpan={2}>{RISK_TYPE_LABELS[e.risk_type as RiskType] || e.risk_type || " "}</td>
-                <td className={cell} colSpan={3}>{e.teacher_name || " "}</td>
+                <td className={`${cell} text-justify`} colSpan={2}>{e.description || " "}</td>
+                <td className={cell} colSpan={2}>{e.teacher_name || " "}</td>
               </tr>
             ))}
 

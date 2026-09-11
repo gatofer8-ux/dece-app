@@ -46,11 +46,18 @@ export function listEntriesForSession(sessionId: string): AlertIdentificationEnt
     .all(sessionId) as AlertIdentificationEntryRow[];
 }
 
-export function createEntry(input: { sessionId: string; institutionId: string; studentName: string; riskType: string; teacherName: string }): string {
+export function createEntry(input: {
+  sessionId: string;
+  institutionId: string;
+  studentName: string;
+  riskType: string;
+  teacherName: string;
+  description?: string | null;
+}): string {
   const id = randomUUID();
   db.prepare(
-    `INSERT INTO alert_identification_entries (id, session_id, institution_id, student_name, risk_type, teacher_name)
-     VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(id, input.sessionId, input.institutionId, input.studentName, input.riskType, input.teacherName);
+    `INSERT INTO alert_identification_entries (id, session_id, institution_id, student_name, risk_type, teacher_name, description)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).run(id, input.sessionId, input.institutionId, input.studentName, input.riskType, input.teacherName, input.description || null);
   return id;
 }

@@ -5,7 +5,13 @@ import { updateAlertSessionAction } from "../actions";
 import { parseAttendees, type AlertSessionAttendee } from "@/lib/alertIdentification";
 import type { AlertIdentificationSessionRow } from "@/lib/types";
 
-export default function AlertSessionEditForm({ session }: { session: AlertIdentificationSessionRow }) {
+export default function AlertSessionEditForm({
+  session,
+  reportingTeachers,
+}: {
+  session: AlertIdentificationSessionRow;
+  reportingTeachers: string[];
+}) {
   const [attendees, setAttendees] = useState<AlertSessionAttendee[]>(parseAttendees(session.attendees_json));
   const action = updateAlertSessionAction.bind(null, session.id);
 
@@ -48,6 +54,11 @@ export default function AlertSessionEditForm({ session }: { session: AlertIdenti
             + Asistente
           </button>
         </div>
+        <p className="text-[11px] text-slate-400 mb-2">
+          Agrega aquí solo a quienes asistieron pero no reportaron ningún estudiante (autoridades, otros docentes).
+          Los docentes que sí reportaron ({reportingTeachers.length ? reportingTeachers.join(", ") : "ninguno todavía"})
+          se agregan solos a la firma del acta.
+        </p>
         <div className="space-y-2">
           {attendees.map((a, i) => (
             <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-center">

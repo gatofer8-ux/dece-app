@@ -834,6 +834,7 @@ export interface AlertIdentificationEntryRow {
   student_name: string;
   risk_type: string;
   teacher_name: string;
+  description: string | null;
   created_at: string;
 }
 
