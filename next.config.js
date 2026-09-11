@@ -42,6 +42,16 @@ const nextConfig = {
     // 1 CPU / sin worker threads evita ese pico (build más lento pero fiable).
     cpus: 1,
     workerThreads: false,
+    // Next.js limita a 1 MB el cuerpo de una petición a una Server Action.
+    // Varias pantallas suben archivos más grandes por ese camino (adjuntos de
+    // casos hasta 15 MB, matrices Excel hasta 15 MB, PDF/.zip de estudiantes
+    // hasta 20 MB) y sin este ajuste Next rechaza la petición ANTES de que el
+    // código de la acción corra — el usuario ve un error genérico de React
+    // ("Cannot read properties of undefined (reading 'error')") en vez del
+    // mensaje amigable que cada acción ya valida por su cuenta.
+    serverActions: {
+      bodySizeLimit: "25mb",
+    },
   },
 };
 
