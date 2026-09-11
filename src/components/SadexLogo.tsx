@@ -20,11 +20,11 @@ export default function SadexLogo({
 
   // Tamaños del icono
   const iconSizeClasses = {
-    xs: "h-6 w-6",
-    sm: "h-8 w-8",
-    md: "h-10 w-10",
-    lg: "h-14 w-14",
-    xl: "h-20 w-20",
+    xs: "h-7 w-7 rounded-lg",
+    sm: "h-9 w-9 rounded-xl",
+    md: "h-11 w-11 rounded-xl",
+    lg: "h-16 w-16 rounded-2xl",
+    xl: "h-24 w-24 rounded-2xl",
   }[size];
 
   // Tamaños de tipografía
@@ -46,13 +46,13 @@ export default function SadexLogo({
 
   const iconElement = (
     <div
-      className={`relative ${iconSizeClasses} shrink-0 rounded-xl overflow-hidden shadow-xs border ${
-        isLight ? "border-brand-200 bg-white shadow-brand-500/5" : "border-white/20 bg-white shadow-black/20"
+      className={`relative ${iconSizeClasses} shrink-0 overflow-hidden shadow-md border ${
+        isLight ? "border-brand-200 bg-brand-900/5 shadow-brand-500/10" : "border-white/20 bg-brand-950 shadow-black/40 ring-1 ring-white/10"
       } flex items-center justify-center`}
     >
       <img
         src="/sadex-logo.png"
-        alt="SADEX Logo"
+        alt="SADEX Logo - Sasho & Darky"
         className="w-full h-full object-cover"
       />
     </div>
