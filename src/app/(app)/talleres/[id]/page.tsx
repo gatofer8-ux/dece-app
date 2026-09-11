@@ -13,7 +13,7 @@ export default function TallerDetailPage({ params }: { params: { id: string } })
 
   const [activeTab, setActiveTab] = useState<"GUION" | "MATERIALES">("GUION");
   const [expandedPhases, setExpandedPhases] = useState<number[]>(
-    workshop.phases.map((p) => p.number)
+    workshop.phases.map((p, idx) => p.number ?? idx + 1)
   );
 
   const togglePhase = (num: number) => {
@@ -22,7 +22,7 @@ export default function TallerDetailPage({ params }: { params: { id: string } })
     );
   };
 
-  const expandAll = () => setExpandedPhases(workshop.phases.map((p) => p.number));
+  const expandAll = () => setExpandedPhases(workshop.phases.map((p, idx) => p.number ?? idx + 1));
   const collapseAll = () => setExpandedPhases([]);
 
   return (
@@ -191,22 +191,25 @@ export default function TallerDetailPage({ params }: { params: { id: string } })
 
           {/* Fases del Taller */}
           <div className="space-y-3">
-            {workshop.phases.map((phase) => {
-              const isExpanded = expandedPhases.includes(phase.number);
+            {workshop.phases.map((phase, idx) => {
+              const phaseNum = phase.number ?? idx + 1;
+              const isExpanded = expandedPhases.includes(phaseNum);
+              const questions = phase.reflectiveQuestions || phase.reflectionQuestions || [];
+              const materials = phase.materials || phase.materialsNeeded || [];
 
               return (
                 <div
-                  key={phase.number}
+                  key={phaseNum}
                   className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs transition-all"
                 >
                   <button
                     type="button"
-                    onClick={() => togglePhase(phase.number)}
+                    onClick={() => togglePhase(phaseNum)}
                     className="w-full text-left p-4.5 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-xl bg-brand-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
-                        {phase.number}
+                        {phaseNum}
                       </div>
                       <div>
                         <h4 className="text-sm font-bold text-slate-900">
@@ -246,7 +249,7 @@ export default function TallerDetailPage({ params }: { params: { id: string } })
                         </div>
                       </div>
 
-                      {/* Dinámica Grupal */}
+                      {/* Dinámica Grupal / Pasos */}
                       {phase.groupDynamics && (
                         <div className="space-y-1">
                           <span className="font-bold text-slate-800 flex items-center gap-1.5">
@@ -259,15 +262,29 @@ export default function TallerDetailPage({ params }: { params: { id: string } })
                         </div>
                       )}
 
+                      {phase.activitySteps && phase.activitySteps.length > 0 && (
+                        <div className="space-y-1 bg-slate-50 p-3 rounded-xl border border-slate-200/70">
+                          <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                            <span>📋</span>
+                            <span>Pasos de la Actividad:</span>
+                          </span>
+                          <ol className="list-decimal list-inside space-y-1 text-slate-700 mt-1 pl-1 text-[11px]">
+                            {phase.activitySteps.map((step, sIdx) => (
+                              <li key={sIdx}>{step}</li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
+
                       {/* Preguntas de Reflexión */}
-                      {phase.reflectionQuestions && phase.reflectionQuestions.length > 0 && (
+                      {questions.length > 0 && (
                         <div className="space-y-1 bg-amber-50/50 p-3 rounded-xl border border-amber-200/60">
                           <span className="font-bold text-amber-900 flex items-center gap-1.5">
                             <span>❓</span>
                             <span>Preguntas Clave para el Diálogo y Reflexión:</span>
                           </span>
                           <ul className="list-disc list-inside space-y-1 text-amber-800 mt-1 pl-1 text-[11px]">
-                            {phase.reflectionQuestions.map((q, i) => (
+                            {questions.map((q, i) => (
                               <li key={i}>{q}</li>
                             ))}
                           </ul>
@@ -275,10 +292,10 @@ export default function TallerDetailPage({ params }: { params: { id: string } })
                       )}
 
                       {/* Materiales específicos de esta fase */}
-                      {phase.materialsNeeded && phase.materialsNeeded.length > 0 && (
+                      {materials.length > 0 && (
                         <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
                           <span className="font-semibold text-slate-700">Insumos de esta fase:</span>
-                          <span>{phase.materialsNeeded.join(", ")}</span>
+                          <span>{materials.join(", ")}</span>
                         </div>
                       )}
                     </div>
@@ -314,7 +331,7 @@ export default function TallerDetailPage({ params }: { params: { id: string } })
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                      {mat.type.replace("_", " ")}
+                      {mat.type ? mat.type.replace("_", " ") : (mat.isPrintableCutout ? "RECORTABLE" : "MATERIAL PRÁCTICO")}
                     </span>
                     <span className="text-[11px] text-slate-400 font-medium">Formato Word (.docx)</span>
                   </div>
@@ -327,14 +344,20 @@ export default function TallerDetailPage({ params }: { params: { id: string } })
                     {mat.description}
                   </p>
 
-                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-[11px] text-slate-500 space-y-1">
-                    <div>
-                      <strong className="text-slate-700">Destinatarios:</strong> {mat.targetUser}
+                  {(mat.targetUser || mat.printInstructions) && (
+                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-[11px] text-slate-500 space-y-1">
+                      {mat.targetUser && (
+                        <div>
+                          <strong className="text-slate-700">Destinatarios:</strong> {mat.targetUser}
+                        </div>
+                      )}
+                      {mat.printInstructions && (
+                        <div>
+                          <strong className="text-slate-700">Impresión:</strong> {mat.printInstructions}
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <strong className="text-slate-700">Impresión:</strong> {mat.printInstructions}
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="pt-2 border-t border-slate-100">

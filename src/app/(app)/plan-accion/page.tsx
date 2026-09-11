@@ -8,7 +8,7 @@ import DeleteButton from "@/components/DeleteButton";
 import { deleteActionPlan } from "./actions";
 
 export default async function PlanAccionPage() {
-  const session = await requireRole(["ADMIN", "DECE", "AUTORIDAD", "DISTRITO"]);
+  const session = await requireRole(["ADMIN", "DECE", "AUTORIDAD", "DISTRITO", "SUPERADMIN"]);
   const institutionId = session.user.role === "DISTRITO" ? null : requireInstitutionId(session);
 
   let plans: (ActionPlanRow & { institution_name?: string })[] = [];
@@ -34,7 +34,11 @@ export default async function PlanAccionPage() {
       .all() as any[];
   }
 
-  const canEdit = session.user.role === "ADMIN" || session.user.role === "DECE";
+  const canEdit =
+    session.user.role === "ADMIN" ||
+    session.user.role === "DECE" ||
+    session.user.role === "SUPERADMIN" ||
+    session.user.role === "AUTORIDAD";
 
   return (
     <div className="space-y-6">

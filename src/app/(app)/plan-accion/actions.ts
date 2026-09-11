@@ -27,10 +27,10 @@ function num(formData: FormData, key: string, fallback = 0): number {
 }
 
 export async function createActionPlan(prevState: ActionState, formData: FormData): Promise<ActionState> {
-  const session = await requireRole(["ADMIN", "DECE"]);
+  const session = await requireRole(["ADMIN", "DECE", "SUPERADMIN", "AUTORIDAD"]);
   const institutionId = requireInstitutionId(session);
 
-  const schoolYearId = str(formData, "school_year_id");
+  let schoolYearId = str(formData, "school_year_id");
   const schoolYearText = str(formData, "school_year_text") || currentSchoolYearText();
   const studentsCount = num(formData, "students_count", 0);
   const coordinatorName = str(formData, "coordinator_name") || session.user.name || "Coordinador DECE";
@@ -43,7 +43,13 @@ export async function createActionPlan(prevState: ActionState, formData: FormDat
   const approvedBy = str(formData, "approved_by") || "";
 
   if (!schoolYearId) {
-    return { error: "Debes seleccionar un año lectivo." };
+    try {
+      const { ensureDefaultSchoolYear } = await import("@/lib/schoolYear");
+      const defaultSy = ensureDefaultSchoolYear(institutionId);
+      schoolYearId = defaultSy?.id || "default-sy";
+    } catch {
+      schoolYearId = "default-sy";
+    }
   }
 
   const existing = db
@@ -51,7 +57,7 @@ export async function createActionPlan(prevState: ActionState, formData: FormDat
     .get(institutionId, schoolYearId) as { id: string } | undefined;
 
   if (existing) {
-    return { error: "Ya existe un Plan de Acción registrado para este año lectivo. Puedes editar el plan existente." };
+    redirect(`/plan-accion/${existing.id}/editar`);
   }
 
   const id = randomUUID();
@@ -104,7 +110,7 @@ export async function createActionPlan(prevState: ActionState, formData: FormDat
 }
 
 export async function updateActionPlan(planId: string, prevState: ActionState, formData: FormData): Promise<ActionState> {
-  const session = await requireRole(["ADMIN", "DECE"]);
+  const session = await requireRole(["ADMIN", "DECE", "SUPERADMIN", "AUTORIDAD"]);
   const institutionId = requireInstitutionId(session);
 
   const schoolYearText = str(formData, "school_year_text") || "2025-2026";
@@ -119,21 +125,36 @@ export async function updateActionPlan(planId: string, prevState: ActionState, f
   const approvedBy = str(formData, "approved_by") || "";
 
   try {
-    db.prepare(
-      `UPDATE action_plans SET
-        school_year_text = @school_year_text,
-        students_count = @students_count,
-        coordinator_name = @coordinator_name,
-        analysts_data = @analysts_data,
-        available_resources = @available_resources,
-        items_data = @items_data,
-        evaluation_notes = @evaluation_notes,
-        elaborated_by = @elaborated_by,
-        reviewed_by = @reviewed_by,
-        approved_by = @approved_by,
-        updated_at = datetime('now')
-      WHERE id = @id AND institution_id = @institution_id`
-    ).run({
+    const isSuperAdmin = session.user.role === "SUPERADMIN";
+    const updateSql = isSuperAdmin
+      ? `UPDATE action_plans SET
+          school_year_text = @school_year_text,
+          students_count = @students_count,
+          coordinator_name = @coordinator_name,
+          analysts_data = @analysts_data,
+          available_resources = @available_resources,
+          items_data = @items_data,
+          evaluation_notes = @evaluation_notes,
+          elaborated_by = @elaborated_by,
+          reviewed_by = @reviewed_by,
+          approved_by = @approved_by,
+          updated_at = datetime('now')
+        WHERE id = @id`
+      : `UPDATE action_plans SET
+          school_year_text = @school_year_text,
+          students_count = @students_count,
+          coordinator_name = @coordinator_name,
+          analysts_data = @analysts_data,
+          available_resources = @available_resources,
+          items_data = @items_data,
+          evaluation_notes = @evaluation_notes,
+          elaborated_by = @elaborated_by,
+          reviewed_by = @reviewed_by,
+          approved_by = @approved_by,
+          updated_at = datetime('now')
+        WHERE id = @id AND institution_id = @institution_id`;
+
+    db.prepare(updateSql).run({
       id: planId,
       institution_id: institutionId,
       school_year_text: schoolYearText,
@@ -166,10 +187,14 @@ export async function updateActionPlan(planId: string, prevState: ActionState, f
 }
 
 export async function deleteActionPlan(planId: string) {
-  const session = await requireRole(["ADMIN", "DECE"]);
+  const session = await requireRole(["ADMIN", "DECE", "SUPERADMIN", "AUTORIDAD"]);
   const institutionId = requireInstitutionId(session);
 
-  db.prepare("DELETE FROM action_plans WHERE id = ? AND institution_id = ?").run(planId, institutionId);
+  if (session.user.role === "SUPERADMIN") {
+    db.prepare("DELETE FROM action_plans WHERE id = ?").run(planId);
+  } else {
+    db.prepare("DELETE FROM action_plans WHERE id = ? AND institution_id = ?").run(planId, institutionId);
+  }
 
   logAudit({
     userId: session.user.id,

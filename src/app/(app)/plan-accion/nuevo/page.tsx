@@ -8,32 +8,39 @@ import { getSignatureDefaults } from "@/lib/caseDocumentDefaults";
 import ActionPlanForm from "../ActionPlanForm";
 
 export default async function NuevoPlanAccionPage() {
-  const session = await requireRole(["ADMIN", "DECE"]);
+  const session = await requireRole(["ADMIN", "DECE", "SUPERADMIN", "AUTORIDAD"]);
   const institutionId = requireInstitutionId(session);
 
-  const institution = db
+  let institution = db
     .prepare("SELECT id, name, amie_code as amie FROM institutions WHERE id = ?")
     .get(institutionId) as { id: string; name: string; amie: string } | undefined;
 
+  if (!institution) {
+    institution = db
+      .prepare("SELECT id, name, amie_code as amie FROM institutions ORDER BY active DESC, created_at ASC LIMIT 1")
+      .get() as { id: string; name: string; amie: string } | undefined;
+  }
+
   if (!institution) redirect("/plan-accion");
 
-  ensureDefaultSchoolYear(institutionId);
-  const schoolYears = listSchoolYears(institutionId);
-  const selectedYear = await getSelectedSchoolYear(institutionId);
+  const effectiveInstId = institution.id;
+  ensureDefaultSchoolYear(effectiveInstId);
+  const schoolYears = listSchoolYears(effectiveInstId);
+  const selectedYear = await getSelectedSchoolYear(effectiveInstId);
   const activeYear = selectedYear || (schoolYears.length > 0 ? schoolYears[0] : null);
 
   // Contar estudiantes reales de la institución
   const studentCountRow = db
     .prepare("SELECT COUNT(*) as c FROM students WHERE institution_id = ?")
-    .get(institutionId) as { c: number } | undefined;
+    .get(effectiveInstId) as { c: number } | undefined;
   const realStudentsCount = studentCountRow?.c || 0;
 
   // Obtener profesionales DECE del sistema
   const deceUsers = db
     .prepare(
-      "SELECT id, name, role, email FROM users WHERE institution_id = ? AND role IN ('DECE', 'ADMIN') AND active = 1"
+      "SELECT id, name, role, email FROM users WHERE institution_id = ? AND role IN ('DECE', 'ADMIN', 'SUPERADMIN') AND active = 1"
     )
-    .all(institutionId) as { id: string; name: string; role: string; email: string }[];
+    .all(effectiveInstId) as { id: string; name: string; role: string; email: string }[];
 
   const deceStaffNames = deceUsers.map((u) => u.name);
 
@@ -44,16 +51,16 @@ export default async function NuevoPlanAccionPage() {
     deceUsers[0];
   const deceResponsibleName = institutionalDece?.name || session.user.name || "Profesional DECE Responsable";
 
-  const sig = getSignatureDefaults(session, institutionId);
+  const sig = getSignatureDefaults(session, effectiveInstId);
   const coordinatorUser =
-    deceUsers.find((u) => u.role === "ADMIN" || u.name.toLowerCase().includes("coord")) ||
+    deceUsers.find((u) => u.role === "ADMIN" || u.role === "SUPERADMIN" || u.name.toLowerCase().includes("coord")) ||
     deceUsers[0];
   const defaultCoordinator =
     sig.deceCoordinator.fullName || coordinatorUser?.name || session.user.name || "Coordinador(a) DECE";
 
   const defaultAnalysts = deceUsers
     .filter((u) => u.id !== coordinatorUser?.id)
-    .map((u) => ({ name: u.name, role: "Analista DECE" }));
+    .map((u) => ({ name: u.name, role: u.role === "DECE" ? "Analista DECE" : u.role }));
   if (defaultAnalysts.length === 0 && deceUsers.length > 0) {
     defaultAnalysts.push({ name: deceResponsibleName, role: "Profesional DECE" });
   }
@@ -64,7 +71,7 @@ export default async function NuevoPlanAccionPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
       <ActionPlanForm
-        institutionId={institutionId}
+        institutionId={effectiveInstId}
         institutionName={institution.name}
         schoolYears={schoolYears}
         defaultSchoolYearId={activeYear?.id || ""}

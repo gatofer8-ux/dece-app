@@ -3,8 +3,8 @@ import { WORKSHOPS_DATABASE, getWorkshopById } from "./talleresData";
 import { generateWorkshopMaterialDocx } from "./workshopMaterialsDocx";
 
 describe("Módulo de Talleres y Guiones Metodológicos (SADEX)", () => {
-  it("debe contener los 12 talleres oficiales estructurados (2023-2024 y 2024-2025)", () => {
-    expect(WORKSHOPS_DATABASE.length).toBe(12);
+  it("debe contener los 25 talleres oficiales estructurados (2023 a 2026)", () => {
+    expect(WORKSHOPS_DATABASE.length).toBe(25);
 
     const ids = WORKSHOPS_DATABASE.map((w) => w.id);
     expect(ids).toContain("prevencion-suicidio");
@@ -19,6 +19,20 @@ describe("Módulo de Talleres y Guiones Metodológicos (SADEX)", () => {
     expect(ids).toContain("diversidad-rostros-historias");
     expect(ids).toContain("comunicacion-asertiva-objeto");
     expect(ids).toContain("redes-apoyo-bienestar-emocional");
+    // 2025-2026
+    expect(ids).toContain("acuerdo-015a-celulares-aula");
+    expect(ids).toContain("derechos-ninez-cna-practica");
+    expect(ids).toContain("rutas-protocolos-acuerdo-081a");
+    expect(ids).toContain("descarga-dece-terapia-contextual");
+    expect(ids).toContain("embarazo-jugar-pensar-decidir");
+    expect(ids).toContain("embarazo-decisiones-proyecto-vida");
+    expect(ids).toContain("masculinidades-de-hombre-a-hombre");
+    expect(ids).toContain("sensibilizacion-tea-padres");
+    expect(ids).toContain("descarga-emocional-inicial");
+    expect(ids).toContain("descarga-emocional-elemental-media");
+    expect(ids).toContain("descarga-emocional-basica-superior");
+    expect(ids).toContain("descarga-emocional-bachillerato");
+    expect(ids).toContain("intervencion-crisis-afectacion-alta");
   });
 
   it("cada taller debe poseer fases con guiones de facilitación y tiempos válidos", () => {
@@ -49,7 +63,7 @@ describe("Módulo de Talleres y Guiones Metodológicos (SADEX)", () => {
     expect(wNone).toBeUndefined();
   });
 
-  it("debe generar documentos Word (.docx) válidos para todos los 19 materiales prácticos y recortables", async () => {
+  it("debe generar documentos Word (.docx) válidos para todos los 45 materiales prácticos y recortables", async () => {
     const allMaterials: { wId: string; mId: string }[] = [];
     for (const w of WORKSHOPS_DATABASE) {
       for (const m of w.downloadableMaterials) {
@@ -57,7 +71,7 @@ describe("Módulo de Talleres y Guiones Metodológicos (SADEX)", () => {
       }
     }
 
-    expect(allMaterials.length).toBe(19);
+    expect(allMaterials.length).toBe(45);
 
     for (const { wId, mId } of allMaterials) {
       const res = await generateWorkshopMaterialDocx(wId, mId, "Unidad Educativa Modelo");
