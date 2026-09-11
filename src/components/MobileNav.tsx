@@ -21,6 +21,15 @@ export default function MobileNav({ role, institutionName }: { role: Role; insti
     setOpen(false);
   }, [pathname]);
 
+  // Escuchar evento para abrir desde la barra inferior
+  useEffect(() => {
+    const handleOpenEvent = () => setOpen(true);
+    window.addEventListener("dece:open-mobile-menu", handleOpenEvent);
+    return () => {
+      window.removeEventListener("dece:open-mobile-menu", handleOpenEvent);
+    };
+  }, []);
+
   // Bloquear el scroll del fondo mientras el panel está abierto.
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -32,18 +41,19 @@ export default function MobileNav({ role, institutionName }: { role: Role; insti
   const groups = navGroupsFor(role);
 
   return (
-    <div className="md:hidden">
+    <div className="md:hidden shrink-0">
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="Abrir menú"
-        className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+        aria-label="Abrir menú de navegación lateral"
+        className="flex items-center gap-1.5 h-9 px-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold text-xs shadow-xs hover:bg-slate-50 dark:hover:bg-slate-700/80 active:scale-95 transition-all shrink-0 cursor-pointer"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
           <line x1="3" y1="6" x2="21" y2="6" />
           <line x1="3" y1="12" x2="21" y2="12" />
           <line x1="3" y1="18" x2="21" y2="18" />
         </svg>
+        <span>Menú</span>
       </button>
 
       {open && (

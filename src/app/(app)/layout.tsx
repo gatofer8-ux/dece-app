@@ -12,6 +12,7 @@ import NetworkStatusBanner from "@/components/NetworkStatusBanner";
 import AmbientBackground from "@/components/AmbientBackground";
 import ThemeToggle from "@/components/ThemeToggle";
 import PwaInstallPrompt from "@/components/PwaInstallPrompt";
+import BottomNav from "@/components/BottomNav";
 import UserSubscriptionStatusBanner from "@/components/UserSubscriptionStatusBanner";
 import { enterDemoModeAction } from "@/app/(app)/actions/demoMode";
 import { listSchoolYears, getSelectedSchoolYear } from "@/lib/schoolYear";
@@ -56,10 +57,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <SadexLogo variant="compact" size="xs" theme="light" showSubtitle={false} />
             </div>
             {effectiveInstitutionId && schoolYears.length > 0 && (
-              <SchoolYearSelector
-                schoolYears={schoolYears}
-                currentYearId={selectedYear ? selectedYear.id : "ALL"}
-              />
+              <div className="hidden lg:block">
+                <SchoolYearSelector
+                  schoolYears={schoolYears}
+                  currentYearId={selectedYear ? selectedYear.id : "ALL"}
+                />
+              </div>
             )}
             {!isDemoMode && (
               <form action={enterDemoModeAction} className="hidden sm:inline-block">
@@ -75,7 +78,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {!isDemoMode && (
               <form action={enterDemoModeAction} className="sm:hidden">
                 <button
@@ -96,13 +99,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <div className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-tight">{user.name}</div>
               <div className="text-xs text-slate-500 dark:text-slate-400">{ROLE_LABELS[user.role]}</div>
             </div>
-            <div className="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-xs shadow-2xs border border-slate-200 dark:border-slate-700">
+            <div className="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-xs shadow-2xs border border-slate-200 dark:border-slate-700 shrink-0">
               {user.name?.slice(0, 1).toUpperCase()}
             </div>
             <LogoutButton />
           </div>
         </header>
-        <main className="flex-1 p-4 md:p-6 bg-transparent">{children}</main>
+        <main className="flex-1 p-4 md:p-6 bg-transparent pb-24 md:pb-6">{children}</main>
+        <BottomNav role={user.role} />
       </div>
     </div>
   );
