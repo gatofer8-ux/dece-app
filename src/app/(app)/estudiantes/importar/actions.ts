@@ -216,6 +216,11 @@ export async function importStudents(
 // ----------------------------------------------------------------------------
 
 const MAX_PDF_IMPORT_FILE_SIZE = 20 * 1024 * 1024; // 20 MB: un .zip con varios PDF escaneados pesa más que una sola planilla
+// Un lote grande de PDF simplemente tarda demasiado para que una sola solicitud
+// HTTP lo sobreviva (el navegador o el proxy cortan la conexión antes de que el
+// servidor alcance a responder), sin importar cuán bien esté manejado el error
+// internamente. Se limita el tamaño del lote para que siempre termine a tiempo.
+const MAX_PDFS_PER_BATCH = 15;
 const GEMINI_MODEL_FALLBACK_CHAIN = ["gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.7-flash"];
 
 let geminiKeyIndex = 0;
@@ -384,6 +389,12 @@ export async function importStudentsFromPdfAi(
       );
       if (entries.length === 0) {
         return { error: "El .zip no contiene ningún archivo PDF.", result: null };
+      }
+      if (entries.length > MAX_PDFS_PER_BATCH) {
+        return {
+          error: `El .zip trae ${entries.length} archivos PDF. Para que la IA alcance a procesarlos sin que se corte la conexión, súbelos en tandas de máximo ${MAX_PDFS_PER_BATCH} PDF por .zip (por ejemplo, uno por paralelo o por curso).`,
+          result: null,
+        };
       }
       let entrySeq = 0;
       for (const entry of entries) {

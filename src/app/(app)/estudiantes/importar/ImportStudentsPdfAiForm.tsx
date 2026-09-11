@@ -29,8 +29,9 @@ export default function ImportStudentsPdfAiForm() {
         <p className="text-sm text-slate-500 mb-3">
           Sirve para listas oficiales de estudiantes en PDF (por ejemplo, las que emite el sistema de matrícula), sin
           necesidad de pasarlas a Excel a mano. La IA lee el encabezado (curso, paralelo, jornada) y la tabla de
-          estudiantes de cada documento. Si tienes un PDF por paralelo, puedes subirlos todos juntos dentro de un{" "}
-          <strong>.zip</strong> y se procesan uno por uno en la misma operación.
+          estudiantes de cada documento. Si tienes varios PDF, puedes subirlos juntos dentro de un <strong>.zip</strong> y
+          se procesan en la misma operación — hasta <strong>15 PDF por .zip</strong>; si tienes más, súbelos en varias
+          tandas para que la IA alcance a procesarlos todos.
         </p>
         <form
           ref={formRef}
