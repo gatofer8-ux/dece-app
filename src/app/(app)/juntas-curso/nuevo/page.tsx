@@ -31,8 +31,8 @@ export default async function NuevoInformeJuntaPage() {
 
   // Si no hay cursos cargados aún en la institución, proveer opciones estándar
   const fallbackCourses = [
-    { course: "Inicial 1", parallel: "A", jornada: "MATUTINA" },
-    { course: "Inicial 2", parallel: "A", jornada: "MATUTINA" },
+    { course: "Inicial I", parallel: "A", jornada: "MATUTINA" },
+    { course: "Inicial II", parallel: "A", jornada: "MATUTINA" },
     { course: "1.° Grado EGB", parallel: "A", jornada: "MATUTINA" },
     { course: "2.° Grado EGB", parallel: "A", jornada: "MATUTINA" },
     { course: "3.° Grado EGB", parallel: "A", jornada: "MATUTINA" },

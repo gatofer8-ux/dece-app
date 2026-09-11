@@ -2880,8 +2880,8 @@ export default function DistributivoForm({
                       className="input text-xs py-1.5 sm:w-60 font-medium"
                     >
                       <optgroup label="Educación Inicial y Básica">
-                        <option value="Inicial 1 (3 años)">Inicial 1 (3 años)</option>
-                        <option value="Inicial 2 (4 años)">Inicial 2 (4 años)</option>
+                        <option value="Inicial I (3 años)">Inicial I (3 años)</option>
+                        <option value="Inicial II (4 años)">Inicial II (4 años)</option>
                         <option value="1.° EGB">1.° EGB (Preparatoria)</option>
                         <option value="2.° EGB">2.° EGB (Elemental)</option>
                         <option value="3.° EGB">3.° EGB (Elemental)</option>
