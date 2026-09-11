@@ -29,12 +29,12 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/circulos-restaurativos", label: "Círculos restaurativos", icon: "⭕", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Acompañamiento y prevención" },
   { href: "/circulos-restaurativos/fichas", label: "Fichas de círculo restaurativo", icon: "🗒️", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Acompañamiento y prevención" },
   { href: "/actas-reunion", label: "Actas de reunión", icon: "📝", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Acompañamiento y prevención" },
-  { href: "/tapas", label: "Juego de arquetipos (TaPas)", icon: "🃏", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Acompañamiento y prevención" },
   { href: "/plan-accion", label: "Plan de acción (POA)", icon: "🎯", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Acompañamiento y prevención" },
 
   // Orientación Vocacional y Profesional (OVP)
   { href: "/ovp", label: "Aplicaciones IPPJ", icon: "🧭", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Orientación Vocacional y Profesional (OVP)" },
   { href: "/ovp/cronograma", label: "Cronogramas de citas", icon: "🗓️", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Orientación Vocacional y Profesional (OVP)" },
+  { href: "/tapas", label: "Juego de arquetipos (TaPas)", icon: "🃏", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Orientación Vocacional y Profesional (OVP)" },
 
   // Informes
   { href: "/reportes", label: "Reportes", icon: "📈", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Informes" },
