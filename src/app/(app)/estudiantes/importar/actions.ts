@@ -345,19 +345,24 @@ export async function importStudentsFromPdfAi(
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
 
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
-    return { error: "Selecciona un archivo PDF (o un .zip con varios PDF) con la lista de estudiantes.", result: null };
+  const files = formData.getAll("file").filter((f): f is File => f instanceof File && f.size > 0);
+  if (files.length === 0) {
+    return { error: "Selecciona uno o varios PDF (o un .zip) con la lista de estudiantes.", result: null };
   }
-  if (file.size > MAX_PDF_IMPORT_FILE_SIZE) {
-    return { error: "El archivo supera el tamaño máximo permitido (20 MB).", result: null };
-  }
-
-  const nameLower = file.name.toLowerCase();
-  const isZip = file.type === "application/zip" || file.type === "application/x-zip-compressed" || nameLower.endsWith(".zip");
-  const isPdf = file.type === "application/pdf" || nameLower.endsWith(".pdf");
-  if (!isZip && !isPdf) {
-    return { error: "El archivo debe ser un PDF o un .zip que contenga varios PDF.", result: null };
+  for (const f of files) {
+    if (f.size > MAX_PDF_IMPORT_FILE_SIZE) {
+      return { error: `El archivo "${f.name}" supera el tamaño máximo permitido (20 MB).`, result: null };
+    }
+    const lower = f.name.toLowerCase();
+    const ok =
+      f.type === "application/zip" ||
+      f.type === "application/x-zip-compressed" ||
+      f.type === "application/pdf" ||
+      lower.endsWith(".zip") ||
+      lower.endsWith(".pdf");
+    if (!ok) {
+      return { error: `El archivo "${f.name}" no es un PDF ni un .zip.`, result: null };
+    }
   }
 
   const ai = getGeminiClient();
@@ -370,31 +375,34 @@ export async function importStudentsFromPdfAi(
   // try/catch general para que CUALQUIER excepción llegue al cliente como un
   // mensaje legible en vez de romper useFormState con un error genérico de React.
   try {
-    // 1. Reunir los PDF a procesar: uno solo, o todos los que traiga el .zip.
+    // 1. Reunir los PDF a procesar: cada archivo puede ser un PDF suelto o un .zip
+    // con varios adentro (se puede combinar: varios PDF sueltos, varios .zip, o
+    // ambos, todo en la misma selección de archivos).
     const pdfFiles: { label: string; base64: string }[] = [];
     const zipReadErrors: SkippedRow[] = [];
-    if (isZip) {
+    for (const f of files) {
+      const lower = f.name.toLowerCase();
+      const isZip = f.type === "application/zip" || f.type === "application/x-zip-compressed" || lower.endsWith(".zip");
+      if (!isZip) {
+        const buf = Buffer.from(await f.arrayBuffer());
+        pdfFiles.push({ label: f.name, base64: buf.toString("base64") });
+        continue;
+      }
       let zip: JSZip;
       try {
-        zip = await JSZip.loadAsync(await file.arrayBuffer());
+        zip = await JSZip.loadAsync(await f.arrayBuffer());
       } catch {
-        return { error: "No se pudo abrir el archivo .zip. Verifica que no esté dañado ni protegido con contraseña.", result: null };
+        return { error: `No se pudo abrir "${f.name}". Verifica que no esté dañado ni protegido con contraseña.`, result: null };
       }
       const entries = Object.values(zip.files).filter(
-        (f) =>
-          !f.dir &&
-          f.name.toLowerCase().endsWith(".pdf") &&
-          !f.name.includes("__MACOSX/") &&
-          !(f.name.split("/").pop() || "").startsWith("._")
+        (e) =>
+          !e.dir &&
+          e.name.toLowerCase().endsWith(".pdf") &&
+          !e.name.includes("__MACOSX/") &&
+          !(e.name.split("/").pop() || "").startsWith("._")
       );
       if (entries.length === 0) {
-        return { error: "El .zip no contiene ningún archivo PDF.", result: null };
-      }
-      if (entries.length > MAX_PDFS_PER_BATCH) {
-        return {
-          error: `El .zip trae ${entries.length} archivos PDF. Para que la IA alcance a procesarlos sin que se corte la conexión, súbelos en tandas de máximo ${MAX_PDFS_PER_BATCH} PDF por .zip (por ejemplo, uno por paralelo o por curso).`,
-          result: null,
-        };
+        return { error: `El archivo "${f.name}" no contiene ningún PDF.`, result: null };
       }
       let entrySeq = 0;
       for (const entry of entries) {
@@ -405,15 +413,18 @@ export async function importStudentsFromPdfAi(
           pdfFiles.push({ label, base64: buf.toString("base64") });
         } catch (err: any) {
           // Una entrada dañada dentro del .zip no debe abortar el resto del lote.
-          zipReadErrors.push({ row: entrySeq, name: `(archivo completo: ${label})`, reason: `No se pudo leer este archivo dentro del .zip: ${err?.message || "error desconocido"}.` });
+          zipReadErrors.push({ row: entrySeq, name: `(archivo completo: ${label})`, reason: `No se pudo leer este archivo dentro de "${f.name}": ${err?.message || "error desconocido"}.` });
         }
       }
-      if (pdfFiles.length === 0) {
-        return { error: "No se pudo leer ningún PDF dentro del .zip.", result: null };
-      }
-    } else {
-      const buf = Buffer.from(await file.arrayBuffer());
-      pdfFiles.push({ label: file.name, base64: buf.toString("base64") });
+    }
+    if (pdfFiles.length === 0) {
+      return { error: "No se pudo leer ningún PDF en los archivos seleccionados.", result: null };
+    }
+    if (pdfFiles.length > MAX_PDFS_PER_BATCH) {
+      return {
+        error: `Seleccionaste ${pdfFiles.length} PDF en total. Para que la IA alcance a procesarlos sin que se corte la conexión, súbelos en tandas de máximo ${MAX_PDFS_PER_BATCH} PDF por operación (por ejemplo, uno por paralelo o por curso).`,
+        result: null,
+      };
     }
 
     // 2. Extraer con la IA. En PARALELO (no uno por uno): con un .zip de varios
