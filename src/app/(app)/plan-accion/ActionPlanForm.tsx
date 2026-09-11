@@ -891,7 +891,7 @@ export default function ActionPlanForm({
               idx === 0 || visibleItems[idx - 1].component !== item.component;
             const isFirstOfDimension =
               idx === 0 || visibleItems[idx - 1].dimension !== item.dimension;
-            const standardCodeMatch = item.expected_goal_standard.match(/E.Dd+.[A-Z0-9.]+/);
+            const standardCodeMatch = (item.expected_goal_standard || "").match(/E.Dd+.[A-Z0-9.]+/);
             const standardCode = standardCodeMatch ? standardCodeMatch[0] : "";
             const standardInfo = DECE_QUALITY_STANDARDS.find(
               (s) => s.code === standardCode || standardCode.startsWith(s.code)

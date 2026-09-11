@@ -8,27 +8,40 @@ import type { ActionPlanRow } from "@/lib/types";
 import ActionPlanForm from "../../ActionPlanForm";
 
 export default async function EditarPlanAccionPage({ params }: { params: { id: string } }) {
-  const session = await requireRole(["ADMIN", "DECE"]);
+  const session = await requireRole(["ADMIN", "DECE", "SUPERADMIN", "AUTORIDAD"]);
   const institutionId = requireInstitutionId(session);
   const sig = getSignatureDefaults(session, institutionId);
 
-  const plan = db
-    .prepare("SELECT * FROM action_plans WHERE id = ? AND institution_id = ?")
-    .get(params.id, institutionId) as ActionPlanRow | undefined;
+  let plan: ActionPlanRow | undefined;
+  if (session.user.role === "SUPERADMIN") {
+    plan = db.prepare("SELECT * FROM action_plans WHERE id = ?").get(params.id) as ActionPlanRow | undefined;
+  } else {
+    plan = db
+      .prepare("SELECT * FROM action_plans WHERE id = ? AND institution_id = ?")
+      .get(params.id, institutionId) as ActionPlanRow | undefined;
+  }
 
   if (!plan) notFound();
 
-  const institution = db
-    .prepare("SELECT id, name, amie_code as amie FROM institutions WHERE id = ?")
-    .get(institutionId) as { id: string; name: string; amie: string };
+  const planInstId = plan.institution_id || institutionId;
 
-  const schoolYears = listSchoolYears(institutionId);
+  let institution = db
+    .prepare("SELECT id, name, amie_code as amie FROM institutions WHERE id = ?")
+    .get(planInstId) as { id: string; name: string; amie: string } | undefined;
+
+  if (!institution) {
+    institution = db
+      .prepare("SELECT id, name, amie_code as amie FROM institutions ORDER BY active DESC LIMIT 1")
+      .get() as { id: string; name: string; amie: string };
+  }
+
+  const schoolYears = listSchoolYears(institution.id);
 
   const deceUsers = db
     .prepare(
-      "SELECT id, name, role, email FROM users WHERE institution_id = ? AND role IN ('DECE', 'ADMIN') AND active = 1"
+      "SELECT id, name, role, email FROM users WHERE institution_id = ? AND role IN ('DECE', 'ADMIN', 'SUPERADMIN') AND active = 1"
     )
-    .all(institutionId) as { id: string; name: string; role: string; email: string }[];
+    .all(institution.id) as { id: string; name: string; role: string; email: string }[];
 
   const deceStaffNames = deceUsers.map((u) => u.name);
   const institutionalDece =
@@ -47,11 +60,21 @@ export default async function EditarPlanAccionPage({ params }: { params: { id: s
   const analysts = parseActionPlanAnalysts(plan.analysts_data);
   const elaborated = parseActionPlanSignatories(plan.elaborated_by);
 
+  const parseSignatorySafe = (val: any, fallback?: any) => {
+    if (!val) return fallback;
+    if (typeof val === "object") return val;
+    try {
+      return JSON.parse(val);
+    } catch {
+      return fallback || { name: String(val), role: "Autoridad" };
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
       <ActionPlanForm
         planId={plan.id}
-        institutionId={institutionId}
+        institutionId={institution.id}
         institutionName={institution.name}
         schoolYears={schoolYears}
         defaultSchoolYearId={plan.school_year_id}
@@ -64,8 +87,8 @@ export default async function EditarPlanAccionPage({ params }: { params: { id: s
         defaultDeceResponsibleName={deceResponsibleName}
         defaultEvaluationNotes={plan.evaluation_notes}
         defaultElaboratedBy={elaborated}
-        defaultReviewedBy={plan.reviewed_by ? JSON.parse(plan.reviewed_by) : (sig.deceCoordinator.fullName ? { name: sig.deceCoordinator.fullName, role: "Coordinador(a) DECE" } : undefined)}
-        defaultApprovedBy={plan.approved_by ? JSON.parse(plan.approved_by) : (sig.authority.fullName ? { name: sig.authority.fullName, role: sig.authority.role } : undefined)}
+        defaultReviewedBy={parseSignatorySafe(plan.reviewed_by, sig.deceCoordinator.fullName ? { name: sig.deceCoordinator.fullName, role: "Coordinador(a) DECE" } : undefined)}
+        defaultApprovedBy={parseSignatorySafe(plan.approved_by, sig.authority.fullName ? { name: sig.authority.fullName, role: sig.authority.role } : undefined)}
         deceStaffNames={deceStaffNames}
         isEditing={true}
       />
