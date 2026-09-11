@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireSession } from "@/lib/session";
+import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { generateWorkshopMaterialDocx } from "@/lib/talleres/workshopMaterialsDocx";
 import { getWorkshopById } from "@/lib/talleres/talleresData";
@@ -9,7 +9,10 @@ export async function GET(
   { params }: { params: { id: string; materialId: string } }
 ) {
   try {
-    const session = await requireSession();
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
     const { user } = session;
 
     const workshop = getWorkshopById(params.id);
