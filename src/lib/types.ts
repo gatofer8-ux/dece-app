@@ -816,6 +816,25 @@ export interface EneisInformeDeceRow {
   updated_at: string;
 }
 
+export interface EneisDiagnosticoRow {
+  id: string;
+  institution_id: string;
+  created_by_id: string | null;
+  zona: string | null;
+  distrito: string | null;
+  fecha: string | null;
+  antecedentes: string | null;
+  objetivo_general: string | null;
+  objetivos_especificos_json: string;
+  actividades_json: string;
+  resultados_json: string;
+  conclusiones: string | null;
+  recomendaciones: string | null;
+  responsables_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface TapasSessionRow {
   id: string;
   institution_id: string;
