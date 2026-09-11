@@ -67,7 +67,7 @@ export function runMigrations(db: Database.Database, migrationsDir: string): voi
           throw err;
         }
       }
-      db.prepare("INSERT INTO schema_migrations (version) VALUES (?)").run(version);
+      db.prepare("INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)").run(version);
     });
 
     try {

@@ -2723,6 +2723,207 @@ export const WORKSHOPS_DATABASE: Workshop[] = [
       }
     ]
   }
+,
+  {
+  "id": "acuerdo-0044a-cuidamos-juntos",
+  "slug": "acuerdo-0044a-cuidamos-juntos",
+  "title": "Taller Lúdico para Docentes: 'Cuidamos Juntos' (Acuerdo Ministerial 0044-A)",
+  "subtitle": "Dinámicas vivenciales, juego de mesa 'La Ruta del Caso', semáforo de alerta, sociodramas y no abstención institucional en el acompañamiento integral",
+  "category": "prevencion",
+  "categoryLabel": "Acompañamiento Integral y Normativa 0044-A",
+  "normativeBase": "Acuerdo Ministerial MINEDEC-MINEDEC-2026-00044-A, LOEI Art. 73 y Código de la Niñez",
+  "targetAudiences": [
+    "docentes",
+    "tutores",
+    "autoridades",
+    "comunidad"
+  ],
+  "targetAudienceLabel": "Docentes de Aula, Tutores de Grado, Equipos DECE, Directivos e Inspectores",
+  "estimatedDuration": "120 minutos (versiones de 45 min y 180 min incluidas)",
+  "relatedActionPlanTopic": "Acompañamiento con enfoque integral, principio de no abstención, detección temprana y corresponsabilidad comunitaria",
+  "generalObjective": "Que el personal docente conozca, practique y se apropie —de forma vivencial y participativa— de sus responsabilidades y de la ruta de acompañamiento integral establecida en el Acuerdo Ministerial MINEDEC-2026-00044-A, de modo que la normativa deje de sentirse como un documento legal distante y se convierta en un conjunto de reflejos y decisiones concretas para el día a día en el aula.",
+  "specificObjectives": [
+    "Identificar señales de alerta (Art. 28) y practicar la decisión de actuar sin esperar certeza plena (Art. 27).",
+    "Reconocer la ruta completa del acompañamiento —prevención, detección, atención, contención, derivación, seguimiento, reparación— y el rol de cada actor corresponsable (Art. 1 y 6).",
+    "Distinguir con seguridad las acciones que SÍ corresponden (Art. 29) de las que están expresamente prohibidas (Art. 30).",
+    "Aplicar lo aprendido en casos simulados, incluyendo la regla de no abstención por falta de competencia (Art. 20).",
+    "Cerrar con un compromiso personal concreto de mejora en su rol dentro del sistema de cuidado."
+  ],
+  "materialsGeneral": [
+    "Tablero 'La Ruta del Caso' (24 casillas, peones y dados)",
+    "Tarjetas de los 13 Roles Corresponsables (Art. 6)",
+    "Tarjetas del Semáforo de Alerta (18 escenarios) y paletas de colores",
+    "Mazo de 15 Tarjetas Pregunta, 4 Tarjetas Reto y 3 Tarjetas Trampa",
+    "Letreros de Esquinas: HACERLO, PROHIBIDO y DEPENDE DEL CASO",
+    "8 Tarjetas de Casos para Sociodramas de Aula",
+    "Cartones de Bingo DECE (5x5 con 24 términos técnicos)",
+    "Plantillas recortables de la Semilla de Compromiso y Certificados de Participación"
+  ],
+  "preliminaryNotes": "Regla de facilitación #1: Nunca se usan nombres reales ni casos reales identificables de estudiantes de la institución. Todos los ejemplos y tarjetas de este taller son ficticios y genéricos a propósito. Si en el taller surge espontáneamente un caso real, el facilitador debe detener la mención, agradecer la confianza y remitir a la persona a conversar en privado después del taller. La frase-eje en la pizarra es: 'Ningún actor institucional podrá abstenerse de actuar por falta de competencia directa' (Art. 20).",
+  "phases": [
+    {
+      "number": 1,
+      "durationMinutes": 10,
+      "title": "Bloque 0: Bienvenida, Encuadre y Frase-Eje (Art. 20)",
+      "objective": "Generar un ambiente de confianza, romper con la rigidez de una capacitación tradicional y presentar la regla de oro de la no abstención.",
+      "materials": [
+        "Música de fondo suave",
+        "Pizarra o papelógrafo con la frase-eje del Art. 20"
+      ],
+      "facilitatorScript": "¡Buenos días a todas y todos! Hoy no venimos a recitar artículos de memoria ni a llenar formularios aburridos: hoy venimos a jugar la normativa. Vamos a movernos, a equivocarnos, a reírnos y, sobre todo, a entrenar qué hacemos cuando un estudiante nos necesita en el aula.\\n\\nTodo lo que suceda aquí se queda aquí, salvo los aprendizajes prácticos que se van con ustedes. Nuestras tres reglas de oro son: participar con el cuerpo y no solo con la mente, escuchar con respeto absoluto, y nunca mencionar nombres reales de estudiantes.\\n\\nDejo escrita en la pizarra la frase que guiará cada minuto de este taller: 'Ningún actor institucional podrá abstenerse de actuar por falta de competencia directa' (Art. 20). Al final de esta jornada, todos sabremos qué significa en la vida real.",
+      "groupDynamics": "Explicación del encuadre lúdico y escritura comunitaria de la frase-eje en la pizarra principal.",
+      "reflectiveQuestions": [
+        "¿Por qué muchas veces sentimos los acuerdos ministeriales como documentos lejanos o difíciles de aplicar?",
+        "¿Qué pasaría si en un hospital un médico dijera 'ese paciente no es de mi turno, que se desangre'?"
+      ]
+    },
+    {
+      "number": 2,
+      "durationMinutes": 15,
+      "title": "Bloque 1: Rompehielo – '¿Quién soy en el sistema?' (Art. 6)",
+      "objective": "Presentar físicamente a los 12 actores corresponsables del sistema de cuidado y experimentar que la protección siempre es comunitaria.",
+      "materials": [
+        "Set de 13 Tarjetas de Roles Corresponsables",
+        "Música rítmica"
+      ],
+      "facilitatorScript": "Cada uno de ustedes tiene una tarjeta que representa un rol del Art. 6: Autoridad, DECE Institucional, DECE Distrital, Docente Tutor, Docente de Aula, DAI, DIE, UDAI, Asesoría Jurídica, Familia, Estudiante, Salud y Fiscalía. Mientras suena la música, caminamos por el salón saludándonos por nuestro rol. Cuando la música se detenga, leeré una emergencia real: tendrán 20 segundos para correr y agruparse con todos los actores que deben intervenir, haciendo una 'foto congelada' de protección.",
+      "groupDynamics": "Dinámica de movimiento con 4 situaciones disparadoras: 1) Estudiante con hambre y ropa inadecuada; 2) Barrera no diagnosticada de discapacidad; 3) Traslado urgente por riesgo psicosocial; 4) Evento crítico en toda la comunidad educativa.",
+      "reflectiveQuestions": [
+        "¿Alguien se quedó solo en alguna ronda?",
+        "¿Por qué es imposible que un solo docente o el DECE solo resuelvan un caso complejo sin la red?"
+      ]
+    },
+    {
+      "number": 3,
+      "durationMinutes": 25,
+      "title": "Bloque 2: Juego 'Semáforo de Alerta' (Arts. 27 y 28)",
+      "objective": "Entrenar el reflejo inmediato de reconocer señales de alerta y desterrar la costumbre de esperar certeza plena para actuar.",
+      "materials": [
+        "18 Tarjetas de Escenarios del Semáforo",
+        "Paletas Verde, Amarillo y Rojo por equipo",
+        "Pizarra de puntuación"
+      ],
+      "facilitatorScript": "Nos dividimos en equipos. Cada equipo tiene tres paletas: Verde (comportamiento esperable de la edad), Amarillo (cambio a observar y registrar) y Rojo (señal de alerta según el Art. 28 que exige comunicación inmediata). Leeré un escenario; tendrán 15 segundos para deliberar y levantar su paleta al unísono. Recuerden la regla del Art. 27: ante la duda, ¡se actúa sin esperar confirmación!",
+      "groupDynamics": "Competencia de 18 rondas rápidas con debate guiado. Los equipos defienden su postura. Casos trampa valen doble puntaje.",
+      "reflectiveQuestions": [
+        "¿Cuál es el peligro mortal de 'esperar a estar 100% seguros' antes de comunicar una alerta de vulneración?",
+        "¿Por qué un bajón repentino en notas o el llanto sin causa aparente son señales de alerta prioritarias en el Art. 28?"
+      ]
+    },
+    {
+      "number": 4,
+      "durationMinutes": 35,
+      "title": "Bloque 3: Juego de Tablero 'La Ruta del Caso' (24 Casillas)",
+      "objective": "Recorrer las 7 etapas de la ruta (prevención, detección, atención, contención, derivación, seguimiento, reparación) y memorizar plazos legales.",
+      "materials": [
+        "Tablero de 24 casillas en gran formato",
+        "Dado, fichas peones",
+        "15 Tarjetas Pregunta, 4 Retos y 3 Trampas"
+      ],
+      "facilitatorScript": "Bienvenidos a 'La Ruta del Caso'. Cada equipo lanzará el dado para avanzar por las 24 casillas. Si caen en '❓ Pregunta', responden una trivia sobre el acuerdo; si aciertan, avanzan. Si caen en '🎭 Reto', tienen 30 segundos para dramatizar una acción correcta (como recibir a una familia con calidez). Pero ¡cuidado con las casillas '⚠️ Trampa'!: si cometen una prohibición del Art. 30, como hacer que el niño repita el relato o confrontarlo con su agresor, retroceden 3 casillas. ¡Gana el equipo que llegue a la meta de Reparación!",
+      "groupDynamics": "Juego de mesa interactivo. Equipos compiten y ejecutan retos vivenciales en 30 segundos. El facilitador modera y refuerza el plazo de 48 horas para contención.",
+      "reflectiveQuestions": [
+        "¿Por qué la meta del juego y del acuerdo es la 'Reparación Socioeducativa' y no la simple derivación externa?",
+        "¿Qué consecuencias penales y éticas tiene cometer una de las prohibiciones del Art. 30?"
+      ]
+    },
+    {
+      "number": 5,
+      "durationMinutes": 20,
+      "title": "Bloque 4: Esquinas – 'Verdadero, Falso o Prohibido' (Arts. 29 y 30)",
+      "objective": "Automatizar físicamente el discernimiento entre las acciones obligatorias y las conductas expresamente prohibidas por la ley.",
+      "materials": [
+        "3 Letreros de gran formato pegados en las paredes: 'HACERLO', 'PROHIBIDO', 'DEPENDE DEL CASO'"
+      ],
+      "facilitatorScript": "Miren las tres paredes del salón: en una dice HACERLO, en la otra PROHIBIDO, y en la tercera DEPENDE DEL CASO. Cuando lea un enunciado, sin hablar con nadie, caminan de inmediato hacia la pared que consideren correcta. Aquí no se vale esperar a ver qué hace la mayoría: el cuerpo toma postura.",
+      "groupDynamics": "Dinámica corporal con 15 enunciados normativos (aciertos del Art. 29 vs transgresiones del Art. 30 como grupos de WhatsApp o mediaciones forzadas).",
+      "reflectiveQuestions": [
+        "¿Por qué está terminantemente prohibido comentar los casos de estudiantes en grupos de WhatsApp de docentes?",
+        "¿Por qué nunca se debe mediar ni confrontar a una víctima con su presunto agresor?"
+      ]
+    },
+    {
+      "number": 6,
+      "durationMinutes": 30,
+      "title": "Bloque 5: Sociodrama – 'Casos que nos importan' (8 Escenarios)",
+      "objective": "Integrar el principio de no revictimización, la no abstención y la escucha activa a través de simulaciones con doble escena.",
+      "materials": [
+        "Set de 8 Tarjetas de Casos Ficticios",
+        "Gafetes de personajes"
+      ],
+      "facilitatorScript": "Cada mesa recibe una tarjeta con un caso ficticio complejo: el comentario en el recreo, la familia que no firma el consentimiento, el docente que dice 'eso no me toca a mí', el estudiante con discapacidad no diagnosticada, o el caso ya derivado. Tienen 8 minutos para preparar dos escenas: primero actúan la respuesta INCORRECTA (el error habitual del sistema), luego dicen '¡REBOBINAR!' y representan la respuesta IMPECABLE conforme al Acuerdo 044-A.",
+      "groupDynamics": "Actuaciones de 2 a 3 minutos por equipo. Catarsis grupal humorística y pedagógica ante los errores cotidianos, seguida de la versión correcta.",
+      "reflectiveQuestions": [
+        "¿Cuántas veces en la vida real hemos caído en la tentación de decir 'eso es del DECE, no es mío'?",
+        "¿Cómo cambia el destino de un estudiante cuando el primer docente que lo escucha no se desentiende?"
+      ]
+    },
+    {
+      "number": 7,
+      "durationMinutes": 15,
+      "title": "Bloque 6: Bingo DECE y Vocabulario Técnico Clave",
+      "objective": "Fijar con soltura los 24 conceptos, siglas e instituciones del marco legal escolar de manera entretenida y lúdica.",
+      "materials": [
+        "Cartones de Bingo DECE 5x5 con 24 términos",
+        "Pistas conceptuales del facilitador",
+        "Semillas o fichas para marcar"
+      ],
+      "facilitatorScript": "¡A jugar al Bingo DECE! En sus cartones tienen términos como DAI, UDAI, 48 horas, Interés Superior, Confidencialidad, Cuidado al Cuidador, Plan Integral y Debida Diligencia. No cantaré el término directo: leeré una adivinanza o pista técnica. Quien identifique el concepto, coloca su ficha. ¡El primero en llenar grita BINGO DECE!",
+      "groupDynamics": "Juego de bingo con pistas conceptuales que refuerzan definiciones legales. Premiación con aplauso colectivo al ganador.",
+      "reflectiveQuestions": [
+        "¿Cuál de estos términos aprendimos hoy que antes desconocíamos por completo?",
+        "¿Por qué es fundamental que todos manejemos el mismo lenguaje técnico entre docentes y DECE?"
+      ]
+    },
+    {
+      "number": 8,
+      "durationMinutes": 15,
+      "title": "Bloque 7: Cierre – 'Semilla de Compromiso' y Evaluación",
+      "objective": "Traducir todo el marco legal a un compromiso ético personal e inmediato en el aula, evaluando el impacto del taller.",
+      "materials": [
+        "Plantillas recortables de la Semilla de Compromiso",
+        "Certificados oficiales de participación",
+        "Fichas de evaluación rápida"
+      ],
+      "facilitatorScript": "Para terminar, cada docente recibe una semilla de papel. En ella escribirá su compromiso personal para esta misma semana: algo concreto, sencillo y poderoso que transformará en su aula. Volvemos a mirar la pizarra: 'Ningún actor institucional podrá abstenerse de actuar por falta de competencia directa'. Hoy sabemos que esa frase es nuestra promesa de honor: cuando un niño nos mira, todos somos cuidadores.",
+      "groupDynamics": "Escritura individual de compromisos, pegado en el mural 'Nuestro Jardín del Cuidado', ronda de una sola palabra final, entrega de certificados y evaluación.",
+      "reflectiveQuestions": [
+        "¿Qué palabra define cómo me voy hoy después de haber jugado y aprendido este acuerdo?",
+        "¿Cómo cuidaremos también a nuestros compañeros docentes para evitar el agotamiento (cuidado al cuidador)?"
+      ]
+    }
+  ],
+  "downloadableMaterials": [
+    {
+      "id": "tablero-y-tarjetas-ruta-del-caso-0044a",
+      "title": "Juego de Mesa Completo: 'La Ruta del Caso' (Tablero 24 Casillas, Preguntas, Retos y Trampas)",
+      "description": "Documento Word listo para imprimir con el tablero completo de 24 casillas, 15 tarjetas de trivia técnica, 4 tarjetas de retos de actuación y 3 tarjetas trampa con líneas de corte punteadas (✂️).",
+      "isPrintableCutout": true,
+      "icon": "✂️"
+    },
+    {
+      "id": "tarjetas-roles-y-semaforo-alerta-0044a",
+      "title": "Tarjetas Recortables: 13 Roles Corresponsables y 18 Escenarios del Semáforo de Alerta",
+      "description": "Set de 13 tarjetas de actores institucionales (Art. 6) y 18 tarjetas de situaciones de aula con la clave técnica del facilitador para el juego del semáforo con líneas de corte (✂️).",
+      "isPrintableCutout": true,
+      "icon": "✂️"
+    },
+    {
+      "id": "tarjetas-casos-sociodrama-esquinas-0044a",
+      "title": "Set de Casos para Sociodramas y Letreros de Esquinas (Hacerlo, Prohibido, Depende)",
+      "description": "Colección de 8 tarjetas de casos ficticios complejos de aula para sociodramas con doble escena y los 3 letreros gigantes de esquinas para la dinámica de movimiento.",
+      "isPrintableCutout": true,
+      "icon": "✂️"
+    },
+    {
+      "id": "bingo-dece-semillas-certificados-0044a",
+      "title": "Cartones de Bingo DECE (10 Cartones), Semillas de Compromiso y Certificados de Participación",
+      "description": "Plantillas de 10 cartones de bingo de 5x5 con 24 términos técnicos, lista de pistas, siluetas recortables de semillas de compromiso personal y certificados de participación en Word editables.",
+      "isPrintableCutout": true,
+      "icon": "✂️"
+    }
+  ]
+}
 ];
 
 export function getWorkshopById(idOrSlug: string): Workshop | undefined {
