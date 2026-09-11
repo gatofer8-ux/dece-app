@@ -7,6 +7,7 @@ import DeleteButton from "@/components/DeleteButton";
 import { generateQrDataUrl } from "@/lib/pasantes";
 import { publicBaseUrl } from "@/lib/ovp/publicUrl";
 import { getEneisSession, listFichasForSession } from "@/lib/eneis/eneisSessions";
+import { ENEIS_MATERIALES } from "@/lib/eneis/eneisMaterialesCatalog";
 import { setEneisSessionStatusAction, deleteEneisSessionAction, deleteEneisFichaAction } from "../actions";
 
 export default async function EneisSessionDetailPage({ params }: { params: { id: string } }) {
@@ -98,6 +99,7 @@ export default async function EneisSessionDetailPage({ params }: { params: { id:
                   <th>Asignatura</th>
                   <th>Curso</th>
                   <th>Tema</th>
+                  <th>Material</th>
                   <th>Fecha</th>
                   <th>Estudiantes</th>
                   <th className="text-right">Acciones</th>
@@ -112,6 +114,9 @@ export default async function EneisSessionDetailPage({ params }: { params: { id:
                       {f.curso} {f.paralelo ? `"${f.paralelo}"` : ""}
                     </td>
                     <td className="text-xs text-slate-600">{f.nombre_ficha || "—"}</td>
+                    <td className="text-xs text-slate-600">
+                      {ENEIS_MATERIALES.find((m) => m.id === f.material_id)?.short || "—"}
+                    </td>
                     <td className="text-xs text-slate-500 whitespace-nowrap">
                       {formatDate(f.fecha_hasta || f.fecha_desde || f.created_at)}
                     </td>

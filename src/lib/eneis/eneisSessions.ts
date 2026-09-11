@@ -112,6 +112,7 @@ export interface EneisFichaRow {
   indicadores_evaluacion: string | null;
   num_estudiantes_capacitados: number | null;
   observaciones: string | null;
+  material_id: string | null;
   created_at: string;
 }
 
@@ -158,6 +159,7 @@ export function createEneisFicha(input: {
   indicadoresEvaluacion: string | null;
   numEstudiantesCapacitados: number | null;
   observaciones: string | null;
+  materialId: string | null;
 }): string {
   const id = randomUUID();
   db.prepare(
@@ -165,12 +167,12 @@ export function createEneisFicha(input: {
       id, session_id, institution_id, docente_nombre, asignatura, subnivel, curso, paralelo,
       fecha_desde, fecha_hasta, nombre_ficha, objetivo_curricular, objetivo_eis, destrezas,
       orientacion_conceptual, recursos, anticipacion, conceptualizacion, consolidacion,
-      indicadores_evaluacion, num_estudiantes_capacitados, observaciones
+      indicadores_evaluacion, num_estudiantes_capacitados, observaciones, material_id
     ) VALUES (
       @id, @sessionId, @institutionId, @docenteNombre, @asignatura, @subnivel, @curso, @paralelo,
       @fechaDesde, @fechaHasta, @nombreFicha, @objetivoCurricular, @objetivoEis, @destrezas,
       @orientacionConceptual, @recursos, @anticipacion, @conceptualizacion, @consolidacion,
-      @indicadoresEvaluacion, @numEstudiantesCapacitados, @observaciones
+      @indicadoresEvaluacion, @numEstudiantesCapacitados, @observaciones, @materialId
     )`
   ).run({ id, ...input });
   return id;
