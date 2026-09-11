@@ -144,13 +144,24 @@ export default async function SuperadminPage() {
 
   const auditLogs = db
     .prepare(`
-      SELECT a.id, a.user_id, a.action, a.entity_type, a.entity_id, a.details,
-             COALESCE(a.timestamp, a.created_at) as created_at,
-             u.name as user_name
+      SELECT a.id,
+             a.user_id,
+             COALESCE(a.institution_id, u.institution_id) as institution_id,
+             a.action,
+             a.entity_type,
+             a.entity_id,
+             a.details,
+             a.timestamp,
+             u.name as user_name,
+             u.email as user_email,
+             u.role as user_role,
+             COALESCE(i.name, ui.name) as institution_name
       FROM audit_logs a
       LEFT JOIN users u ON u.id = a.user_id
-      ORDER BY COALESCE(a.timestamp, a.created_at) DESC
-      LIMIT 150
+      LEFT JOIN institutions i ON i.id = a.institution_id
+      LEFT JOIN institutions ui ON ui.id = u.institution_id
+      ORDER BY a.timestamp DESC
+      LIMIT 500
     `)
     .all() as any[];
 

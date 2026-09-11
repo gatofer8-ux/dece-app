@@ -761,3 +761,84 @@ export async function updateInstitutionAction(formData: FormData) {
   }
 }
 
+/**
+ * Consulta en tiempo real los registros de auditoría del sistema para el Superadministrador,
+ * permitiendo filtrar con precisión por institución, usuario, tipo de acción, entidad o búsqueda libre.
+ */
+export async function getSuperadminAuditLogsAction(filters?: {
+  institutionId?: string;
+  userId?: string;
+  action?: string;
+  entityType?: string;
+  search?: string;
+  limit?: number;
+}) {
+  await requireRole(["SUPERADMIN"]);
+
+  let where = "WHERE 1=1";
+  const params: any[] = [];
+
+  if (filters?.institutionId && filters.institutionId !== "TODAS") {
+    if (filters.institutionId === "GLOBAL_DISTRITO") {
+      where += " AND (a.institution_id IS NULL AND u.institution_id IS NULL)";
+    } else {
+      where += " AND (a.institution_id = ? OR u.institution_id = ?)";
+      params.push(filters.institutionId, filters.institutionId);
+    }
+  }
+
+  if (filters?.userId && filters.userId !== "TODOS") {
+    where += " AND a.user_id = ?";
+    params.push(filters.userId);
+  }
+
+  if (filters?.action && filters.action !== "TODAS") {
+    where += " AND a.action = ?";
+    params.push(filters.action);
+  }
+
+  if (filters?.entityType && filters.entityType !== "TODAS") {
+    where += " AND a.entity_type = ?";
+    params.push(filters.entityType);
+  }
+
+  if (filters?.search?.trim()) {
+    const q = `%${filters.search.trim()}%`;
+    where += " AND (a.details LIKE ? OR a.entity_id LIKE ? OR a.entity_type LIKE ? OR u.name LIKE ? OR u.email LIKE ? OR i.name LIKE ? OR ui.name LIKE ?)";
+    params.push(q, q, q, q, q, q, q);
+  }
+
+  const limit = Math.min(Math.max(Number(filters?.limit) || 500, 50), 2000);
+
+  try {
+    const logs = db
+      .prepare(`
+        SELECT a.id,
+               a.user_id,
+               COALESCE(a.institution_id, u.institution_id) as institution_id,
+               a.action,
+               a.entity_type,
+               a.entity_id,
+               a.details,
+               a.timestamp,
+               u.name as user_name,
+               u.email as user_email,
+               u.role as user_role,
+               COALESCE(i.name, ui.name) as institution_name
+        FROM audit_logs a
+        LEFT JOIN users u ON u.id = a.user_id
+        LEFT JOIN institutions i ON i.id = a.institution_id
+        LEFT JOIN institutions ui ON ui.id = u.institution_id
+        ${where}
+        ORDER BY a.timestamp DESC
+        LIMIT ${limit}
+      `)
+      .all(...params) as any[];
+
+    return { success: true, logs, error: null };
+  } catch (err) {
+    return { success: false, logs: [], error: err instanceof Error ? err.message : "Error al obtener registros de auditoría." };
+  }
+}
+
+

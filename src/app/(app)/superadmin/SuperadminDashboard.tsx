@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Badge, StatCard, formatDate } from "@/components/ui";
+import { Badge, StatCard, formatDate, formatDateTime } from "@/components/ui";
 import { ROLE_LABELS, type Role } from "@/lib/types";
 import CreateInstitutionModal from "./CreateInstitutionModal";
 import CreateUserModal from "./CreateUserModal";
@@ -24,6 +24,7 @@ import {
   reactivateUserAction,
   deactivateInstitutionAction,
   reactivateInstitutionAction,
+  getSuperadminAuditLogsAction,
 } from "./actions";
 import { toggleUserSuspensionAction } from "./subscription-actions";
 
@@ -80,13 +81,17 @@ interface UserData {
 
 interface AuditLogData {
   id: string;
-  user_id: string;
-  user_name?: string;
+  user_id: string | null;
+  user_name?: string | null;
+  user_email?: string | null;
+  user_role?: Role | null;
+  institution_id?: string | null;
+  institution_name?: string | null;
   action: string;
   entity_type: string;
   entity_id: string | null;
   details: string | null;
-  created_at: string;
+  timestamp: string;
 }
 
 interface SubscriptionPackageData {
@@ -173,6 +178,132 @@ export default function SuperadminDashboard({
     targetId: "",
     targetName: "",
   });
+
+  // Filtros y estado de Auditoría
+  const [auditLogsList, setAuditLogsList] = useState<AuditLogData[]>(auditLogs);
+  const [auditSearch, setAuditSearch] = useState("");
+  const [auditInstitutionFilter, setAuditInstitutionFilter] = useState<string>("TODAS");
+  const [auditUserFilter, setAuditUserFilter] = useState<string>("TODOS");
+  const [auditActionFilter, setAuditActionFilter] = useState<string>("TODAS");
+  const [auditEntityFilter, setAuditEntityFilter] = useState<string>("TODAS");
+  const [isLoadingAudit, setIsLoadingAudit] = useState(false);
+  const [auditFetchMessage, setAuditFetchMessage] = useState<string | null>(null);
+
+  const fetchAuditLogsFromServer = async (limit = 1000) => {
+    setIsLoadingAudit(true);
+    setAuditFetchMessage(null);
+    try {
+      const res = await getSuperadminAuditLogsAction({
+        institutionId: auditInstitutionFilter,
+        userId: auditUserFilter,
+        action: auditActionFilter,
+        entityType: auditEntityFilter,
+        search: auditSearch,
+        limit,
+      });
+      if (res.success && res.logs) {
+        setAuditLogsList(res.logs);
+        setAuditFetchMessage(`Se cargaron ${res.logs.length} registros directamente de la base de datos.`);
+      } else {
+        setAuditFetchMessage(res.error || "Error al consultar registros de auditoría.");
+      }
+    } catch {
+      setAuditFetchMessage("Error de conexión al cargar registros.");
+    } finally {
+      setIsLoadingAudit(false);
+    }
+  };
+
+  const filteredAuditLogs = auditLogsList.filter((log) => {
+    // Filtro por institución
+    if (auditInstitutionFilter !== "TODAS") {
+      if (auditInstitutionFilter === "GLOBAL_DISTRITO") {
+        if (log.institution_id) return false;
+      } else {
+        if (log.institution_id !== auditInstitutionFilter) return false;
+      }
+    }
+
+    // Filtro por usuario
+    if (auditUserFilter !== "TODOS") {
+      if (log.user_id !== auditUserFilter) return false;
+    }
+
+    // Filtro por acción
+    if (auditActionFilter !== "TODAS") {
+      if (log.action !== auditActionFilter) return false;
+    }
+
+    // Filtro por entidad
+    if (auditEntityFilter !== "TODAS") {
+      if (log.entity_type !== auditEntityFilter) return false;
+    }
+
+    // Filtro por texto de búsqueda
+    if (auditSearch.trim()) {
+      const q = auditSearch.toLowerCase();
+      const matchText =
+        (log.details && log.details.toLowerCase().includes(q)) ||
+        (log.user_name && log.user_name.toLowerCase().includes(q)) ||
+        (log.user_email && log.user_email.toLowerCase().includes(q)) ||
+        (log.institution_name && log.institution_name.toLowerCase().includes(q)) ||
+        (log.entity_type && log.entity_type.toLowerCase().includes(q)) ||
+        (log.entity_id && log.entity_id.toLowerCase().includes(q)) ||
+        (log.action && log.action.toLowerCase().includes(q));
+
+      if (!matchText) return false;
+    }
+
+    return true;
+  });
+
+  const availableAuditActions = Array.from(
+    new Set([
+      "CREAR",
+      "EDITAR",
+      "ELIMINAR",
+      "LOGIN",
+      "LOGIN_FALLIDO",
+      "EXPORTAR",
+      "DESACTIVAR",
+      "REACTIVAR",
+      "RESETEAR_CLAVE",
+      ...auditLogsList.map((l) => l.action).filter(Boolean),
+    ])
+  ).sort();
+
+  const availableAuditEntities = Array.from(
+    new Set(auditLogsList.map((l) => l.entity_type).filter(Boolean))
+  ).sort();
+
+  const availableAuditUsers = users.filter((u) => {
+    if (auditInstitutionFilter === "TODAS") return true;
+    if (auditInstitutionFilter === "GLOBAL_DISTRITO") return !u.institution_id;
+    return u.institution_id === auditInstitutionFilter;
+  });
+
+  const auditActionBadge = (action: string) => {
+    const act = (action || "").toUpperCase();
+    if (act.includes("CREAR") || act.includes("REACTIVAR")) {
+      return "bg-emerald-100 text-emerald-800 border-emerald-200";
+    }
+    if (act.includes("EDITAR") || act.includes("ACTUALIZAR")) {
+      return "bg-sky-100 text-sky-800 border-sky-200";
+    }
+    if (act.includes("ELIMINAR") || act.includes("BORRAR") || act.includes("FALLIDO")) {
+      return "bg-rose-100 text-rose-800 border-rose-200";
+    }
+    if (act.includes("DESACTIVAR") || act.includes("SUSPENDER") || act.includes("CLAVE") || act.includes("PASSWORD")) {
+      return "bg-amber-100 text-amber-800 border-amber-200";
+    }
+    if (act.includes("EXPORTAR")) {
+      return "bg-purple-100 text-purple-800 border-purple-200";
+    }
+    if (act.includes("LOGIN")) {
+      return "bg-indigo-100 text-indigo-800 border-indigo-200";
+    }
+    return "bg-slate-100 text-slate-800 border-slate-200";
+  };
 
   const filteredInstitutions = institutions.filter((i) => {
     const q = instSearch.toLowerCase();
@@ -677,6 +808,23 @@ export default function SuperadminDashboard({
                           />
 
                           <ResetPasswordModal userId={u.id} userName={u.name} />
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveTab("auditoria");
+                              setAuditUserFilter(u.id);
+                              if (u.institution_id) {
+                                setAuditInstitutionFilter(u.institution_id);
+                              } else {
+                                setAuditInstitutionFilter("GLOBAL_DISTRITO");
+                              }
+                            }}
+                            className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded text-xs font-semibold transition flex items-center gap-1 shadow-xs"
+                            title={`Ver registro de auditoría de ${u.name}`}
+                          >
+                            <span>📜</span> Auditoría
+                          </button>
 
                           {!isSelf && (
                             u.active === 1 ? (
@@ -1250,6 +1398,18 @@ export default function SuperadminDashboard({
                         >
                           👁️ Ver Usuarios
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveTab("auditoria");
+                            setAuditInstitutionFilter(i.id);
+                            setAuditUserFilter("TODOS");
+                          }}
+                          className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded text-xs font-semibold transition flex items-center gap-1 shadow-xs"
+                          title={`Ver registro de auditoría de ${i.name}`}
+                        >
+                          <span>📜</span> Auditoría
+                        </button>
                         <EditInstitutionModal institution={i} />
                         {i.active === 1 ? (
                           <button
@@ -1301,63 +1461,395 @@ export default function SuperadminDashboard({
         </div>
       )}
 
-      {/* PESTAÑA 4: AUDITORÍA GLOBAL */}
+      {/* PESTAÑA 4: AUDITORÍA GLOBAL POR USUARIO E INSTITUCIÓN */}
       {activeTab === "auditoria" && (
-        <div className="card overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <div>
-              <h4 className="font-semibold text-sm text-slate-800 flex items-center gap-1.5">
-                <span>📜</span> Registro de Auditoría Global del Sistema
-              </h4>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Bitácora cronológica de todas las acciones administrativas y de seguridad.
-              </p>
+        <div className="space-y-4">
+          {/* Tarjeta de Controles y Filtros */}
+          <div className="card p-4 space-y-3 bg-slate-50/50 border border-slate-200 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-200">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <span>📜</span> Auditoría del Sistema por Usuario e Institución
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Visualiza y filtra en tiempo real la trazabilidad de cada acción administrativa, de caso o de usuario.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={isLoadingAudit}
+                  onClick={() => fetchAuditLogsFromServer(1000)}
+                  className="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow-xs"
+                  title="Consultar los últimos 1000 registros directamente en la base de datos"
+                >
+                  <span>{isLoadingAudit ? "⏳" : "🔄"}</span>
+                  {isLoadingAudit ? "Consultando BD..." : "Cargar 1000 registros de BD"}
+                </button>
+              </div>
             </div>
-            <span className="text-xs text-slate-400">{auditLogs.length} eventos recientes</span>
+
+            {auditFetchMessage && (
+              <div className="p-2.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-900 text-xs flex items-center justify-between">
+                <span>ℹ️ {auditFetchMessage}</span>
+                <button
+                  type="button"
+                  onClick={() => setAuditFetchMessage(null)}
+                  className="text-blue-500 hover:text-blue-700 text-xs font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {/* Fila de Selectores */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Filtro por Institución */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                  Institución Educativa
+                </label>
+                <select
+                  value={auditInstitutionFilter}
+                  onChange={(e) => {
+                    setAuditInstitutionFilter(e.target.value);
+                    setAuditUserFilter("TODOS");
+                  }}
+                  className="select w-full text-xs"
+                >
+                  <option value="TODAS">🏛️ Todas las instituciones</option>
+                  <option value="GLOBAL_DISTRITO">🌐 Distrito / Nivel Central (Sin IE)</option>
+                  {institutions.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.name} {i.amie_code ? `(${i.amie_code})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filtro por Usuario */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                  Usuario responsable
+                </label>
+                <select
+                  value={auditUserFilter}
+                  onChange={(e) => setAuditUserFilter(e.target.value)}
+                  className="select w-full text-xs"
+                >
+                  <option value="TODOS">👤 Todos los usuarios ({availableAuditUsers.length})</option>
+                  {availableAuditUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} — {u.email} ({u.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filtro por Acción */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                  Tipo de Acción
+                </label>
+                <select
+                  value={auditActionFilter}
+                  onChange={(e) => setAuditActionFilter(e.target.value)}
+                  className="select w-full text-xs"
+                >
+                  <option value="TODAS">⚡ Todas las acciones</option>
+                  {availableAuditActions.map((act) => (
+                    <option key={act} value={act}>
+                      {act}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filtro por Tipo de Entidad */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                  Entidad afectada
+                </label>
+                <select
+                  value={auditEntityFilter}
+                  onChange={(e) => setAuditEntityFilter(e.target.value)}
+                  className="select w-full text-xs"
+                >
+                  <option value="TODAS">📁 Todas las entidades</option>
+                  {availableAuditEntities.map((ent) => (
+                    <option key={ent} value={ent}>
+                      {ent}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Fila de Buscador y Limpiar */}
+            <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+              <div className="relative flex-1 w-full">
+                <input
+                  type="text"
+                  value={auditSearch}
+                  onChange={(e) => setAuditSearch(e.target.value)}
+                  placeholder="Buscar en auditoría por texto, detalle, ID, correo, nombre o entidad..."
+                  className="input w-full text-xs pl-8"
+                />
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">
+                  🔍
+                </span>
+                {auditSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setAuditSearch("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {(auditInstitutionFilter !== "TODAS" ||
+                auditUserFilter !== "TODOS" ||
+                auditActionFilter !== "TODAS" ||
+                auditEntityFilter !== "TODAS" ||
+                auditSearch) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuditInstitutionFilter("TODAS");
+                    setAuditUserFilter("TODOS");
+                    setAuditActionFilter("TODAS");
+                    setAuditEntityFilter("TODAS");
+                    setAuditSearch("");
+                  }}
+                  className="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition shrink-0"
+                >
+                  ✕ Limpiar filtros
+                </button>
+              )}
+            </div>
+
+            {/* Chips de Filtros Activos y Contador */}
+            <div className="flex items-center justify-between text-xs text-slate-500 pt-1 flex-wrap gap-2">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-semibold text-slate-700">Filtros activos:</span>
+                {auditInstitutionFilter !== "TODAS" && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-brand-100 text-brand-800 text-[11px] font-medium">
+                    🏛️{" "}
+                    {auditInstitutionFilter === "GLOBAL_DISTRITO"
+                      ? "Nivel Central / Distrito"
+                      : institutions.find((i) => i.id === auditInstitutionFilter)?.name || "Institución"}
+                    <button
+                      type="button"
+                      onClick={() => setAuditInstitutionFilter("TODAS")}
+                      className="hover:text-brand-950 font-bold"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                {auditUserFilter !== "TODOS" && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[11px] font-medium">
+                    👤 {users.find((u) => u.id === auditUserFilter)?.name || "Usuario"}
+                    <button
+                      type="button"
+                      onClick={() => setAuditUserFilter("TODOS")}
+                      className="hover:text-indigo-950 font-bold"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                {auditActionFilter !== "TODAS" && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[11px] font-medium">
+                    ⚡ {auditActionFilter}
+                    <button
+                      type="button"
+                      onClick={() => setAuditActionFilter("TODAS")}
+                      className="hover:text-amber-950 font-bold"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                {auditEntityFilter !== "TODAS" && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-[11px] font-medium">
+                    📁 {auditEntityFilter}
+                    <button
+                      type="button"
+                      onClick={() => setAuditEntityFilter("TODAS")}
+                      className="hover:text-purple-950 font-bold"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                {auditSearch && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200 text-slate-800 text-[11px] font-medium">
+                    🔍 &quot;{auditSearch}&quot;
+                    <button
+                      type="button"
+                      onClick={() => setAuditSearch("")}
+                      className="hover:text-black font-bold"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                {auditInstitutionFilter === "TODAS" &&
+                  auditUserFilter === "TODOS" &&
+                  auditActionFilter === "TODAS" &&
+                  auditEntityFilter === "TODAS" &&
+                  !auditSearch && <span className="text-slate-400 italic">Ninguno (Mostrando todo)</span>}
+              </div>
+
+              <div className="font-medium">
+                Mostrando <strong className="text-slate-800">{filteredAuditLogs.length}</strong> de{" "}
+                <strong className="text-slate-800">{auditLogsList.length}</strong> registros en memoria
+              </div>
+            </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs font-mono">
-              <thead className="bg-slate-50 text-slate-500 uppercase border-b border-slate-100">
-                <tr>
-                  <th className="text-left px-3 py-2">Fecha y Hora</th>
-                  <th className="text-left px-3 py-2">Usuario</th>
-                  <th className="text-left px-3 py-2">Acción</th>
-                  <th className="text-left px-3 py-2">Entidad</th>
-                  <th className="text-left px-3 py-2">Detalles</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {auditLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-50">
-                    <td className="px-3 py-2 text-slate-500 whitespace-nowrap">
-                      {log.created_at}
-                    </td>
-                    <td className="px-3 py-2 font-sans font-medium text-slate-900">
-                      {log.user_name || "Sistema"}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-800">
-                        {log.action}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-slate-600 font-sans">
-                      {log.entity_type} {log.entity_id ? `(${log.entity_id.slice(0, 8)})` : ""}
-                    </td>
-                    <td className="px-3 py-2 font-sans text-slate-600 max-w-md truncate">
-                      {log.details || "-"}
-                    </td>
-                  </tr>
-                ))}
-                {auditLogs.length === 0 && (
+          {/* Tabla de Auditoría */}
+          <div className="card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-slate-100/80 text-slate-600 uppercase border-b border-slate-200 font-bold text-[11px]">
                   <tr>
-                    <td colSpan={5} className="py-6 text-center text-xs text-slate-400 font-sans">
-                      No hay registros de auditoría disponibles.
-                    </td>
+                    <th className="text-left px-3.5 py-3 whitespace-nowrap">Fecha y Hora</th>
+                    <th className="text-left px-3.5 py-3">Institución</th>
+                    <th className="text-left px-3.5 py-3">Usuario responsable</th>
+                    <th className="text-left px-3.5 py-3">Acción</th>
+                    <th className="text-left px-3.5 py-3">Entidad</th>
+                    <th className="text-left px-3.5 py-3 min-w-[280px]">Detalles</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredAuditLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-slate-50/80 transition-colors">
+                      {/* Fecha y hora local de Ecuador */}
+                      <td className="px-3.5 py-2.5 text-slate-600 whitespace-nowrap font-medium">
+                        {formatDateTime(log.timestamp)}
+                      </td>
+
+                      {/* Institución */}
+                      <td className="px-3.5 py-2.5">
+                        {log.institution_name ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (log.institution_id) {
+                                setAuditInstitutionFilter(log.institution_id);
+                                setAuditUserFilter("TODOS");
+                              }
+                            }}
+                            className="text-left group flex items-center gap-1"
+                            title={`Filtrar solo registros de ${log.institution_name}`}
+                          >
+                            <span className="font-semibold text-slate-800 group-hover:text-brand-600 transition">
+                              {log.institution_name}
+                            </span>
+                          </button>
+                        ) : (
+                          <span className="text-slate-400 italic">Nivel Central / Distrito</span>
+                        )}
+                      </td>
+
+                      {/* Usuario */}
+                      <td className="px-3.5 py-2.5">
+                        {log.user_name ? (
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (log.user_id) setAuditUserFilter(log.user_id);
+                                }}
+                                className="font-bold text-slate-900 hover:text-brand-600 transition text-left"
+                                title={`Filtrar solo registros de ${log.user_name}`}
+                              >
+                                {log.user_name}
+                              </button>
+                              {log.user_role && (
+                                <span
+                                  className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${getRoleBadgeColor(
+                                    log.user_role
+                                  )}`}
+                                >
+                                  {log.user_role}
+                                </span>
+                              )}
+                            </div>
+                            {log.user_email && (
+                              <div className="text-[10px] text-slate-400 font-mono">{log.user_email}</div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 italic">Sistema / Acceso anónimo</span>
+                        )}
+                      </td>
+
+                      {/* Acción */}
+                      <td className="px-3.5 py-2.5 whitespace-nowrap">
+                        <span
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold border inline-block ${auditActionBadge(
+                            log.action
+                          )}`}
+                        >
+                          {log.action}
+                        </span>
+                      </td>
+
+                      {/* Entidad */}
+                      <td className="px-3.5 py-2.5 whitespace-nowrap">
+                        <span className="font-semibold text-slate-700">{log.entity_type}</span>
+                        {log.entity_id && (
+                          <span
+                            className="ml-1 text-[10px] text-slate-400 font-mono bg-slate-100 px-1 py-0.5 rounded"
+                            title={`ID completo: ${log.entity_id}`}
+                          >
+                            #{log.entity_id.slice(0, 8)}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Detalles */}
+                      <td className="px-3.5 py-2.5 text-slate-600 leading-relaxed font-sans text-xs">
+                        {log.details || <span className="text-slate-300">—</span>}
+                      </td>
+                    </tr>
+                  ))}
+
+                  {filteredAuditLogs.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-slate-400 space-y-2">
+                        <div className="text-2xl">🔍</div>
+                        <div className="text-sm font-semibold text-slate-600">
+                          No se encontraron registros de auditoría
+                        </div>
+                        <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                          No hay eventos que coincidan con los filtros seleccionados de institución, usuario, acción o búsqueda.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAuditInstitutionFilter("TODAS");
+                            setAuditUserFilter("TODOS");
+                            setAuditActionFilter("TODAS");
+                            setAuditEntityFilter("TODAS");
+                            setAuditSearch("");
+                          }}
+                          className="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold transition mt-2"
+                        >
+                          Restablecer todos los filtros
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
