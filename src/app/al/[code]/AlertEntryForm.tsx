@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
+import VoiceDictationButton from "@/components/VoiceDictationButton";
 import { submitAlertEntryAction, type AlertEntryActionState } from "./actions";
 import { RISK_TYPE_LABELS } from "@/lib/types";
 
@@ -39,6 +40,19 @@ export default function AlertEntryForm({ code }: { code: string }) {
             </option>
           ))}
         </select>
+      </div>
+      <div>
+        <div className="flex items-center justify-between">
+          <label className="label text-xs">Breve descripción del caso (opcional)</label>
+          <VoiceDictationButton targetId="f-description" compact />
+        </div>
+        <textarea
+          id="f-description"
+          name="description"
+          rows={3}
+          className="textarea text-sm"
+          placeholder="Resumen breve de lo observado, para dejar constancia en la junta."
+        />
       </div>
       <div>
         <label className="label text-xs">Tu nombre (docente que alerta)</label>

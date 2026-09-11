@@ -76,6 +76,7 @@ export default async function AlertaIdentificacionDetailPage({ params }: { param
                 <tr>
                   <th>Nombre del estudiante</th>
                   <th>Riesgo psicosocial</th>
+                  <th>Descripción</th>
                   <th>Docente que alerta</th>
                   <th>Fecha</th>
                   {canManage && <th className="text-right">Acciones</th>}
@@ -86,6 +87,7 @@ export default async function AlertaIdentificacionDetailPage({ params }: { param
                   <tr key={e.id}>
                     <td className="text-sm font-semibold text-slate-900">{e.student_name}</td>
                     <td className="text-xs text-slate-700">{RISK_TYPE_LABELS[e.risk_type as RiskType] || e.risk_type}</td>
+                    <td className="text-xs text-slate-600 max-w-xs truncate" title={e.description || ""}>{e.description || "—"}</td>
                     <td className="text-xs text-slate-600">{e.teacher_name}</td>
                     <td className="text-xs text-slate-500 whitespace-nowrap">{formatDate(e.created_at)}</td>
                     {canManage && (
@@ -110,7 +112,10 @@ export default async function AlertaIdentificacionDetailPage({ params }: { param
 
       {canManage && (
         <>
-          <AlertSessionEditForm session={s} />
+          <AlertSessionEditForm
+            session={s}
+            reportingTeachers={Array.from(new Set(entries.map((e) => e.teacher_name.trim()).filter(Boolean)))}
+          />
 
           <div className="flex justify-end">
             <DeleteButton
