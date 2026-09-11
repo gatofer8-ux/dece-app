@@ -31,6 +31,8 @@ export const DEPENDENCIA_LABEL = "DEPARTAMENTO DE CONSEJERÍA ESTUDIANTIL";
 export const AI_FIELD_LABELS = {
   thematic_background:
     "Antecedentes de la temática de un acta de reunión del DECE (contexto breve y formal de por qué se convoca la reunión, en 3.ª persona, estilo institucional del Ministerio de Educación del Ecuador, sin nombres de estudiantes ni datos personales)",
+  desarrollo_narrativo:
+    "Desarrollo de la reunión de un acta del DECE (narrativa formal en 3.ª persona de lo tratado, acuerdos y compromisos de la reunión, estilo institucional del Ministerio de Educación del Ecuador, sin nombres de estudiantes ni datos personales)",
 } as const;
 
 function safeArray<T>(raw: string | null | undefined): T[] {
