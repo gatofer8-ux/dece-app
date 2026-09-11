@@ -31,6 +31,7 @@ export default async function TapasPage() {
         action={
           canManage ? (
             <div className="flex items-center gap-2">
+              <Link href="/tapas/manual" className="btn-secondary text-xs">📘 Manual</Link>
               <Link href="/tapas/cartillas" className="btn-secondary text-xs">🃏 Cartillas</Link>
               <Link href="/tapas/nueva" className="btn-primary flex items-center gap-1.5">
                 <span>➕</span> Nueva aplicación
