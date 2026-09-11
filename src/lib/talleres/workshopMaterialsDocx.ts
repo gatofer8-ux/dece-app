@@ -10,9 +10,6 @@ import {
   BorderStyle,
   WidthType,
   ShadingType,
-  Footer,
-  PageNumber,
-  HeadingLevel,
 } from "docx";
 
 const FONT = "Arial";
@@ -98,189 +95,50 @@ function headerBanner(title: string, subtitle: string, institutionName?: string)
   ];
 }
 
-/** 1. Casos de Simulación para Prevención del Suicidio */
+// -------------------------------------------------------------
+// 1. Casos de Simulación Suicidio
+// -------------------------------------------------------------
 export async function generateSuicidioCasesDocx(institutionName?: string): Promise<Buffer> {
   const casesData = [
-    {
-      num: 1,
-      level: "NIVEL DE RIESGO BAJO (VERDE)",
-      badgeColor: "DCFCE7",
-      textColor: "166534",
-      age: "15 años",
-      diag: "Estrés académico, ansiedad leve ante exámenes",
-      fam: "Familia con apoyo moderado; presión parental por obtener calificaciones de excelencia.",
-      esc: "Buen rendimiento escolar previo; aislamiento ocasional durante semanas de evaluaciones.",
-      sit: "El estudiante ha mencionado sentirse abrumado en conversaciones informales con compañeros. No expresa ideación suicida ni autolesiones, pero manifiesta cansancio emocional persistente y temor al fracaso.",
-    },
-    {
-      num: 2,
-      level: "NIVEL DE RIESGO MODERADO (AMARILLO)",
-      badgeColor: "FEF08A",
-      textColor: "854D0E",
-      age: "17 años",
-      diag: "Tristeza profunda prolongada, pensamientos de escape no estructurados",
-      fam: "Conflictos intrafamiliares severos, distanciamiento afectivo y falta de escucha en el hogar.",
-      esc: "Caída drástica en el rendimiento escolar, abandono de actividades deportivas y aislamiento social creciente.",
-      sit: "El estudiante le confió a un docente tutor que siente que 'estaría mejor si no despertara mañana'. No cuenta con un plan específico ni antecedentes de intento, pero muestra deterioro significativo de su autoimagen.",
-    },
-    {
-      num: 3,
-      level: "NIVEL DE RIESGO ALTO (NARANJA)",
-      badgeColor: "FFEDD5",
-      textColor: "9A3412",
-      age: "16 años",
-      diag: "Trastorno del estado de ánimo, historial de autolesiones y desesperanza",
-      fam: "Hogar disfuncional con antecedentes familiares de salud mental no tratados.",
-      esc: "Problemas graves de conducta, ausentismo injustificado y aislamiento total de su grupo de pares.",
-      sit: "El estudiante tuvo un intento autolítico reciente en su domicilio y se reincorpora al aula. En sus libretas se han encontrado notas de despedida veladas y marcas de cortes en sus antebrazos.",
-    },
-    {
-      num: 4,
-      level: "NIVEL DE RIESGO CRÍTICO (ROJO - EMERGENCIA)",
-      badgeColor: "FEE2E2",
-      textColor: "991B1B",
-      age: "14 años",
-      diag: "Ideación suicida estructurada con método definido e inminencia",
-      fam: "Entorno familiar hostil con negligencia grave y violencia intrafamiliar reportada.",
-      esc: "Aislamiento extremo, despedida de amigos cercanos regalando sus pertenencias personales.",
-      sit: "El estudiante ha manifestado a dos compañeros un plan concreto para atentar contra su vida en el transcurso del día, indicando lugar y medio. ¡Requiere activación emergente de ECU-911 y contención inmediata!",
-    },
-    {
-      num: 5,
-      level: "NIVEL DE RIESGO BAJO / PREVENTIVO (VERDE)",
-      badgeColor: "DCFCE7",
-      textColor: "166534",
-      age: "12 años",
-      diag: "Dificultades de adaptación y timidez extrema",
-      fam: "Familia protectora pero con dificultades para fomentar habilidades sociales.",
-      esc: "Dificultad para hacer amigos, permanece solo durante los recreos; blanco de burlas ocasionales.",
-      sit: "El estudiante no presenta ideación autolítica, pero manifiesta soledad y tristeza. Requiere fortalecimiento de habilidades de asertividad, integración y monitoreo de convivencia armónica.",
-    },
-    {
-      num: 6,
-      level: "NIVEL DE RIESGO MODERADO (AMARILLO)",
-      badgeColor: "FEF08A",
-      textColor: "854D0E",
-      age: "14 años",
-      diag: "Baja autoestima, frustración académica y labilidad emocional",
-      fam: "Poco diálogo emocional en casa; padres ausentes por jornadas laborales extensas.",
-      esc: "Bajo rendimiento en materias cuantitativas; comentarios frecuentes de 'yo no sirvo para nada'.",
-      sit: "El estudiante llora con frecuencia en los cambios de hora y expresa desesperanza sobre su futuro. No hay plan estructurado, pero requiere apoyo psicoemocional y vinculación con tutor.",
-    },
+    { num: 1, level: "NIVEL DE RIESGO BAJO (VERDE)", textColor: "166534", age: "15 años", diag: "Estrés académico y ansiedad leve", fam: "Apoyo moderado; presión por calificaciones de excelencia.", esc: "Buen rendimiento escolar previo; aislamiento temporal.", sit: "Se siente abrumado en conversaciones informales. No expresa ideación suicida ni autolesiones." },
+    { num: 2, level: "NIVEL DE RIESGO MODERADO (AMARILLO)", textColor: "854D0E", age: "17 años", diag: "Tristeza profunda prolongada", fam: "Conflictos intrafamiliares severos y falta de escucha.", esc: "Caída drástica en el rendimiento escolar y abandono de amigos.", sit: "Confió a un docente que 'estaría mejor si no despertara mañana'. No cuenta con un plan específico." },
+    { num: 3, level: "NIVEL DE RIESGO ALTO (NARANJA)", textColor: "9A3412", age: "16 años", diag: "Historial de autolesiones y desesperanza", fam: "Hogar disfuncional con antecedentes familiares de salud mental.", esc: "Problemas de conducta, ausentismo injustificado y aislamiento.", sit: "Intento autolítico reciente en casa. Notas de despedida veladas y marcas de cortes en antebrazos." },
+    { num: 4, level: "NIVEL DE RIESGO CRÍTICO (ROJO - EMERGENCIA)", textColor: "991B1B", age: "14 años", diag: "Ideación suicida estructurada con método definido", fam: "Entorno hostil con violencia intrafamiliar reportada.", esc: "Aislamiento extremo, despidiéndose de amigos regalando objetos.", sit: "Manifestó a compañeros un plan concreto para atentar contra su vida hoy. ¡Activar ECU-911 de inmediato!" },
+    { num: 5, level: "NIVEL DE RIESGO BAJO / PREVENTIVO (VERDE)", textColor: "166534", age: "12 años", diag: "Dificultades de adaptación y timidez extrema", fam: "Familia protectora con poca estimulación social.", esc: "Dificultad para hacer amigos, permanece solo en recreos.", sit: "No presenta ideación autolítica, pero manifiesta soledad. Requiere fortalecimiento de asertividad." },
+    { num: 6, level: "NIVEL DE RIESGO MODERADO (AMARILLO)", textColor: "854D0E", age: "14 años", diag: "Baja autoestima y frustración académica", fam: "Poco diálogo emocional; padres ausentes por trabajo.", esc: "Bajo rendimiento; comentarios de 'yo no sirvo para nada'.", sit: "Llora con frecuencia en los cambios de hora. Requiere apoyo socioemocional y vinculación con tutor." },
   ];
 
-  const tableRows: TableRow[] = [];
-
-  for (const c of casesData) {
-    tableRows.push(
-      new TableRow({
-        children: [
-          new TableCell({
-            width: { size: USABLE, type: WidthType.DXA },
-            borders: ALL_CUT_BORDERS,
-            shading: { fill: "FFFFFF", type: ShadingType.CLEAR },
-            margins: { top: 200, bottom: 200, left: 240, right: 240 },
-            children: [
-              new Paragraph({
-                spacing: { after: 60 },
-                children: [
-                  pRun("✂️  RECORTAR POR LA LÍNEA PUNTEADA  •  TARJETA DE CASO #" + c.num, {
-                    bold: true,
-                    size: 16,
-                    color: "64748B",
-                  }),
-                ],
-              }),
-              new Paragraph({
-                spacing: { after: 120 },
-                children: [
-                  pRun(c.level, { bold: true, size: 20, color: c.textColor }),
-                ],
-              }),
-              new Paragraph({
-                spacing: { after: 60 },
-                children: [
-                  pRun("Edad: ", { bold: true, size: 18 }),
-                  pRun(c.age + "   |   ", { size: 18 }),
-                  pRun("Diagnóstico / Motivo: ", { bold: true, size: 18 }),
-                  pRun(c.diag, { size: 18 }),
-                ],
-              }),
-              new Paragraph({
-                spacing: { after: 60 },
-                children: [
-                  pRun("Contexto Familiar: ", { bold: true, size: 18 }),
-                  pRun(c.fam, { size: 18 }),
-                ],
-              }),
-              new Paragraph({
-                spacing: { after: 60 },
-                children: [
-                  pRun("Contexto Escolar: ", { bold: true, size: 18 }),
-                  pRun(c.esc, { size: 18 }),
-                ],
-              }),
-              new Paragraph({
-                spacing: { after: 120 },
-                children: [
-                  pRun("Situación Observada: ", { bold: true, size: 18 }),
-                  pRun(c.sit, { italics: true, size: 18 }),
-                ],
-              }),
-              new Paragraph({
-                spacing: { after: 40 },
-                children: [
-                  pRun("PREGUNTAS GUÍA PARA EL GRUPO DE TRABAJO:", { bold: true, size: 16, color: "0284C7" }),
-                ],
-              }),
-              new Paragraph({
-                spacing: { after: 20 },
-                children: [
-                  pRun("1. ¿Qué factores de riesgo y señales de alerta identificaron en este caso?", { size: 16 }),
-                ],
-              }),
-              new Paragraph({
-                spacing: { after: 20 },
-                children: [
-                  pRun("2. ¿Qué respuestas de los compañeros o docentes empeorarían su situación?", { size: 16 }),
-                ],
-              }),
-              new Paragraph({
-                spacing: { after: 40 },
-                children: [
-                  pRun("3. ¿Cuál es el paso concreto que debe activarse de inmediato según el protocolo institucional?", { size: 16 }),
-                ],
-              }),
-            ],
-          }),
-        ],
-      })
-    );
-  }
+  const tableRows: TableRow[] = casesData.map((c) => (
+    new TableRow({
+      children: [
+        new TableCell({
+          width: { size: USABLE, type: WidthType.DXA },
+          borders: ALL_CUT_BORDERS,
+          margins: { top: 200, bottom: 200, left: 240, right: 240 },
+          children: [
+            new Paragraph({ spacing: { after: 60 }, children: [pRun("✂️  RECORTAR POR LA LÍNEA PUNTEADA  •  TARJETA DE CASO #" + c.num, { bold: true, size: 16, color: "64748B" })] }),
+            new Paragraph({ spacing: { after: 120 }, children: [pRun(c.level, { bold: true, size: 20, color: c.textColor })] }),
+            new Paragraph({ spacing: { after: 60 }, children: [pRun("Edad: ", { bold: true, size: 18 }), pRun(c.age + "   |   ", { size: 18 }), pRun("Diagnóstico: ", { bold: true, size: 18 }), pRun(c.diag, { size: 18 })] }),
+            new Paragraph({ spacing: { after: 60 }, children: [pRun("Contexto Familiar: ", { bold: true, size: 18 }), pRun(c.fam, { size: 18 })] }),
+            new Paragraph({ spacing: { after: 60 }, children: [pRun("Contexto Escolar: ", { bold: true, size: 18 }), pRun(c.esc, { size: 18 })] }),
+            new Paragraph({ spacing: { after: 120 }, children: [pRun("Situación Observada: ", { bold: true, size: 18 }), pRun(c.sit, { italics: true, size: 18 })] }),
+            new Paragraph({ spacing: { after: 40 }, children: [pRun("PREGUNTAS GUÍA PARA EL GRUPO DE TRABAJO:", { bold: true, size: 16, color: "0284C7" })] }),
+            new Paragraph({ spacing: { after: 20 }, children: [pRun("1. ¿Qué factores de riesgo y señales de alerta identificaron en este caso?", { size: 16 })] }),
+            new Paragraph({ spacing: { after: 20 }, children: [pRun("2. ¿Qué respuestas de los compañeros o docentes empeorarían su situación?", { size: 16 })] }),
+            new Paragraph({ spacing: { after: 40 }, children: [pRun("3. ¿Cuál es el paso concreto que debe activarse de inmediato según el protocolo institucional?", { size: 16 })] }),
+          ],
+        }),
+      ],
+    })
+  ));
 
   const doc = new Document({
     sections: [
       {
         properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
         children: [
-          ...headerBanner(
-            "MATERIAL RECORTABLE: TARJETAS DE CASOS DE SIMULACIÓN",
-            "Taller de Prevención del Suicidio y Conductas Autolíticas (Acuerdo 044-A)",
-            institutionName
-          ),
-          new Paragraph({
-            spacing: { after: 200 },
-            children: [
-              pRun(
-                "Instrucciones: Imprimir las hojas y recortar cada caso por la línea punteada (✂️). Entregar un caso a cada subgrupo de docentes o estudiantes para su análisis reflexivo durante la sesión.",
-                { italics: true, size: 18, color: "475569" }
-              ),
-            ],
-          }),
-          new Table({
-            width: { size: USABLE, type: WidthType.DXA },
-            rows: tableRows,
-          }),
+          ...headerBanner("MATERIAL RECORTABLE: TARJETAS DE CASOS DE SIMULACIÓN", "Taller de Prevención del Suicidio y Conductas Autolíticas (Acuerdo 044-A)", institutionName),
+          new Table({ width: { size: USABLE, type: WidthType.DXA }, rows: tableRows }),
         ],
       },
     ],
@@ -289,148 +147,50 @@ export async function generateSuicidioCasesDocx(institutionName?: string): Promi
   return await Packer.toBuffer(doc);
 }
 
-/** 2. Guía de Señales de Alerta y Mitos vs Realidades */
+// -------------------------------------------------------------
+// 2. Guía Señales de Alerta Suicidio
+// -------------------------------------------------------------
 export async function generateSuicidioGuideDocx(institutionName?: string): Promise<Buffer> {
   const doc = new Document({
     sections: [
       {
         properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
         children: [
-          ...headerBanner(
-            "FICHA PEDAGÓGICA: SEÑALES TEMPRANAS Y MITOS VS. REALIDADES",
-            "Herramienta Informativa y de Actuación Rápida para el Aula",
-            institutionName
-          ),
-          new Paragraph({
-            spacing: { after: 120 },
-            children: [
-              pRun("1. SEÑALES DE ALERTA QUE NO DEBEMOS IGNORAR", { bold: true, size: 22, color: "0284C7" }),
-            ],
-          }),
+          ...headerBanner("FICHA PEDAGÓGICA: SEÑALES TEMPRANAS Y MITOS VS. REALIDADES", "Herramienta Informativa y de Actuación Rápida para el Aula", institutionName),
+          new Paragraph({ spacing: { after: 120 }, children: [pRun("1. SEÑALES DE ALERTA QUE NO DEBEMOS IGNORAR", { bold: true, size: 22, color: "0284C7" })] }),
           new Table({
             width: { size: USABLE, type: WidthType.DXA },
             rows: [
               new TableRow({
                 children: [
-                  new TableCell({
-                    width: { size: USABLE / 3, type: WidthType.DXA },
-                    shading: { fill: "F1F5F9" },
-                    children: [
-                      new Paragraph({ children: [pRun("SEÑALES VERBALES", { bold: true, size: 18 })] }),
-                      new Paragraph({ children: [pRun("• 'Desearía no haber nacido'.\n• 'Pronto ya no seré una carga'.\n• 'No le encuentro sentido a nada'.\n• Despedidas inusuales a amigos.", { size: 16 })] }),
-                    ],
-                  }),
-                  new TableCell({
-                    width: { size: USABLE / 3, type: WidthType.DXA },
-                    shading: { fill: "F1F5F9" },
-                    children: [
-                      new Paragraph({ children: [pRun("SEÑALES CONDUCTUALES", { bold: true, size: 18 })] }),
-                      new Paragraph({ children: [pRun("• Regalar pertenencias queridas.\n• Cortes o quemaduras en la piel.\n• Aislamiento repentino y mutismo.\n• Búsqueda de métodos en internet.", { size: 16 })] }),
-                    ],
-                  }),
-                  new TableCell({
-                    width: { size: USABLE / 3, type: WidthType.DXA },
-                    shading: { fill: "F1F5F9" },
-                    children: [
-                      new Paragraph({ children: [pRun("CAMBIOS EMOCIONALES", { bold: true, size: 18 })] }),
-                      new Paragraph({ children: [pRun("• Calma repentina tras depresión.\n• Labilidad extrema o llanto.\n• Irritabilidad e ira explosiva.\n• Desesperanza profunda.", { size: 16 })] }),
-                    ],
-                  }),
+                  new TableCell({ width: { size: USABLE / 3, type: WidthType.DXA }, shading: { fill: "F1F5F9" }, children: [new Paragraph({ children: [pRun("SEÑALES VERBALES\\n• 'Desearía no haber nacido'\\n• 'No le encuentro sentido a nada'\\n• Despedidas inusuales", { size: 16 })] })] }),
+                  new TableCell({ width: { size: USABLE / 3, type: WidthType.DXA }, shading: { fill: "F1F5F9" }, children: [new Paragraph({ children: [pRun("SEÑALES CONDUCTUALES\\n• Regalar pertenencias queridas\\n• Cortes o autolesiones\\n• Aislamiento repentino", { size: 16 })] })] }),
+                  new TableCell({ width: { size: USABLE / 3, type: WidthType.DXA }, shading: { fill: "F1F5F9" }, children: [new Paragraph({ children: [pRun("CAMBIOS EMOCIONALES\\n• Calma repentina tras depresión\\n• Llanto incontrolable\\n• Desesperanza profunda", { size: 16 })] })] }),
                 ],
               }),
             ],
           }),
-          new Paragraph({
-            spacing: { before: 240, after: 120 },
-            children: [
-              pRun("2. MITOS VS. REALIDADES SOBRE EL SUICIDIO", { bold: true, size: 22, color: "0284C7" }),
-            ],
-          }),
-          new Table({
-            width: { size: USABLE, type: WidthType.DXA },
-            rows: [
-              new TableRow({
-                children: [
-                  new TableCell({
-                    width: { size: USABLE / 2, type: WidthType.DXA },
-                    shading: { fill: "FEE2E2" },
-                    children: [
-                      new Paragraph({ children: [pRun("MITOS COMUNES (FALSO)", { bold: true, size: 18, color: "991B1B" })] }),
-                      new Paragraph({ children: [pRun("❌ 'El que se va a suicidar no lo dice, lo hace'.", { bold: true, size: 16 })] }),
-                      new Paragraph({ children: [pRun("❌ 'Hablar del suicidio incita a que lo cometan'.", { bold: true, size: 16 })] }),
-                      new Paragraph({ children: [pRun("❌ 'Solo quieren llamar la atención'.", { bold: true, size: 16 })] }),
-                      new Paragraph({ children: [pRun("❌ 'El suicidio es un acto de cobardía o de valentía'.", { bold: true, size: 16 })] }),
-                    ],
-                  }),
-                  new TableCell({
-                    width: { size: USABLE / 2, type: WidthType.DXA },
-                    shading: { fill: "DCFCE7" },
-                    children: [
-                      new Paragraph({ children: [pRun("REALIDAD CIENTÍFICA (VERDADERO)", { bold: true, size: 18, color: "166534" })] }),
-                      new Paragraph({ children: [pRun("✔ 8 de cada 10 personas dan señales o advertencias previas.", { size: 16 })] }),
-                      new Paragraph({ children: [pRun("✔ Hablar de forma respetuosa alivia y abre la puerta a la ayuda.", { size: 16 })] }),
-                      new Paragraph({ children: [pRun("✔ Toda expresión de dolor es un pedido urgente de auxilio.", { size: 16 })] }),
-                      new Paragraph({ children: [pRun("✔ Es el resultado de un dolor psicológico intolerable que requiere tratamiento.", { size: 16 })] }),
-                    ],
-                  }),
-                ],
-              }),
-            ],
-          }),
-          new Paragraph({
-            spacing: { before: 240, after: 120 },
-            children: [
-              pRun("3. NÚMEROS DE EMERGENCIA Y APOYO PERMANENTE 24/7", { bold: true, size: 22, color: "0284C7" }),
-            ],
-          }),
-          new Table({
-            width: { size: USABLE, type: WidthType.DXA },
-            rows: [
-              new TableRow({
-                children: [
-                  new TableCell({
-                    width: { size: USABLE, type: WidthType.DXA },
-                    shading: { fill: "EFF6FF" },
-                    children: [
-                      new Paragraph({ children: [pRun("📞 LÍNEA NACIONAL DE SALUD MENTAL: Marca 171 (Opción 6) - Gratuita y confidencial.", { bold: true, size: 18, color: "1E40AF" })] }),
-                      new Paragraph({ children: [pRun("🚨 EMERGENCIAS INMINENTES: ECU-911 las 24 horas del día a nivel nacional.", { bold: true, size: 18, color: "B91C1C" })] }),
-                      new Paragraph({ children: [pRun("🏫 DEPARTAMENTO DE CONSEJERÍA ESTUDIANTIL (DECE): Tu espacio seguro en la institución.", { bold: true, size: 18, color: "0284C7" })] }),
-                    ],
-                  }),
-                ],
-              }),
-            ],
-          }),
+          new Paragraph({ spacing: { before: 200, after: 120 }, children: [pRun("2. LÍNEAS DE AYUDA PERMANENTES", { bold: true, size: 22, color: "0284C7" })] }),
+          new Paragraph({ spacing: { after: 60 }, children: [pRun("📞 LÍNEA NACIONAL DE SALUD MENTAL: Marca 171 (Opción 6) - 24 horas gratuita y confidencial.", { bold: true, size: 18, color: "1E40AF" })] }),
+          new Paragraph({ spacing: { after: 60 }, children: [pRun("🚨 EMERGENCIAS INMEDIATAS: ECU-911.", { bold: true, size: 18, color: "B91C1C" })] }),
         ],
       },
     ],
   });
-
   return await Packer.toBuffer(doc);
 }
 
-/** 3. Guía de Bolsillo de Primeros Auxilios Psicológicos (PAP) para Docentes */
+// -------------------------------------------------------------
+// 3. Guía Bolsillo PAP
+// -------------------------------------------------------------
 export async function generatePapPocketGuideDocx(institutionName?: string): Promise<Buffer> {
   const doc = new Document({
     sections: [
       {
         properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
         children: [
-          ...headerBanner(
-            "GUÍA DE BOLSILLO: PRIMEROS AUXILIOS PSICOLÓGICOS (PAP)",
-            "Protocolo Rápido de Contención en el Aula para Personal Docente",
-            institutionName
-          ),
-          new Paragraph({
-            spacing: { after: 120 },
-            children: [
-              pRun("✂️  RECORTAR Y PLEGAR EN TRES PARTES PARA LLEVAR EN EL CUADERNO PEDAGÓGICO", {
-                bold: true,
-                size: 16,
-                color: "64748B",
-              }),
-            ],
-          }),
+          ...headerBanner("GUÍA DE BOLSILLO: PRIMEROS AUXILIOS PSICOLÓGICOS (PAP)", "Protocolo Rápido de Contención en el Aula para Personal Docente", institutionName),
+          new Paragraph({ spacing: { after: 120 }, children: [pRun("✂️ RECORTAR Y PLEGAR PARA LLEVAR EN EL CUADERNO PEDAGÓGICO", { bold: true, size: 16, color: "64748B" })] }),
           new Table({
             width: { size: USABLE, type: WidthType.DXA },
             borders: ALL_SOLID_BORDERS,
@@ -440,12 +200,7 @@ export async function generatePapPocketGuideDocx(institutionName?: string): Prom
                   new TableCell({
                     width: { size: USABLE, type: WidthType.DXA },
                     shading: { fill: "0F172A" },
-                    children: [
-                      new Paragraph({
-                        alignment: AlignmentType.CENTER,
-                        children: [pRun("EL PENTÁGONO DE LOS PAP (5 PRINCIPIOS DE ACCIÓN)", { bold: true, size: 18, color: "FFFFFF" })],
-                      }),
-                    ],
+                    children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("LOS 5 PRINCIPIOS DE LOS PAP (OMS / MINEDUC)", { bold: true, size: 18, color: "FFFFFF" })] })],
                   }),
                 ],
               }),
@@ -454,46 +209,11 @@ export async function generatePapPocketGuideDocx(institutionName?: string): Prom
                   new TableCell({
                     width: { size: USABLE, type: WidthType.DXA },
                     children: [
-                      new Paragraph({ children: [pRun("1. ESCUCHAR: ", { bold: true, size: 16 }), pRun("Ponte a su nivel, mantén contacto visual tranquilo y escucha sin interrumpir.", { size: 16 })] }),
-                      new Paragraph({ children: [pRun("2. PROTEGER: ", { bold: true, size: 16 }), pRun("Aleja al estudiante de miradas ajenas. Bríndale un espacio ventilado y seguro.", { size: 16 })] }),
-                      new Paragraph({ children: [pRun("3. CONSOLAR: ", { bold: true, size: 16 }), pRun("Ayuda a regular la respiración. Ofrece agua. Valida sus emociones sin juzgar.", { size: 16 })] }),
-                      new Paragraph({ children: [pRun("4. INFORMAR: ", { bold: true, size: 16 }), pRun("Responde con hechos reales y claros. Disminuye la incertidumbre y desmiente rumores.", { size: 16 })] }),
-                      new Paragraph({ children: [pRun("5. CONECTAR: ", { bold: true, size: 16 }), pRun("No lo dejes solo. Notifica de inmediato al DECE y al representante legal.", { size: 16 })] }),
-                    ],
-                  }),
-                ],
-              }),
-            ],
-          }),
-          new Paragraph({
-            spacing: { before: 200, after: 120 },
-            children: [pRun("¿QUÉ HACER VS. QUÉ EVITAR EN UNA CRISIS?", { bold: true, size: 20, color: "0284C7" })],
-          }),
-          new Table({
-            width: { size: USABLE, type: WidthType.DXA },
-            rows: [
-              new TableRow({
-                children: [
-                  new TableCell({
-                    width: { size: USABLE / 2, type: WidthType.DXA },
-                    shading: { fill: "DCFCE7" },
-                    children: [
-                      new Paragraph({ children: [pRun("QUÉ HACER (RECOMENDADO)", { bold: true, size: 18, color: "166534" })] }),
-                      new Paragraph({ children: [pRun("✔ Usa tono de voz calmado y pausado.", { size: 16 })] }),
-                      new Paragraph({ children: [pRun("✔ Di: 'Estás a salvo, estoy aquí contigo'.", { size: 16 })] }),
-                      new Paragraph({ children: [pRun("✔ Respeta si no desea hablar en ese momento.", { size: 16 })] }),
-                      new Paragraph({ children: [pRun("✔ Acompaña físicamente al estudiante al DECE.", { size: 16 })] }),
-                    ],
-                  }),
-                  new TableCell({
-                    width: { size: USABLE / 2, type: WidthType.DXA },
-                    shading: { fill: "FEE2E2" },
-                    children: [
-                      new Paragraph({ children: [pRun("QUÉ EVITAR (PERJUDICIAL)", { bold: true, size: 18, color: "991B1B" })] }),
-                      new Paragraph({ children: [pRun("❌ Decir: 'Cálmate', 'No es para tanto', 'Sé fuerte'.", { size: 16 })] }),
-                      new Paragraph({ children: [pRun("❌ Forzarlo a contar los detalles del trauma.", { size: 16 })] }),
-                      new Paragraph({ children: [pRun("❌ Hacer promesas que no puedas cumplir.", { size: 16 })] }),
-                      new Paragraph({ children: [pRun("❌ Dejarlo solo en el pasillo o baño.", { size: 16 })] }),
+                      new Paragraph({ children: [pRun("1. ESCUCHAR: Contacto visual suave, validar la emoción sin juzgar ni minimizar.", { size: 16 })] }),
+                      new Paragraph({ children: [pRun("2. PROTEGER: Alejar al estudiante de miradas curiosas. Llevarlo a un espacio seguro y ventilado.", { size: 16 })] }),
+                      new Paragraph({ children: [pRun("3. CONSOLAR: Guiar respiración suave. Ofrecer agua a temperatura ambiente.", { size: 16 })] }),
+                      new Paragraph({ children: [pRun("4. INFORMAR: Explicar hechos reales con calma, reduciendo la incertidumbre.", { size: 16 })] }),
+                      new Paragraph({ children: [pRun("5. CONECTAR: No dejarlo solo. Acompañarlo al DECE y notificar a la familia.", { size: 16 })] }),
                     ],
                   }),
                 ],
@@ -504,190 +224,75 @@ export async function generatePapPocketGuideDocx(institutionName?: string): Prom
       },
     ],
   });
-
   return await Packer.toBuffer(doc);
 }
 
-/** 4. Tarjetas Recortables de Grounding y Respiración */
+// -------------------------------------------------------------
+// 4. Tarjetas Grounding
+// -------------------------------------------------------------
 export async function generateGroundingCardsDocx(institutionName?: string): Promise<Buffer> {
   const cards = [
-    {
-      title: "TÉCNICA 5-4-3-2-1 (ENRAIZAMIENTO SENSORIAL)",
-      desc: "Úsala cuando sientas que la ansiedad o el pánico te abruman:",
-      steps: [
-        "👀 Mira 5 cosas a tu alrededor (el reloj, la ventana, tus zapatos...).",
-        "✋ Toca 4 objetos con texturas distintas (tu ropa, la mesa, tu cabello...).",
-        "👂 Escucha 3 sonidos cercanos o lejanos (el viento, pasos, tu respiración).",
-        "👃 Huele 2 aromas presentes en el ambiente.",
-        "👅 Saborea 1 sabor en tu boca o di una afirmación positiva sobre ti.",
-      ],
-    },
-    {
-      title: "RESPIRACIÓN CUADRADA 4-4-4-4 (CALMA INMEDIATA)",
-      desc: "Regula los latidos de tu corazón y relaja tu sistema nervioso:",
-      steps: [
-        "1. Inhala suavemente por la nariz contando mentalmente: 1, 2, 3, 4.",
-        "2. Sostén el aire en tus pulmones contando: 1, 2, 3, 4.",
-        "3. Exhala despacio por la boca contando: 1, 2, 3, 4.",
-        "4. Espera sin tomar aire contando: 1, 2, 3, 4.",
-        "Repite este ciclo 4 veces seguidas hasta sentir tranquilidad.",
-      ],
-    },
-    {
-      title: "ANCLAJE DE SEGURIDAD EMOCIONAL",
-      desc: "Recordatorios para cuando la mente se llena de miedo:",
-      steps: [
-        "• 'Esta emoción es temporal y pasará pronto'.",
-        "• 'Aquí y ahora estoy a salvo; puedo dar un paso a la vez'.",
-        "• 'Tengo personas que me aprecian y están dispuestas a ayudarme'.",
-        "• Pon tu mano sobre tu pecho y siente el ritmo suave de tu corazón.",
-      ],
-    },
-    {
-      title: "MI RED DE APOYO Y CONTACTO DE EMERGENCIA",
-      desc: "Personas de confianza a las que puedo acudir hoy:",
-      steps: [
-        "1. Mi familiar de confianza: ____________________________________",
-        "2. Mi docente o tutor de apoyo: ________________________________",
-        "3. Departamento DECE: Oficina de Consejería Estudiantil.",
-        "4. Línea Gratuita de Salud Mental: 171 (Opción 6).",
-        "5. Emergencias Inmediatas: 911.",
-      ],
-    },
+    { title: "TÉCNICA 5-4-3-2-1 (ENRAIZAMIENTO SENSORIAL)", steps: ["👀 5 cosas que puedas VER", "✋ 4 cosas que puedas TOCAR", "👂 3 cosas que puedas ESCUCHAR", "👃 2 cosas que puedas OLER", "👅 1 cosa que puedas SABOREAR o una frase de aprecio a ti mismo."] },
+    { title: "RESPIRACIÓN CUADRADA 4-4-4-4", steps: ["1. Inhala suave por la nariz: 1, 2, 3, 4", "2. Sostén el aire: 1, 2, 3, 4", "3. Exhala despacio por la boca: 1, 2, 3, 4", "4. Espera sin aire: 1, 2, 3, 4 (Repetir 4 veces)"] },
+    { title: "ANCLAJE DE SEGURIDAD EMOCIONAL", steps: ["• 'Esta emoción es temporal y pasará pronto'.", "• 'Aquí y ahora estoy a salvo; puedo dar un paso a la vez'.", "• Pon tu mano en el pecho y siente el latido calmado de tu corazón."] },
   ];
 
-  const rows: TableRow[] = [];
-  for (const c of cards) {
-    rows.push(
-      new TableRow({
-        children: [
-          new TableCell({
-            width: { size: USABLE, type: WidthType.DXA },
-            borders: ALL_CUT_BORDERS,
-            margins: { top: 160, bottom: 160, left: 200, right: 200 },
-            children: [
-              new Paragraph({ children: [pRun("✂️  TARJETA RECORTABLE DE REGULACIÓN EMOCIONAL", { bold: true, size: 14, color: "64748B" })] }),
-              new Paragraph({ children: [pRun(c.title, { bold: true, size: 18, color: "0284C7" })] }),
-              new Paragraph({ spacing: { after: 80 }, children: [pRun(c.desc, { italics: true, size: 16 })] }),
-              ...c.steps.map((s) => new Paragraph({ spacing: { after: 40 }, children: [pRun(s, { size: 16 })] })),
-            ],
-          }),
-        ],
-      })
-    );
-  }
+  const rows: TableRow[] = cards.map((c) => (
+    new TableRow({
+      children: [
+        new TableCell({
+          width: { size: USABLE, type: WidthType.DXA },
+          borders: ALL_CUT_BORDERS,
+          margins: { top: 160, bottom: 160, left: 200, right: 200 },
+          children: [
+            new Paragraph({ children: [pRun("✂️ TARJETA RECORTABLE DE REGULACIÓN EMOCIONAL", { bold: true, size: 14, color: "64748B" })] }),
+            new Paragraph({ children: [pRun(c.title, { bold: true, size: 18, color: "0284C7" })] }),
+            ...c.steps.map((s) => new Paragraph({ spacing: { after: 40 }, children: [pRun(s, { size: 16 })] })),
+          ],
+        }),
+      ],
+    })
+  ));
 
   const doc = new Document({
     sections: [
       {
         properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
         children: [
-          ...headerBanner(
-            "TARJETAS RECORTABLES DE CALMA Y REGULACIÓN EMOCIONAL",
-            "Técnicas de Respiración y Grounding para el Aula y el Hogar",
-            institutionName
-          ),
+          ...headerBanner("TARJETAS RECORTABLES DE CALMA Y REGULACIÓN EMOCIONAL", "Técnicas de Respiración y Grounding para el Aula y el Hogar", institutionName),
           new Table({ width: { size: USABLE, type: WidthType.DXA }, rows }),
         ],
       },
     ],
   });
-
   return await Packer.toBuffer(doc);
 }
 
-/** 5. Ficha Didáctica: Mi Flor de Fortalezas (Taller de Autoestima) */
+// -------------------------------------------------------------
+// 5. Ficha Flor de Fortalezas
+// -------------------------------------------------------------
 export async function generateFlowerFortalezasDocx(institutionName?: string): Promise<Buffer> {
   const doc = new Document({
     sections: [
       {
         properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
         children: [
-          ...headerBanner(
-            "FICHA DIDÁCTICA RECORTABLE: 'MI FLOR DE FORTALEZAS'",
-            "Taller de Autoestima: 'El Jardín de Mis Superpoderes' (Para Niñas y Niños)",
-            institutionName
-          ),
-          new Paragraph({
-            spacing: { after: 140 },
-            children: [
-              pRun("Estudiante: __________________________________________________  Grado/Paralelo: ____________  Fecha: ____________", {
-                bold: true,
-                size: 16,
-              }),
-            ],
-          }),
-          new Paragraph({
-            spacing: { after: 120 },
-            children: [
-              pRun(
-                "Instrucciones: Dibuja tu carita feliz en el círculo central de la flor. Luego, escribe o dibuja en cada uno de los pétalos recortables tus fortalezas. Recorta los pétalos por las líneas punteadas (✂️) y pégalos alrededor de tu flor.",
-                { italics: true, size: 16, color: "475569" }
-              ),
-            ],
-          }),
+          ...headerBanner("FICHA DIDÁCTICA RECORTABLE: 'MI FLOR DE FORTALEZAS'", "Taller de Autoestima Infantil: El Jardín de Mis Superpoderes", institutionName),
+          new Paragraph({ spacing: { after: 120 }, children: [pRun("Instrucciones: Dibuja tu carita en el centro. Escribe o dibuja tus fortalezas en cada pétalo. Recorta por las líneas punteadas (✂️) y arma tu flor.", { italics: true, size: 16 })] }),
           new Table({
             width: { size: USABLE, type: WidthType.DXA },
             borders: ALL_CUT_BORDERS,
             rows: [
               new TableRow({
                 children: [
-                  new TableCell({
-                    width: { size: USABLE / 2, type: WidthType.DXA },
-                    margins: { top: 200, bottom: 200, left: 200, right: 200 },
-                    children: [
-                      new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("🌸 PÉTALO 1 (RECORTAR)", { bold: true, size: 16, color: "DB2777" })] }),
-                      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 120 }, children: [pRun("Algo en lo que soy súper bueno/a es:\n\n____________________________________", { size: 16 })] }),
-                    ],
-                  }),
-                  new TableCell({
-                    width: { size: USABLE / 2, type: WidthType.DXA },
-                    margins: { top: 200, bottom: 200, left: 200, right: 200 },
-                    children: [
-                      new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("🌸 PÉTALO 2 (RECORTAR)", { bold: true, size: 16, color: "DB2777" })] }),
-                      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 120 }, children: [pRun("Una buena acción que hice por alguien:\n\n____________________________________", { size: 16 })] }),
-                    ],
-                  }),
+                  new TableCell({ width: { size: USABLE / 2, type: WidthType.DXA }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("🌸 PÉTALO 1: Algo en lo que soy genial\\n________________________", { size: 16 })] })] }),
+                  new TableCell({ width: { size: USABLE / 2, type: WidthType.DXA }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("🌸 PÉTALO 2: Una buena acción que hice\\n________________________", { size: 16 })] })] }),
                 ],
               }),
               new TableRow({
                 children: [
-                  new TableCell({
-                    width: { size: USABLE / 2, type: WidthType.DXA },
-                    margins: { top: 200, bottom: 200, left: 200, right: 200 },
-                    children: [
-                      new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("🌸 PÉTALO 3 (RECORTAR)", { bold: true, size: 16, color: "DB2777" })] }),
-                      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 120 }, children: [pRun("Lo que más me hace sonreír en la vida:\n\n____________________________________", { size: 16 })] }),
-                    ],
-                  }),
-                  new TableCell({
-                    width: { size: USABLE / 2, type: WidthType.DXA },
-                    margins: { top: 200, bottom: 200, left: 200, right: 200 },
-                    children: [
-                      new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("🌸 PÉTALO 4 (RECORTAR)", { bold: true, size: 16, color: "DB2777" })] }),
-                      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 120 }, children: [pRun("Un sueño grande que quiero alcanzar:\n\n____________________________________", { size: 16 })] }),
-                    ],
-                  }),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  new TableCell({
-                    width: { size: USABLE / 2, type: WidthType.DXA },
-                    margins: { top: 200, bottom: 200, left: 200, right: 200 },
-                    children: [
-                      new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("🌸 PÉTALO 5 (RECORTAR)", { bold: true, size: 16, color: "DB2777" })] }),
-                      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 120 }, children: [pRun("Mis amigos me aprecian porque yo:\n\n____________________________________", { size: 16 })] }),
-                    ],
-                  }),
-                  new TableCell({
-                    width: { size: USABLE / 2, type: WidthType.DXA },
-                    margins: { top: 200, bottom: 200, left: 200, right: 200 },
-                    children: [
-                      new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("🌸 PÉTALO 6 (RECORTAR)", { bold: true, size: 16, color: "DB2777" })] }),
-                      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 120 }, children: [pRun("Lo que más me gusta de mi forma de ser:\n\n____________________________________", { size: 16 })] }),
-                    ],
-                  }),
+                  new TableCell({ width: { size: USABLE / 2, type: WidthType.DXA }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("🌸 PÉTALO 3: Lo que más me hace sonreír\\n________________________", { size: 16 })] })] }),
+                  new TableCell({ width: { size: USABLE / 2, type: WidthType.DXA }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("🌸 PÉTALO 4: Un sueño que quiero cumplir\\n________________________", { size: 16 })] })] }),
                 ],
               }),
             ],
@@ -696,123 +301,78 @@ export async function generateFlowerFortalezasDocx(institutionName?: string): Pr
       },
     ],
   });
-
   return await Packer.toBuffer(doc);
 }
 
-/** 6. Tarjetas Coleccionables de Afirmaciones */
+// -------------------------------------------------------------
+// 6. Tarjetas Afirmaciones Positivas
+// -------------------------------------------------------------
 export async function generateAffirmationCardsDocx(institutionName?: string): Promise<Buffer> {
   const affirmations = [
     "⭐ 'Soy una persona única, valiosa e irrepetible'.",
-    "💪 'Mis errores no me definen; me enseñan a crecer'.",
+    "💪 'Mis errores no me definen; me ayudan a aprender'.",
     "🎨 'Mis talentos y creatividad hacen el mundo mejor'.",
     "🤝 'Merezco respeto y trato con amor a mis compañeros'.",
     "🦁 'Soy valiente para pedir ayuda cuando la necesito'.",
-    "🌈 'Mis sentimientos importan y está bien sentirlos'.",
-    "🚀 'Con esfuerzo y paciencia puedo alcanzar mis metas'.",
     "💖 'Hoy elijo sentirme orgulloso de lo que soy'.",
   ];
 
-  const rows: TableRow[] = [];
-  for (let i = 0; i < affirmations.length; i += 2) {
-    rows.push(
-      new TableRow({
-        children: [
-          new TableCell({
-            width: { size: USABLE / 2, type: WidthType.DXA },
-            borders: ALL_CUT_BORDERS,
-            margins: { top: 200, bottom: 200, left: 180, right: 180 },
-            children: [
-              new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("SUPERPODER EMOCIONAL #" + (i + 1), { bold: true, size: 14, color: "D97706" })] }),
-              new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 80 }, children: [pRun(affirmations[i], { bold: true, size: 18, color: "1E293B" })] }),
-              new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("SADEX • DECE", { size: 12, color: "94A3B8" })] }),
-            ],
-          }),
-          new TableCell({
-            width: { size: USABLE / 2, type: WidthType.DXA },
-            borders: ALL_CUT_BORDERS,
-            margins: { top: 200, bottom: 200, left: 180, right: 180 },
-            children: [
-              new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("SUPERPODER EMOCIONAL #" + (i + 2), { bold: true, size: 14, color: "D97706" })] }),
-              new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 80 }, children: [pRun(affirmations[i + 1], { bold: true, size: 18, color: "1E293B" })] }),
-              new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("SADEX • DECE", { size: 12, color: "94A3B8" })] }),
-            ],
-          }),
-        ],
-      })
-    );
-  }
+  const rows: TableRow[] = affirmations.map((af, i) => (
+    new TableRow({
+      children: [
+        new TableCell({
+          width: { size: USABLE, type: WidthType.DXA },
+          borders: ALL_CUT_BORDERS,
+          margins: { top: 160, bottom: 160, left: 200, right: 200 },
+          children: [
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("✂️ SUPERPODER EMOCIONAL #" + (i + 1), { bold: true, size: 14, color: "D97706" })] }),
+            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 60, after: 60 }, children: [pRun(af, { bold: true, size: 18 })] }),
+          ],
+        }),
+      ],
+    })
+  ));
 
   const doc = new Document({
     sections: [
       {
         properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
         children: [
-          ...headerBanner(
-            "TARJETAS COLECCIONABLES DE AFIRMACIONES POSITIVAS",
-            "Incentivos Didácticos Recortables para Guardar en la Cartuchera",
-            institutionName
-          ),
+          ...headerBanner("TARJETAS RECORTABLES DE AFIRMACIONES POSITIVAS", "Incentivos Didácticos para el Aula", institutionName),
           new Table({ width: { size: USABLE, type: WidthType.DXA }, rows }),
         ],
       },
     ],
   });
-
   return await Packer.toBuffer(doc);
 }
 
-/** 7. Matriz de Análisis de Contexto DECE */
+// -------------------------------------------------------------
+// 7. Matriz Contexto DECE
+// -------------------------------------------------------------
 export async function generateDeceContextMatrixDocx(institutionName?: string): Promise<Buffer> {
   const doc = new Document({
     sections: [
       {
         properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
         children: [
-          ...headerBanner(
-            "MATRIZ DE DIAGNÓSTICO CONTEXTUAL Y FACTORES DE RIESGO DECE",
-            "Taller Especializado: Enfoque de Derechos y Determinantes Sociales",
-            institutionName
-          ),
-          new Paragraph({
-            spacing: { after: 120 },
-            children: [
-              pRun(
-                "Instrucciones: En mesas de trabajo técnico del DECE, completen la matriz analizando cómo los determinantes socioeconómicos de su territorio impactan las trayectorias educativas de NNA.",
-                { italics: true, size: 16, color: "475569" }
-              ),
-            ],
-          }),
+          ...headerBanner("MATRIZ DE DIAGNÓSTICO CONTEXTUAL DECE", "Análisis de Pobreza Infantil, Roles de Género y Vulnerabilidad", institutionName),
           new Table({
             width: { size: USABLE, type: WidthType.DXA },
             borders: ALL_SOLID_BORDERS,
             rows: [
               new TableRow({
                 children: [
-                  new TableCell({ width: { size: USABLE * 0.25, type: WidthType.DXA }, shading: { fill: "F1F5F9" }, children: [new Paragraph({ children: [pRun("DIMENSIÓN CONTEXTUAL", { bold: true, size: 16 })] })] }),
-                  new TableCell({ width: { size: USABLE * 0.35, type: WidthType.DXA }, shading: { fill: "F1F5F9" }, children: [new Paragraph({ children: [pRun("BARRERAS OBSERVADAS EN EL TERRITORIO", { bold: true, size: 16 })] })] }),
-                  new TableCell({ width: { size: USABLE * 0.4, type: WidthType.DXA }, shading: { fill: "F1F5F9" }, children: [new Paragraph({ children: [pRun("ESTRATEGIA DE ACOMPAÑAMIENTO DECE", { bold: true, size: 16 })] })] }),
+                  new TableCell({ width: { size: USABLE * 0.3, type: WidthType.DXA }, shading: { fill: "F1F5F9" }, children: [new Paragraph({ children: [pRun("DIMENSIÓN CONTEXTUAL", { bold: true, size: 16 })] })] }),
+                  new TableCell({ width: { size: USABLE * 0.35, type: WidthType.DXA }, shading: { fill: "F1F5F9" }, children: [new Paragraph({ children: [pRun("BARRERAS OBSERVADAS", { bold: true, size: 16 })] })] }),
+                  new TableCell({ width: { size: USABLE * 0.35, type: WidthType.DXA }, shading: { fill: "F1F5F9" }, children: [new Paragraph({ children: [pRun("ESTRATEGIA DE ACOMPAÑAMIENTO", { bold: true, size: 16 })] })] }),
                 ],
               }),
               new TableRow({
                 children: [
-                  new TableCell({ children: [new Paragraph({ children: [pRun("Trabajo Infantil y Cuidado Doméstico (Género)", { bold: true, size: 16 })] })] }),
-                  new TableCell({ children: [new Paragraph({ children: [pRun("Niñas/adolescentes a cargo del cuidado de hermanos menores o ventas informales.\nAusentismo reiterado los días lunes o viernes.", { size: 16 })] })] }),
-                  new TableCell({ children: [new Paragraph({ children: [pRun("• Flexibilización pedagógica con docentes tutores.\n• Activación de redes de cuidado comunitarias.\n• Acta de corresponsabilidad familiar.", { size: 16 })] })] }),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  new TableCell({ children: [new Paragraph({ children: [pRun("Vulnerabilidad por Pobreza Extrema", { bold: true, size: 16 })] })] }),
-                  new TableCell({ children: [new Paragraph({ children: [pRun("Falta de útiles escolares, uniformes o alimentación adecuada.\nDeserción por necesidad de generar ingresos.", { size: 16 })] })] }),
-                  new TableCell({ children: [new Paragraph({ children: [pRun("• Articulación con MIES / bonos de contingencia.\n• Campañas solidarias internas sin estigmatizar.\n• Derivación a programas de nivelación.", { size: 16 })] })] }),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  new TableCell({ children: [new Paragraph({ children: [pRun("Riesgos en el Entorno Escolar", { bold: true, size: 16 })] })] }),
-                  new TableCell({ children: [new Paragraph({ children: [pRun("Microtráfico en exteriores, inseguridad comunitaria y falta de espacios recreativos seguros.", { size: 16 })] })] }),
-                  new TableCell({ children: [new Paragraph({ children: [pRun("• Coordinación con Policía Comunitaria / DINAPEN.\n• Fortalecimiento de brigadas de seguridad escolar.\n• Talleres preventivos del Acuerdo 044-A.", { size: 16 })] })] }),
+                  new TableCell({ children: [new Paragraph({ children: [pRun("Trabajo Infantil y Roles de Cuidado", { bold: true, size: 16 })] })] }),
+                  new TableCell({ children: [new Paragraph({ children: [pRun("Cuidado de hermanos menores que genera ausentismo escolar.", { size: 16 })] })] }),
+                  new TableCell({ children: [new Paragraph({ children: [pRun("Flexibilización pedagógica y articulación con redes de apoyo.", { size: 16 })] })] }),
                 ],
               }),
             ],
@@ -821,11 +381,415 @@ export async function generateDeceContextMatrixDocx(institutionName?: string): P
       },
     ],
   });
-
   return await Packer.toBuffer(doc);
 }
 
-/** Despachador según materialId */
+// -------------------------------------------------------------
+// 8. Bingo de Estilos de Crianza
+// -------------------------------------------------------------
+export async function generateBingoEstilosCrianzaDocx(institutionName?: string): Promise<Buffer> {
+  const bingoCards = [
+    { card: 1, items: [["Establece normas con afecto", "Grita cuando se equivoca"], ["No revisa cuadernos ni tareas", "Escucha activamente la opinión"]] },
+    { card: 2, items: [["¡Aquí se hace lo que yo mando!", "Deja que el hijo haga lo que quiera"], ["Felicita los esfuerzos del niño", "Ausente en reuniones escolares"]] },
+    { card: 3, items: [["Da explicaciones y dialoga", "Pone límites firmes y claros"], ["Compara a los hijos entre sí", "No pone horarios para dormir ni pantallas"]] },
+    { card: 4, items: [["Reconoce las emociones del hijo", "Ignora el llanto por estar en el celular"], ["Aplica castigo físico como corrección", "Fomenta la autonomía responsable"]] },
+  ];
+
+  const rows: TableRow[] = bingoCards.map((b) => (
+    new TableRow({
+      children: [
+        new TableCell({
+          width: { size: USABLE, type: WidthType.DXA },
+          borders: ALL_CUT_BORDERS,
+          margins: { top: 160, bottom: 160, left: 180, right: 180 },
+          children: [
+            new Paragraph({ children: [pRun("✂️ CARTÓN DE BINGO #" + b.card + " • TALLER DE ESTILOS DE CRIANZA", { bold: true, size: 14, color: "0284C7" })] }),
+            new Paragraph({ spacing: { after: 60 }, children: [pRun("Marque una 'X' cuando el facilitador lea una conducta correspondiente a su cartón:", { italics: true, size: 14 })] }),
+            ...b.items.map((pair) => (
+              new Paragraph({ spacing: { after: 40 }, children: [pRun("[   ] " + pair[0] + "          |          [   ] " + pair[1], { size: 16 })] })
+            )),
+          ],
+        }),
+      ],
+    })
+  ));
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
+        children: [
+          ...headerBanner("MATERIAL RECORTABLE: BINGO DE ESTILOS DE CRIANZA", "Taller 'Jugando a Criar y Colaborar' (Escuela para Familias)", institutionName),
+          new Table({ width: { size: USABLE, type: WidthType.DXA }, rows }),
+        ],
+      },
+    ],
+  });
+  return await Packer.toBuffer(doc);
+}
+
+// -------------------------------------------------------------
+// 9. Acuerdos de Corresponsabilidad
+// -------------------------------------------------------------
+export async function generateAcuerdosCorresponsabilidadDocx(institutionName?: string): Promise<Buffer> {
+  const doc = new Document({
+    sections: [
+      {
+        properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
+        children: [
+          ...headerBanner("ACTA DE COMPROMISOS Y CORRESPONSABILIDAD FAMILIA - ESCUELA", "Alianza Protectora para el Acompañamiento Integral del Estudiante", institutionName),
+          new Paragraph({ spacing: { after: 120 }, children: [pRun("Estudiante: _____________________________________________ Grado/Paralelo: _________________\\nRepresentante Legal: ___________________________________ Cédula: _________________________", { bold: true, size: 16 })] }),
+          new Table({
+            width: { size: USABLE, type: WidthType.DXA },
+            borders: ALL_SOLID_BORDERS,
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({ width: { size: USABLE / 2, type: WidthType.DXA }, shading: { fill: "F1F5F9" }, children: [new Paragraph({ children: [pRun("COMPROMISOS DE LA FAMILIA", { bold: true, size: 16 })] })] }),
+                  new TableCell({ width: { size: USABLE / 2, type: WidthType.DXA }, shading: { fill: "F1F5F9" }, children: [new Paragraph({ children: [pRun("COMPROMISOS DE LA INSTITUCIÓN / DOCENTE", { bold: true, size: 16 })] })] }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph({ children: [pRun("1. Dedicar tiempo diario al diálogo afectivo sin pantallas.\\n2. Asistir puntualmente a convocatorias y talleres.\\n3. Fomentar hábitos de sueño y estudio en casa.", { size: 16 })] })] }),
+                  new TableCell({ children: [new Paragraph({ children: [pRun("1. Informar oportunamente alertas académicas o anímicas.\\n2. Tratar con dignidad, respeto y pedagogía positiva.\\n3. Brindar apoyo psicosocial a través del DECE.", { size: 16 })] })] }),
+                ],
+              }),
+            ],
+          }),
+          new Paragraph({ spacing: { before: 240 }, children: [pRun("Firma Representante: ____________________       Firma Docente Tutor: ____________________", { bold: true, size: 16 })] }),
+        ],
+      },
+    ],
+  });
+  return await Packer.toBuffer(doc);
+}
+
+// -------------------------------------------------------------
+// 10. Pasaporte Triatlón OVP
+// -------------------------------------------------------------
+export async function generatePasaporteTriatlonDocx(institutionName?: string): Promise<Buffer> {
+  const doc = new Document({
+    sections: [
+      {
+        properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
+        children: [
+          ...headerBanner("PASAPORTE OFICIAL: TRIATLÓN ACADÉMICO OVP", "Circuito de Elección de Bachillerato (Ciencias, Mecánica y Contabilidad)", institutionName),
+          new Paragraph({ spacing: { after: 120 }, children: [pRun("Estudiante: __________________________________________________ Grado: 10mo EGB Paralelo: ____", { bold: true, size: 16 })] }),
+          new Table({
+            width: { size: USABLE, type: WidthType.DXA },
+            borders: ALL_CUT_BORDERS,
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({ width: { size: USABLE / 3, type: WidthType.DXA }, margins: { top: 180, bottom: 180, left: 160, right: 160 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("ESTACIÓN 1: CIENCIAS\\n🔬\\nReto de Laboratorio\\n\\n[  SELLO / FIRMA  ]\\n\\nMi afinidad: ( 1 al 5 ): ___", { size: 16 })] })] }),
+                  new TableCell({ width: { size: USABLE / 3, type: WidthType.DXA }, margins: { top: 180, bottom: 180, left: 160, right: 160 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("ESTACIÓN 2: MECÁNICA\\n⚙️\\nDesafío de Ensamble\\n\\n[  SELLO / FIRMA  ]\\n\\nMi afinidad: ( 1 al 5 ): ___", { size: 16 })] })] }),
+                  new TableCell({ width: { size: USABLE / 3, type: WidthType.DXA }, margins: { top: 180, bottom: 180, left: 160, right: 160 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("ESTACIÓN 3: CONTABILIDAD\\n📊\\nReto de Presupuesto\\n\\n[  SELLO / FIRMA  ]\\n\\nMi afinidad: ( 1 al 5 ): ___", { size: 16 })] })] }),
+                ],
+              }),
+            ],
+          }),
+          new Paragraph({ spacing: { before: 160 }, children: [pRun("Reflexión Final del Estudiante: La especialidad que más llamó mi atención fue _____________________ porque ____________________________________________________________________________.", { italics: true, size: 16 })] }),
+        ],
+      },
+    ],
+  });
+  return await Packer.toBuffer(doc);
+}
+
+// -------------------------------------------------------------
+// 11. Semáforo Buen Trato Infantil (4 años)
+// -------------------------------------------------------------
+export async function generateSemaforoBuenTratoDocx(institutionName?: string): Promise<Buffer> {
+  const doc = new Document({
+    sections: [
+      {
+        properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
+        children: [
+          ...headerBanner("FICHA DIDÁCTICA: 'EL SEMÁFORO DEL BUEN TRATO'", "Taller Infantil de Autoprotección: 'Yo tengo derecho a ser bien tratado'", institutionName),
+          new Paragraph({ spacing: { after: 120 }, children: [pRun("Instrucciones: Pintar el semáforo. Recortar las figuras por las líneas punteadas (✂️) y pegarlas donde correspondan.", { italics: true, size: 16 })] }),
+          new Table({
+            width: { size: USABLE, type: WidthType.DXA },
+            borders: ALL_CUT_BORDERS,
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({ width: { size: USABLE, type: WidthType.DXA }, shading: { fill: "DCFCE7" }, children: [new Paragraph({ children: [pRun("🟢 VERDE: COSAS QUE ME HACEN FELIZ (Abrazos con cariño, juegos, palabras amables)", { bold: true, size: 16, color: "166534" })] })] }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({ width: { size: USABLE, type: WidthType.DXA }, shading: { fill: "FEF08A" }, children: [new Paragraph({ children: [pRun("🟡 AMARILLO: COSAS QUE ME CONFUNDEN (Secretos raros, burlas; avisar a un adulto)", { bold: true, size: 16, color: "854D0E" })] })] }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({ width: { size: USABLE, type: WidthType.DXA }, shading: { fill: "FEE2E2" }, children: [new Paragraph({ children: [pRun("🔴 ROJO: COSAS QUE NADIE DEBE HACERME (Gritos, golpes, tocar mi cuerpo; ¡DECIR NO Y CORRER!)", { bold: true, size: 16, color: "991B1B" })] })] }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      },
+    ],
+  });
+  return await Packer.toBuffer(doc);
+}
+
+// -------------------------------------------------------------
+// 12. Medallas Buen Trato
+// -------------------------------------------------------------
+export async function generateMedallasBuenTratoDocx(institutionName?: string): Promise<Buffer> {
+  const doc = new Document({
+    sections: [
+      {
+        properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
+        children: [
+          ...headerBanner("MEDALLAS RECORTABLES: DEFENSOR DEL BUEN TRATO", "Recortar, colorear y colgar en el cuello de las niñas y niños", institutionName),
+          new Table({
+            width: { size: USABLE, type: WidthType.DXA },
+            borders: ALL_CUT_BORDERS,
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({ width: { size: USABLE / 2, type: WidthType.DXA }, margins: { top: 160, bottom: 160, left: 160, right: 160 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("⭐ MEDALLA DE HONOR ⭐\\n\\n¡DEFENSOR DEL BUEN TRATO!\\n\\nNombre: ____________________\\n\\nSADEX • INICIAL", { bold: true, size: 16, color: "0284C7" })] })] }),
+                  new TableCell({ width: { size: USABLE / 2, type: WidthType.DXA }, margins: { top: 160, bottom: 160, left: 160, right: 160 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [pRun("⭐ MEDALLA DE HONOR ⭐\\n\\n¡DEFENSOR DEL BUEN TRATO!\\n\\nNombre: ____________________\\n\\nSADEX • INICIAL", { bold: true, size: 16, color: "0284C7" })] })] }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      },
+    ],
+  });
+  return await Packer.toBuffer(doc);
+}
+
+// -------------------------------------------------------------
+// 13. Tarjetas Casos Alerta Aula Epilepsia
+// -------------------------------------------------------------
+export async function generateTarjetasCasosAlertaAulaDocx(institutionName?: string): Promise<Buffer> {
+  const situ = [
+    "Situación 1: Estudiante con taquicardia y temblor antes de rendir un examen trimestral.",
+    "Situación 2: Estudiante con ausentismo reiterado los lunes, quejándose de insomnio y cefalea.",
+    "Situación 3: Alumna aislada que deja de comer y expresa que 'no tiene ganas de vivir'.",
+    "Situación 4: Estudiante que convulsiona repentinamente en medio de una clase de ciencias.",
+  ];
+
+  const rows: TableRow[] = situ.map((s, i) => (
+    new TableRow({
+      children: [
+        new TableCell({
+          width: { size: USABLE, type: WidthType.DXA },
+          borders: ALL_CUT_BORDERS,
+          margins: { top: 160, bottom: 160, left: 200, right: 200 },
+          children: [
+            new Paragraph({ children: [pRun("✂️ TARJETA DE SITUACIÓN #" + (i + 1), { bold: true, size: 14, color: "64748B" })] }),
+            new Paragraph({ spacing: { before: 60, after: 60 }, children: [pRun(s, { bold: true, size: 16 })] }),
+            new Paragraph({ children: [pRun("Pregunta: ¿Cuál es el paso 1 de contención y qué protocolo institucional se activa?", { italics: true, size: 14, color: "0284C7" })] }),
+          ],
+        }),
+      ],
+    })
+  ));
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
+        children: [
+          ...headerBanner("TARJETAS DE SITUACIONES DE ALERTA EN AULA", "Taller Docente: Riesgos Psicosociales, Salud Mental y Emergencias", institutionName),
+          new Table({ width: { size: USABLE, type: WidthType.DXA }, rows }),
+        ],
+      },
+    ],
+  });
+  return await Packer.toBuffer(doc);
+}
+
+// -------------------------------------------------------------
+// 14. Protocolo Bolsillo Epilepsia
+// -------------------------------------------------------------
+export async function generateProtocoloBolsilloEpilepsiaDocx(institutionName?: string): Promise<Buffer> {
+  const doc = new Document({
+    sections: [
+      {
+        properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
+        children: [
+          ...headerBanner("PROTOCOLO DE BOLSILLO: PRIMEROS AUXILIOS ANTE CONVULSIONES", "Guía Médica para Docentes ante Crisis Epilépticas en el Aula", institutionName),
+          new Table({
+            width: { size: USABLE, type: WidthType.DXA },
+            borders: ALL_SOLID_BORDERS,
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({ width: { size: USABLE / 2, type: WidthType.DXA }, shading: { fill: "DCFCE7" }, children: [new Paragraph({ children: [pRun("QUÉ HACER SIEMPRE (OBLIGATORIO)\\n\\n1. Conserve la calma y cronometre la crisis.\\n2. Coloque algo suave bajo la cabeza.\\n3. Aparte objetos duros o cortantes.\\n4. Despeje el área de curiosos.\\n5. Coloque de lado (Posición Lateral PLS) al terminar.", { size: 16 })] })] }),
+                  new TableCell({ width: { size: USABLE / 2, type: WidthType.DXA }, shading: { fill: "FEE2E2" }, children: [new Paragraph({ children: [pRun("QUÉ NUNCA HACER (PROHIBIDO)\\n\\n❌ NUNCA meta objetos, dedos ni cucharas en la boca.\\n❌ NUNCA intente sujetar a la fuerza los movimientos.\\n❌ NUNCA dé agua, comida ni medicación por boca.\\n❌ NUNCA lo deje solo durante la crisis.", { size: 16 })] })] }),
+                ],
+              }),
+            ],
+          }),
+          new Paragraph({ spacing: { before: 160 }, children: [pRun("🚨 LLAMAR AL ECU-911 SI: La crisis dura más de 5 minutos, si es su primera crisis conocida, o si no recupera la consciencia.", { bold: true, size: 16, color: "B91C1C" })] }),
+        ],
+      },
+    ],
+  });
+  return await Packer.toBuffer(doc);
+}
+
+// -------------------------------------------------------------
+// 15. Tarjetas Frases Estereotipos (Interculturalidad)
+// -------------------------------------------------------------
+export async function generateTarjetasFrasesEstereotiposDocx(institutionName?: string): Promise<Buffer> {
+  const phrases = [
+    "Frase 1: 'Esos chicos de esa etnia siempre son conflictivos, no les gusta trabajar en grupo'.",
+    "Frase 2: 'Esa alumna debería amarrarse ese cabello afro, así no parece formal'.",
+    "Frase 3: 'Aquí en Ecuador hablamos bien, los de ese país hablan raro y cantado'.",
+    "Frase 4: 'Los indígenas son buenos para el campo, pero no para la universidad'.",
+  ];
+
+  const rows: TableRow[] = phrases.map((ph, i) => (
+    new TableRow({
+      children: [
+        new TableCell({
+          width: { size: USABLE, type: WidthType.DXA },
+          borders: ALL_CUT_BORDERS,
+          margins: { top: 160, bottom: 160, left: 200, right: 200 },
+          children: [
+            new Paragraph({ children: [pRun("✂️ MICROAGRESIÓN PARA DEBATE DOCENTE #" + (i + 1), { bold: true, size: 14, color: "64748B" })] }),
+            new Paragraph({ spacing: { before: 60, after: 60 }, children: [pRun(ph, { bold: true, size: 16 })] }),
+            new Paragraph({ children: [pRun("Análisis: ¿Qué prejuicio estructural opera detrás y cómo lo deconstruimos en clase?", { italics: true, size: 14, color: "0284C7" })] }),
+          ],
+        }),
+      ],
+    })
+  ));
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
+        children: [
+          ...headerBanner("TARJETAS DE ANÁLISIS: DECONSTRUYENDO EL RACISMO", "Taller: Educar desde la Interculturalidad y la No Discriminación", institutionName),
+          new Table({ width: { size: USABLE, type: WidthType.DXA }, rows }),
+        ],
+      },
+    ],
+  });
+  return await Packer.toBuffer(doc);
+}
+
+// -------------------------------------------------------------
+// 16. Decálogo Interculturalidad
+// -------------------------------------------------------------
+export async function generateDecalogoInterculturalidadDocx(institutionName?: string): Promise<Buffer> {
+  const doc = new Document({
+    sections: [
+      {
+        properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
+        children: [
+          ...headerBanner("DECÁLOGO POR UNA ESCUELA INTERCULTURAL Y LIBRE DE RACISMO", "Pacto Institucional de Convivencia Armónica", institutionName),
+          new Paragraph({ spacing: { after: 60 }, children: [pRun("1. En nuestra institución la diversidad de culturas, tonos de piel y orígenes es motivo de orgullo y riqueza colectiva.", { size: 16 })] }),
+          new Paragraph({ spacing: { after: 60 }, children: [pRun("2. Cero tolerancia a apodos, burlas o chistes denigrantes basados en raza, nacionalidad o acento.", { size: 16 })] }),
+          new Paragraph({ spacing: { after: 60 }, children: [pRun("3. Incorporamos saberes ancestrales y literatura diversa en nuestras clases cotidianas.", { size: 16 })] }),
+          new Paragraph({ spacing: { after: 60 }, children: [pRun("4. Escuchamos y validamos la identidad de cada estudiante sin forzar asimilaciones forzadas.", { size: 16 })] }),
+          new Paragraph({ spacing: { before: 200 }, children: [pRun("Firma de Compromiso del Claustro Docente: ________________________________________________", { bold: true, size: 16 })] }),
+        ],
+      },
+    ],
+  });
+  return await Packer.toBuffer(doc);
+}
+
+// -------------------------------------------------------------
+// 17. Tarjetas Historias Diversidad
+// -------------------------------------------------------------
+export async function generateTarjetasHistoriasDiversidadDocx(institutionName?: string): Promise<Buffer> {
+  const bios = [
+    { name: "Dr. Umar Khan (Sierra Leona)", desc: "Científico y médico cirujano experto en medicina tropical. Considerado un héroe nacional, lideró la lucha contra el ébola en África Occidental y entregó su vida atendiendo a los más vulnerables." },
+    { name: "Vladimir Franz (República Checa)", desc: "Abogado de formación con el rostro completamente tatuado, es un aclamado catedrático universitario de teatro, compositor de ópera y candidato presidencial. Desafía todo prejuicio estético externo." },
+  ];
+
+  const rows: TableRow[] = bios.map((b) => (
+    new TableRow({
+      children: [
+        new TableCell({
+          width: { size: USABLE, type: WidthType.DXA },
+          borders: ALL_CUT_BORDERS,
+          margins: { top: 160, bottom: 160, left: 200, right: 200 },
+          children: [
+            new Paragraph({ children: [pRun("✂️ BIOGRAFÍA REAL PARA ANÁLISIS • " + b.name, { bold: true, size: 16, color: "0284C7" })] }),
+            new Paragraph({ spacing: { before: 60, after: 60 }, children: [pRun(b.desc, { size: 16 })] }),
+            new Paragraph({ children: [pRun("Reflexión: ¿Qué etiquetas le habría puesto la sociedad antes de conocer su verdadera obra?", { italics: true, size: 14 })] }),
+          ],
+        }),
+      ],
+    })
+  ));
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
+        children: [
+          ...headerBanner("TARJETAS DE HISTORIAS DE VIDA QUE ROMPEN ESTEREOTIPOS", "Taller: Diversidad Institucional y Miradas sin Prejuicios", institutionName),
+          new Table({ width: { size: USABLE, type: WidthType.DXA }, rows }),
+        ],
+      },
+    ],
+  });
+  return await Packer.toBuffer(doc);
+}
+
+// -------------------------------------------------------------
+// 18. Tarjetas Mensajes Yo (Comunicación Asertiva)
+// -------------------------------------------------------------
+export async function generateTarjetasMensajesYoDocx(institutionName?: string): Promise<Buffer> {
+  const doc = new Document({
+    sections: [
+      {
+        properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
+        children: [
+          ...headerBanner("GUÍA DE BOLSILLO: LA FÓRMULA DEL 'MENSAJE YO'", "Taller de Comunicación Asertiva y Resolución de Conflictos", institutionName),
+          new Table({
+            width: { size: USABLE, type: WidthType.DXA },
+            borders: ALL_SOLID_BORDERS,
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({ width: { size: USABLE, type: WidthType.DXA }, shading: { fill: "F1F5F9" }, children: [new Paragraph({ children: [pRun("ESTRUCTURA DE UN MENSAJE ASERTIVO:\\n\\n1. CUANDO... [describe el hecho objetivo sin insultar ni exagerar]\\n2. YO ME SIENTO... [nombra tu emoción con claridad]\\n3. PORQUE NECESITO... [explica tu necesidad de respeto o coordinación]\\n4. POR ESO TE PROPONGO... [acuerdo claro hacia el futuro]", { bold: true, size: 16 })] })] }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      },
+    ],
+  });
+  return await Packer.toBuffer(doc);
+}
+
+// -------------------------------------------------------------
+// 19. Rueda Emociones y Árbol de Apoyo
+// -------------------------------------------------------------
+export async function generateRuedaEmocionesArbolDocx(institutionName?: string): Promise<Buffer> {
+  const doc = new Document({
+    sections: [
+      {
+        properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
+        children: [
+          ...headerBanner("FICHA RECORTABLE: RUEDA DE EMOCIONES Y ÁRBOL DE APOYO", "Taller: Construyendo Redes de Apoyo y Resiliencia Emocional", institutionName),
+          new Paragraph({ spacing: { after: 120 }, children: [pRun("Estudiante: __________________________________________________ Grado: _________________\\n\\nCompleta tu Árbol de Redes de Apoyo:\\n• EN LAS RAÍCES: Escribe 3 fortalezas tuyas (lo que te sostiene).\\n• EN EL TRONCO: Escribe tus actividades que te dan paz y alegría.\\n• EN LAS RAMAS: Escribe los nombres de 3 personas a quienes puedes acudir cuando estés triste.", { size: 16 })] }),
+        ],
+      },
+    ],
+  });
+  return await Packer.toBuffer(doc);
+}
+
+// -------------------------------------------------------------
+// DESPACHADOR CENTRAL DE MATERIALES
+// -------------------------------------------------------------
 export async function generateWorkshopMaterialDocx(
   workshopId: string,
   materialId: string,
@@ -833,40 +797,43 @@ export async function generateWorkshopMaterialDocx(
 ): Promise<{ buffer: Buffer; fileName: string } | null> {
   switch (materialId) {
     case "casos-simulacion-suicidio":
-      return {
-        buffer: await generateSuicidioCasesDocx(institutionName),
-        fileName: "Casos_Simulacion_Prevencion_Suicidio_SADEX.docx",
-      };
+      return { buffer: await generateSuicidioCasesDocx(institutionName), fileName: "Casos_Simulacion_Prevencion_Suicidio_SADEX.docx" };
     case "guia-senales-alerta-mitos":
-      return {
-        buffer: await generateSuicidioGuideDocx(institutionName),
-        fileName: "Ficha_Senales_Alerta_y_Mitos_SADEX.docx",
-      };
+      return { buffer: await generateSuicidioGuideDocx(institutionName), fileName: "Ficha_Senales_Alerta_y_Mitos_SADEX.docx" };
     case "guia-bolsillo-pap-docentes":
-      return {
-        buffer: await generatePapPocketGuideDocx(institutionName),
-        fileName: "Guia_Bolsillo_PAP_Docentes_SADEX.docx",
-      };
+      return { buffer: await generatePapPocketGuideDocx(institutionName), fileName: "Guia_Bolsillo_PAP_Docentes_SADEX.docx" };
     case "tarjetas-grounding-respiracion":
-      return {
-        buffer: await generateGroundingCardsDocx(institutionName),
-        fileName: "Tarjetas_Recortables_Grounding_Respiracion_SADEX.docx",
-      };
+      return { buffer: await generateGroundingCardsDocx(institutionName), fileName: "Tarjetas_Recortables_Grounding_Respiracion_SADEX.docx" };
     case "ficha-flor-fortalezas":
-      return {
-        buffer: await generateFlowerFortalezasDocx(institutionName),
-        fileName: "Ficha_Recortable_Flor_Fortalezas_Autoestima_SADEX.docx",
-      };
+      return { buffer: await generateFlowerFortalezasDocx(institutionName), fileName: "Ficha_Recortable_Flor_Fortalezas_Autoestima_SADEX.docx" };
     case "tarjetas-afirmaciones-positivas":
-      return {
-        buffer: await generateAffirmationCardsDocx(institutionName),
-        fileName: "Tarjetas_Coleccionables_Afirmaciones_Positivas_SADEX.docx",
-      };
+      return { buffer: await generateAffirmationCardsDocx(institutionName), fileName: "Tarjetas_Coleccionables_Afirmaciones_Positivas_SADEX.docx" };
     case "matriz-analisis-contexto-dece":
-      return {
-        buffer: await generateDeceContextMatrixDocx(institutionName),
-        fileName: "Matriz_Analisis_Contextual_Pobreza_Infantil_DECE_SADEX.docx",
-      };
+      return { buffer: await generateDeceContextMatrixDocx(institutionName), fileName: "Matriz_Analisis_Contextual_Pobreza_Infantil_DECE_SADEX.docx" };
+    case "bingo-estilos-crianza":
+      return { buffer: await generateBingoEstilosCrianzaDocx(institutionName), fileName: "Bingo_Estilos_Crianza_Familias_SADEX.docx" };
+    case "acuerdos-corresponsabilidad":
+      return { buffer: await generateAcuerdosCorresponsabilidadDocx(institutionName), fileName: "Ficha_Acuerdos_Corresponsabilidad_Familia_SADEX.docx" };
+    case "pasaporte-triatlon-ovp":
+      return { buffer: await generatePasaporteTriatlonDocx(institutionName), fileName: "Pasaporte_Triatlon_Academico_OVP_SADEX.docx" };
+    case "semaforo-buen-trato-recortable":
+      return { buffer: await generateSemaforoBuenTratoDocx(institutionName), fileName: "Ficha_Recortable_Semaforo_Buen_Trato_SADEX.docx" };
+    case "medallas-campeon-buen-trato":
+      return { buffer: await generateMedallasBuenTratoDocx(institutionName), fileName: "Medallas_Recortables_Buen_Trato_Infantil_SADEX.docx" };
+    case "tarjetas-casos-alerta-aula":
+      return { buffer: await generateTarjetasCasosAlertaAulaDocx(institutionName), fileName: "Tarjetas_Casos_Alerta_Aula_Epilepsia_SADEX.docx" };
+    case "protocolo-bolsillo-epilepsia":
+      return { buffer: await generateProtocoloBolsilloEpilepsiaDocx(institutionName), fileName: "Protocolo_Bolsillo_Primeros_Auxilios_Epilepsia_SADEX.docx" };
+    case "tarjetas-frases-estereotipos":
+      return { buffer: await generateTarjetasFrasesEstereotiposDocx(institutionName), fileName: "Tarjetas_Debate_Racismo_y_Microagresiones_SADEX.docx" };
+    case "decalogo-convivencia-intercultural":
+      return { buffer: await generateDecalogoInterculturalidadDocx(institutionName), fileName: "Decalogo_Escuela_Intercultural_Inclusiva_SADEX.docx" };
+    case "tarjetas-historias-diversidad":
+      return { buffer: await generateTarjetasHistoriasDiversidadDocx(institutionName), fileName: "Tarjetas_Historias_Diversidad_y_Prejuicios_SADEX.docx" };
+    case "tarjetas-mensajes-yo-asertividad":
+      return { buffer: await generateTarjetasMensajesYoDocx(institutionName), fileName: "Tarjetas_Entrenamiento_Mensaje_Yo_Asertividad_SADEX.docx" };
+    case "rueda-emociones-arbol-apoyo":
+      return { buffer: await generateRuedaEmocionesArbolDocx(institutionName), fileName: "Ficha_Recortable_Rueda_Emociones_y_Arbol_Apoyo_SADEX.docx" };
     default:
       return null;
   }
