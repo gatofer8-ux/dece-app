@@ -90,6 +90,9 @@ export default async function EstudianteDetallePage({ params }: { params: { id: 
         }${student.bachillerato_specialty ? ` (${student.bachillerato_specialty})` : ""} · ${formatDocumentId(student.document_type, student.document_id, "short")}`}
         action={
           <div className="flex flex-wrap items-center gap-2">
+            <Link href={`/estudiantes/carnets?id=${student.id}`} className="btn-secondary text-xs flex items-center gap-1">
+              <span>🪪</span> Carnet con QR
+            </Link>
             <Link href={`/estudiantes/${student.id}/imprimir`} className="btn-secondary text-xs">
               🖨️ Imprimir ficha
             </Link>

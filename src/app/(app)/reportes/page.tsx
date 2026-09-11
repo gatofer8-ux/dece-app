@@ -80,6 +80,9 @@ export default async function ReportesPage({
         description="Indicadores de gestión del DECE para el período seleccionado. Listo para exportar en tus informes mensuales/trimestrales."
         action={
           <div className="flex flex-wrap gap-2">
+            <Link href="/reportes/ejecutivo" className="btn-secondary flex items-center gap-1.5 font-semibold text-slate-800">
+              <span>🏛️</span> Rendición al Distrito
+            </Link>
             <Link href="/reportes/estadisticas" className="btn-primary bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 shadow-sm">
               <span>📊</span> Cuadros Estadísticos
             </Link>

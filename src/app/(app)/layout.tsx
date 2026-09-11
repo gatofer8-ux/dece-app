@@ -9,6 +9,9 @@ import GlobalSearchModal from "@/components/GlobalSearchModal";
 import TopChatButton from "@/components/TopChatButton";
 import DemoModeBanner from "@/components/DemoModeBanner";
 import NetworkStatusBanner from "@/components/NetworkStatusBanner";
+import AmbientBackground from "@/components/AmbientBackground";
+import ThemeToggle from "@/components/ThemeToggle";
+import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 import UserSubscriptionStatusBanner from "@/components/UserSubscriptionStatusBanner";
 import { enterDemoModeAction } from "@/app/(app)/actions/demoMode";
 import { listSchoolYears, getSelectedSchoolYear } from "@/lib/schoolYear";
@@ -39,13 +42,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const selectedYear = effectiveInstitutionId ? await getSelectedSchoolYear(effectiveInstitutionId) : null;
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen relative overflow-x-hidden bg-slate-50/70">
+      <AmbientBackground />
       <Sidebar role={user.role} institutionName={institution?.name} institutionLogo={institution?.seal_image} />
       <div className="flex-1 flex flex-col min-w-0">
         <NetworkStatusBanner />
         {isDemoMode && <DemoModeBanner />}
         <UserSubscriptionStatusBanner subscription={(user as any).subscription} />
-        <header className="no-print sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/80 bg-white/90 backdrop-blur-md px-4 md:px-6 py-2.5 gap-3">
+        <header className="no-print sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/70 bg-white/80 backdrop-blur-xl px-4 md:px-6 py-2.5 gap-3 shadow-2xs transition-colors">
           <div className="flex items-center gap-3">
             <MobileNav role={user.role} institutionName={institution?.name} />
             <div className="md:hidden">
@@ -86,6 +90,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             {user.role !== "DISTRITO" && <GlobalSearchModal />}
             {user.role !== "DISTRITO" && <TopChatButton />}
             {(user.role === "ADMIN" || user.role === "DECE") && <PushSubscribeButton />}
+            <PwaInstallPrompt />
+            <ThemeToggle />
             <div className="text-right hidden sm:block">
               <div className="text-sm font-semibold text-slate-800 leading-tight">{user.name}</div>
               <div className="text-xs text-slate-500">{ROLE_LABELS[user.role]}</div>
@@ -96,7 +102,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <LogoutButton />
           </div>
         </header>
-        <main className="flex-1 p-4 md:p-6 bg-slate-50/60">{children}</main>
+        <main className="flex-1 p-4 md:p-6 bg-transparent animate-fade-in-up">{children}</main>
       </div>
     </div>
   );

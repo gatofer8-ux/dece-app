@@ -27,7 +27,11 @@ function collectAttendees(fd: FormData) {
   return JSON.stringify(out);
 }
 function collectSignatories(fd: FormData) {
-  const out = getAllStr(fd, "sig_nombre").filter(Boolean).map((n) => ({ nombre: n }));
+  const nombres = getAllStr(fd, "sig_nombre");
+  const firmas = getAllStr(fd, "sig_firma");
+  const out = nombres
+    .map((n, i) => ({ nombre: n.trim(), firma_data_url: firmas[i]?.trim() || undefined }))
+    .filter((s) => s.nombre || s.firma_data_url);
   return JSON.stringify(out);
 }
 

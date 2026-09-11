@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
+import SignaturePadModal from "@/components/SignaturePadModal";
 import { createMeetingMinutes, updateMeetingMinutes, draftMeetingField } from "../actions";
 import {
   parseAttendees,
@@ -80,6 +81,7 @@ export default function ActasReunionForm({
   const [signatories, setSignatories] = useState<MeetingSignatory[]>(
     initialData ? parseSignatories(initialData.signatories_json) : []
   );
+  const [activeSigningIndex, setActiveSigningIndex] = useState<number | null>(null);
 
   const legacyAgenda = initialData && !((initialData.desarrollo_narrativo || "").trim())
     ? parseAgenda(initialData.agenda_json)
@@ -235,21 +237,72 @@ export default function ActasReunionForm({
             + Firmante
           </button>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {signatories.map((s, i) => (
-            <div key={i} className="flex gap-2 items-center">
-              <input
-                name="sig_nombre"
-                defaultValue={s.nombre}
-                placeholder="Nombre del participante"
-                className="input text-sm flex-1"
-              />
+            <div key={i} className="card p-3 bg-slate-50/70 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex-1 space-y-1.5">
+                <input
+                  name="sig_nombre"
+                  defaultValue={s.nombre}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSignatories((arr) => arr.map((item, idx) => (idx === i ? { ...item, nombre: val } : item)));
+                  }}
+                  placeholder="Nombre y apellido del participante *"
+                  className="input text-sm w-full bg-white"
+                />
+                <input type="hidden" name="sig_firma" value={s.firma_data_url || ""} />
+
+                {s.firma_data_url ? (
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded flex items-center gap-1">
+                      <span>✓</span> Firma digital capturada
+                    </span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={s.firma_data_url}
+                      alt={`Firma de ${s.nombre}`}
+                      className="h-7 max-w-[100px] object-contain border border-slate-200 bg-white rounded px-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setActiveSigningIndex(i)}
+                      className="text-xs text-brand-600 hover:underline"
+                    >
+                      Modificar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSignatories((arr) =>
+                          arr.map((item, idx) => (idx === i ? { ...item, firma_data_url: undefined } : item))
+                        );
+                      }}
+                      className="text-xs text-rose-600 hover:underline"
+                    >
+                      Borrar firma
+                    </button>
+                  </div>
+                ) : (
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setActiveSigningIndex(i)}
+                      className="btn-secondary text-xs px-2.5 py-1 flex items-center gap-1 text-slate-700 hover:bg-brand-50 hover:text-brand-700 border-dashed"
+                    >
+                      <span>✍️</span> Firmar en pantalla
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <button
                 type="button"
                 onClick={() => setSignatories((arr) => arr.filter((_, j) => j !== i))}
-                className="text-red-600 text-xs px-2"
+                className="text-rose-600 hover:bg-rose-50 text-xs px-2 py-1 rounded self-end sm:self-center transition-colors"
+                title="Quitar firmante"
               >
-                quitar
+                🗑️ Quitar
               </button>
             </div>
           ))}
@@ -280,6 +333,20 @@ export default function ActasReunionForm({
           {mode === "edit" ? "Guardar cambios" : "Guardar y ver acta"}
         </button>
       </div>
+
+      {activeSigningIndex !== null && (
+        <SignaturePadModal
+          isOpen={true}
+          signatoryName={signatories[activeSigningIndex]?.nombre || `Participante #${activeSigningIndex + 1}`}
+          onClose={() => setActiveSigningIndex(null)}
+          onSave={(dataUrl) => {
+            setSignatories((arr) =>
+              arr.map((item, idx) => (idx === activeSigningIndex ? { ...item, firma_data_url: dataUrl } : item))
+            );
+            setActiveSigningIndex(null);
+          }}
+        />
+      )}
     </form>
   );
 }

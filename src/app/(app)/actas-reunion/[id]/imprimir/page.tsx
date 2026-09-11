@@ -161,7 +161,18 @@ export default async function ImprimirActaReunionPage({ params }: { params: { id
             {sigRows.map((s, i) => (
               <tr key={i}>
                 <td className={cell}>{s.nombre || " "}</td>
-                <td className={cell} style={{ height: 34 }}>&nbsp;</td>
+                <td className={cell} style={{ height: 38, verticalAlign: "middle" }}>
+                  {s.firma_data_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={s.firma_data_url}
+                      alt={`Firma de ${s.nombre}`}
+                      className="h-8 max-w-[130px] object-contain mx-auto"
+                    />
+                  ) : (
+                    <span className="block h-7">&nbsp;</span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
