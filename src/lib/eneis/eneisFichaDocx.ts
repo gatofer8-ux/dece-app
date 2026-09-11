@@ -19,6 +19,7 @@ import {
 } from "docx";
 import { currentSchoolYearText } from "@/lib/schoolYearText";
 import type { EneisFichaRow } from "./eneisSessions";
+import { getMaterialLabel } from "./eneisMaterialesCatalog";
 
 const FONT = "Calibri";
 const NAVY = "1F3864";
@@ -86,6 +87,7 @@ function buildFichaTable(ficha: EneisFichaRow, courseLabel: string): Table {
     row([lbl("Docente"), val(ficha.docente_nombre), lbl("Paralelo"), val(ficha.paralelo || "")]),
     row([lbl("Asignatura"), val(ficha.asignatura, 3)]),
     row([lbl("Nombre de la ficha"), val((ficha.nombre_ficha || "").toUpperCase(), 3)]),
+    row([lbl("Material de referencia"), val(getMaterialLabel(ficha.material_id) || "", 3)]),
     row([lbl("Objetivo Curricular del Área"), val(ficha.objetivo_curricular || "", 3)]),
     row([lbl("Objetivo de Educación Integral en Sexualidad"), val(ficha.objetivo_eis || "", 3)]),
     row([lbl("Destrezas con criterios de desempeño a evaluar"), val(ficha.destrezas || "", 3)]),
