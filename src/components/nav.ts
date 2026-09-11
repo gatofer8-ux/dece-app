@@ -23,6 +23,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/esquelas", label: "Esquelas de citación", icon: "📨", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
   { href: "/derivaciones", label: "Derivaciones", icon: "🔀", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
   { href: "/atencion-diaria", label: "Atención diaria", icon: "📋", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
+  { href: "/offline", label: "Centro Offline", icon: "📡", roles: ["SUPERADMIN", "ADMIN", "DECE", "DOCENTE"], group: "Principal" },
 
   // Acompañamiento y prevención
   { href: "/actividades", label: "Promoción y prevención", icon: "🌱", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD", "DOCENTE"], group: "Acompañamiento y prevención" },
