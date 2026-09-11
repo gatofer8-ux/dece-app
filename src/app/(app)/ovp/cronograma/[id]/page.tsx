@@ -32,7 +32,14 @@ export default async function CronogramaDetailPage({ params }: { params: { id: s
         action={
           <div className="flex items-center gap-2">
             <a href={`/api/ovp/cronograma/${sched.id}/export-word`} className="btn-primary flex items-center gap-1.5">
-              <span>⬇️</span> Descargar Word
+              <span>⬇️</span> Descargar cronograma
+            </a>
+            <a
+              href={`/api/ovp/cronograma/${sched.id}/export-questionnaires`}
+              className="px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-semibold flex items-center gap-1.5"
+              title='Genera un cuestionario por estudiante, para que lo llenen en casa con su representante y lo traigan a la entrevista.'
+            >
+              <span>📋</span> Cuestionarios para enviar a casa
             </a>
             {canManage && (
               <DeleteButton
@@ -48,6 +55,15 @@ export default async function CronogramaDetailPage({ params }: { params: { id: s
           </div>
         }
       />
+
+      <div className="p-3 bg-brand-50 border border-brand-200 rounded-lg text-xs text-brand-800 flex items-start gap-2">
+        <span>💡</span>
+        <span>
+          Estrategia sugerida: 1) descarga y entrega/envía el <strong>cronograma</strong> a cada tutor con la hora asignada; 2) descarga los{" "}
+          <strong>cuestionarios para enviar a casa</strong> (uno por estudiante, con sus datos precargados) para que cada estudiante y su
+          representante lo llenen juntos; 3) piden que lo traigan completo el día de su cita, como respaldo de la entrevista.
+        </span>
+      </div>
 
       <div className="card p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
         <div>
