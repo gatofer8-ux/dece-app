@@ -806,6 +806,16 @@ export interface EneisActaRow {
   updated_at: string;
 }
 
+export interface EneisInformeDeceRow {
+  id: string;
+  institution_id: string;
+  created_by_id: string | null;
+  periodo: string;
+  actividades_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface TapasSessionRow {
   id: string;
   institution_id: string;
