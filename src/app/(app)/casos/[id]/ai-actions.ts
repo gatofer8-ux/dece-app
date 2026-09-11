@@ -63,7 +63,7 @@ function caseEntities(caseFile: CaseFileRow, student: StudentRow | undefined): C
  * - Resto de casos: contexto completo, pero seudonimizado (nombres, cédula,
  *   teléfonos y direcciones reemplazados por su rol).
  */
-function buildCaseContext(caseId: string, institutionId: string): string {
+export function buildCaseContext(caseId: string, institutionId: string): string {
   const caseFile = db.prepare("SELECT * FROM case_files WHERE id = ?").get(caseId) as CaseFileRow | undefined;
   if (!caseFile) return "";
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow | undefined;
