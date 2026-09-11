@@ -64,7 +64,7 @@ function extendedStudentFields(formData: FormData) {
     birth_province: str(formData, "birth_province"),
     birth_canton: str(formData, "birth_canton"),
     birth_parish: str(formData, "birth_parish"),
-    jornada: str(formData, "jornada"),
+    jornada: str(formData, "jornada") ? str(formData, "jornada")!.toUpperCase().trim() : null,
     education_level: str(formData, "education_level"),
     bachillerato_specialty: str(formData, "bachillerato_specialty"),
     neighborhood: str(formData, "neighborhood"),
@@ -280,7 +280,7 @@ export async function enrollStudentInYearAction(formData: FormData) {
   const schoolYearId = String(formData.get("school_year_id") || "");
   const course = String(formData.get("course") || "").trim();
   const parallel = str(formData, "parallel");
-  const jornada = str(formData, "jornada");
+  const jornada = str(formData, "jornada") ? str(formData, "jornada")!.toUpperCase().trim() : null;
   const education_level = str(formData, "education_level");
   const specialty = str(formData, "specialty");
 

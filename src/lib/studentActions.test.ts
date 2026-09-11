@@ -168,4 +168,73 @@ describe("createStudent y updateStudent - Validación de Documentos de Identidad
     expect(updated.document_type).toBe("PASAPORTE");
     expect(updated.document_id).toBe("ECU998877");
   });
+
+  it("registra un estudiante con jornada Matutina y la normaliza a mayúsculas", async () => {
+    const fd = new FormData();
+    fd.append("full_name", "Ana Belén Morales");
+    fd.append("document_type", "CEDULA");
+    fd.append("document_id", "0924567894");
+    fd.append("course", "8vo EGB");
+    fd.append("parallel", "B");
+    fd.append("jornada", "Matutina");
+
+    await createStudent(fd);
+
+    const saved = db.prepare("SELECT * FROM students WHERE full_name = ?").get("Ana Belén Morales") as any;
+    expect(saved).toBeDefined();
+    expect(saved.jornada).toBe("MATUTINA");
+    expect(saved.course).toBe("8vo EGB");
+    expect(saved.parallel).toBe("B");
+  });
+
+  it("registra un estudiante con jornada Vespertina y permite actualizarlo a Nocturna", async () => {
+    const fd = new FormData();
+    fd.append("full_name", "Diego Armando Paredes");
+    fd.append("document_type", "CEDULA");
+    fd.append("document_id", "0912345675");
+    fd.append("course", "3ro BGU");
+    fd.append("parallel", "A");
+    fd.append("jornada", "VESPERTINA");
+
+    await createStudent(fd);
+
+    const created = db.prepare("SELECT * FROM students WHERE full_name = ?").get("Diego Armando Paredes") as any;
+    expect(created.jornada).toBe("VESPERTINA");
+
+    // Actualizar jornada a Nocturna
+    const fdUpdate = new FormData();
+    fdUpdate.append("full_name", "Diego Armando Paredes");
+    fdUpdate.append("document_type", "CEDULA");
+    fdUpdate.append("document_id", "0912345675");
+    fdUpdate.append("course", "3ro BGU");
+    fdUpdate.append("parallel", "A");
+    fdUpdate.append("jornada", "nocturna");
+
+    await updateStudent(created.id, fdUpdate);
+
+    const updated = db.prepare("SELECT * FROM students WHERE id = ?").get(created.id) as any;
+    expect(updated.jornada).toBe("NOCTURNA");
+  });
+
+  it("filtra estudiantes correctamente por jornada (MATUTINA, VESPERTINA, SIN_JORNADA)", () => {
+    const matutinaList = db.prepare(
+      "SELECT * FROM students WHERE institution_id = ? AND UPPER(TRIM(jornada)) = UPPER(TRIM(?))"
+    ).all(INST_ID, "matutina") as any[];
+
+    expect(matutinaList.some((s) => s.full_name === "Ana Belén Morales")).toBe(true);
+    expect(matutinaList.every((s) => s.jornada === "MATUTINA")).toBe(true);
+
+    const nocturnaList = db.prepare(
+      "SELECT * FROM students WHERE institution_id = ? AND UPPER(TRIM(jornada)) = UPPER(TRIM(?))"
+    ).all(INST_ID, "NOCTURNA") as any[];
+
+    expect(nocturnaList.some((s) => s.full_name === "Diego Armando Paredes")).toBe(true);
+
+    const sinJornadaList = db.prepare(
+      "SELECT * FROM students WHERE institution_id = ? AND (jornada IS NULL OR TRIM(jornada) = '')"
+    ).all(INST_ID) as any[];
+
+    expect(sinJornadaList.some((s) => s.full_name === "Estudiante Sin Documento")).toBe(true);
+  });
 });
+
