@@ -17,7 +17,7 @@ export default async function EneisEncuestasPage() {
     <div className="space-y-6">
       <PageHeader
         title="ENEIS — Encuestas de percepción"
-        description="Encuestas anónimas a estudiantes y docentes sobre la implementación del ENEIS. Se responden por un enlace, sin cuenta, y los resultados se tabulan solos."
+        description="Encuestas anónimas a estudiantes, docentes y padres de familia sobre la implementación del ENEIS. Se responden por un enlace, sin cuenta, y los resultados se tabulan solos."
         action={
           canManage ? (
             <Link href="/eneis/encuestas/nueva" className="btn-primary flex items-center gap-1.5">
@@ -31,7 +31,7 @@ export default async function EneisEncuestasPage() {
         <EmptyState
           icon="📊"
           title="Todavía no hay encuestas creadas"
-          description="Crea una encuesta (a estudiantes o a docentes), comparte el enlace o el código, y mira los resultados tabulados en tiempo real."
+          description="Crea una encuesta (a estudiantes, docentes o padres de familia), comparte el enlace o el código, y mira los resultados tabulados en tiempo real."
           action={
             canManage ? (
               <Link href="/eneis/encuestas/nueva" className="btn-primary mt-2">+ Nueva encuesta</Link>

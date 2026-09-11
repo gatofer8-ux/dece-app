@@ -2,12 +2,14 @@ import { describe, it, expect } from "vitest";
 import {
   validateSurveyAnswers,
   getSurveyQuestions,
+  instrumentLabel,
   ENEIS_STUDENT_SURVEY,
   ENEIS_TEACHER_SURVEY,
+  ENEIS_PARENT_SURVEY,
 } from "./eneisSurveyInstrument";
 
 describe("instrumento ENEIS", () => {
-  it("cada encuesta tiene 10 preguntas con 5 opciones", () => {
+  it("cada encuesta de estudiantes/docentes tiene 10 preguntas con 5 opciones", () => {
     expect(ENEIS_STUDENT_SURVEY).toHaveLength(10);
     expect(ENEIS_TEACHER_SURVEY).toHaveLength(10);
     for (const q of [...ENEIS_STUDENT_SURVEY, ...ENEIS_TEACHER_SURVEY]) {
@@ -15,9 +17,21 @@ describe("instrumento ENEIS", () => {
     }
   });
 
+  it("la encuesta a padres tiene 29 preguntas Sí/No", () => {
+    expect(ENEIS_PARENT_SURVEY).toHaveLength(29);
+    for (const q of ENEIS_PARENT_SURVEY) {
+      expect(q.options).toEqual(["Sí", "No"]);
+    }
+  });
+
   it("getSurveyQuestions devuelve el instrumento correcto", () => {
     expect(getSurveyQuestions("DOCENTES")).toBe(ENEIS_TEACHER_SURVEY);
     expect(getSurveyQuestions("ESTUDIANTES")).toBe(ENEIS_STUDENT_SURVEY);
+    expect(getSurveyQuestions("REPRESENTANTES")).toBe(ENEIS_PARENT_SURVEY);
+  });
+
+  it("instrumentLabel devuelve la etiqueta correcta", () => {
+    expect(instrumentLabel("REPRESENTANTES")).toBe("Encuesta a Padres de Familia");
   });
 });
 

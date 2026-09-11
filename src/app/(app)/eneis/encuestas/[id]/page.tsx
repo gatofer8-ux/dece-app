@@ -72,7 +72,8 @@ export default async function EneisEncuestaDetailPage({ params }: { params: { id
 
       {total === 0 ? (
         <div className="card p-6 text-sm text-slate-500">
-          Todavía no llega ninguna respuesta. Comparte el enlace o el código con {s.instrument === "DOCENTES" ? "los docentes" : "los estudiantes"}.
+          Todavía no llega ninguna respuesta. Comparte el enlace o el código con{" "}
+          {s.instrument === "DOCENTES" ? "los docentes" : s.instrument === "REPRESENTANTES" ? "los padres de familia" : "los estudiantes"}.
         </div>
       ) : (
         <div className="space-y-4">

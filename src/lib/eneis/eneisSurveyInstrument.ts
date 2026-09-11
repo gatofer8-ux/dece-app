@@ -1,12 +1,13 @@
 /**
  * Instrumentos oficiales de percepción sobre la implementación del ENEIS
- * (Estrategia Nacional de Educación Integral en Sexualidad): uno para
- * estudiantes y otro para docentes, 10 preguntas de opción múltiple (una
- * sola respuesta) cada uno. Son puros (sin acceso a base de datos) para
- * poder importarse también desde el formulario público.
+ * (Estrategia Nacional de Educación Integral en Sexualidad): estudiantes y
+ * docentes (10 preguntas de opción múltiple, una sola respuesta), y padres
+ * de familia/representantes (banco oficial de preguntas Sí/No). Son puros
+ * (sin acceso a base de datos) para poder importarse también desde el
+ * formulario público.
  */
 
-export type EneisSurveyInstrument = "ESTUDIANTES" | "DOCENTES";
+export type EneisSurveyInstrument = "ESTUDIANTES" | "DOCENTES" | "REPRESENTANTES";
 
 export interface SurveyQuestion {
   text: string;
@@ -105,12 +106,48 @@ export const ENEIS_TEACHER_SURVEY: SurveyQuestion[] = [
   },
 ];
 
+export const ENEIS_PARENT_SURVEY: SurveyQuestion[] = [
+  { text: "¿Su hijo(a) consume diariamente frutas y verduras en su alimentación?", options: ["Sí", "No"] },
+  { text: "¿Se asegura de que su hijo(a) duerma al menos 8 horas cada noche?", options: ["Sí", "No"] },
+  { text: "¿Limita el tiempo que su hijo(a) pasa frente a pantallas (TV, celular, videojuegos)?", options: ["Sí", "No"] },
+  { text: "¿Su hijo(a) realiza actividad física o algún tipo de ejercicio al menos 30 minutos al día?", options: ["Sí", "No"] },
+  { text: "¿Fomenta en casa el consumo de agua en lugar de bebidas azucaradas?", options: ["Sí", "No"] },
+  { text: "¿Tiene establecida una rutina diaria para las comidas y el descanso de su hijo(a)?", options: ["Sí", "No"] },
+  { text: "¿Habla abiertamente con su hijo/a sobre sobre la importancia del buen manejo de sus emociones?", options: ["Sí", "No"] },
+  { text: "¿Cree que hablar sobre salud mental en las instituciones es importante para el bienestar emocional de sus hijos?", options: ["Sí", "No"] },
+  { text: "¿Considera que su hijo puede hablar con usted sin miedo sobre dudas relacionadas con su desarrollo integral (bienestar físico, psicológico, emocional)?", options: ["Sí", "No"] },
+  { text: "¿Ha notado cambios en el estado de ánimo de su hijo que podrían estar relacionados con su desarrollo afectivo?", options: ["Sí", "No"] },
+  { text: "¿Considera necesario buscar apoyo con profesionales en caso de identificar cambios emocionales o de comportamiento en sus hijos?", options: ["Sí", "No"] },
+  { text: "¿Se ofrece información en la Institución Educativa sobre igualdad de género y prevención de la violencia en educación en sexualidad?", options: ["Sí", "No"] },
+  { text: "¿Ha recibido formación o capacitación sobre Educación Integral Sexual?", options: ["Sí", "No"] },
+  { text: "¿Considera usted que debe ser parte del proceso de educación sexual en sus representados?", options: ["Sí", "No"] },
+  { text: "¿Se ha realizado campañas de sensibilización para informar a la comunidad sobre la importancia de la Educación Integral Sexual?", options: ["Sí", "No"] },
+  { text: "¿Considera usted que el desayuno saludable es primordial para su hijo?", options: ["Sí", "No"] },
+  { text: "¿En su almuerzo consume la porción adecuada de proteínas (carne pollo pescado) verduras (lechuga tomate cebolla) y carbohidratos (papas arroz yuca)?", options: ["Sí", "No"] },
+  { text: "¿En su familia se realizan controles nutricionales preventivos?", options: ["Sí", "No"] },
+  { text: "¿Usted cómo representante es corresponsable del consumo de alimentos de su hijo/a en la institución educativa?", options: ["Sí", "No"] },
+  { text: "¿Cuáles son sus principales dudas o preocupaciones y las de sus hijos en temas de sexualidad?", options: ["Sí", "No"] },
+  { text: "¿Que nivel de conocimiento y actitud tiene usted como padre sobre EIS?", options: ["Sí", "No"] },
+  { text: "¿La institución ha brindado capacitaciones en prevención de Enfermedades de Transmisión Sexual?", options: ["Sí", "No"] },
+  { text: "¿Ha hablado con sus hijos sobre las ETS y sus consecuencias?", options: ["Sí", "No"] },
+  { text: "¿Ha recibido información sobre las ETS por parte de otras instancias (p.e., MSP, Junta Cantonal, etc.)? ¿Cuáles?", options: ["Sí", "No"] },
+  { text: "¿Existe la confianza y el conocimiento necesario para abordar estos temas en su núcleo familiar?", options: ["Sí", "No"] },
+  { text: "¿Cuenta con servicios básicos en su hogar?", options: ["Sí", "No"] },
+  { text: "¿Cuenta con un espacio privado (baño, letrina, otros) para su aseo personal y el de su familia?", options: ["Sí", "No"] },
+  { text: "¿Provee a sus familiares con los implementos necesarios para su higiene diaria?", options: ["Sí", "No"] },
+  { text: "¿Enseña a su hijo/a rutinas de aseo íntimo, de manos, bucal, etc?", options: ["Sí", "No"] },
+];
+
 export function getSurveyQuestions(instrument: EneisSurveyInstrument): SurveyQuestion[] {
-  return instrument === "DOCENTES" ? ENEIS_TEACHER_SURVEY : ENEIS_STUDENT_SURVEY;
+  if (instrument === "DOCENTES") return ENEIS_TEACHER_SURVEY;
+  if (instrument === "REPRESENTANTES") return ENEIS_PARENT_SURVEY;
+  return ENEIS_STUDENT_SURVEY;
 }
 
 export function instrumentLabel(instrument: EneisSurveyInstrument): string {
-  return instrument === "DOCENTES" ? "Encuesta a Docentes" : "Encuesta a Estudiantes";
+  if (instrument === "DOCENTES") return "Encuesta a Docentes";
+  if (instrument === "REPRESENTANTES") return "Encuesta a Padres de Familia";
+  return "Encuesta a Estudiantes";
 }
 
 /** Valida que las respuestas cubran todas las preguntas con índices de opción válidos. */

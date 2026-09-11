@@ -17,9 +17,11 @@ export default async function NuevaEneisEncuestaPage() {
           <select name="instrument" defaultValue="ESTUDIANTES" className="select text-sm">
             <option value="ESTUDIANTES">Estudiantes</option>
             <option value="DOCENTES">Docentes</option>
+            <option value="REPRESENTANTES">Padres de familia / Representantes</option>
           </select>
           <p className="text-[11px] text-slate-400 mt-1">
-            Cada una tiene su propio cuestionario oficial de 10 preguntas sobre la implementación del ENEIS.
+            Estudiantes y docentes: cuestionario oficial de 10 preguntas de opción múltiple. Padres de familia: banco
+            oficial de preguntas Sí/No sobre la implementación del ENEIS.
           </p>
         </div>
         <div>

@@ -17,8 +17,14 @@ export async function createEneisSurveySessionAction(formData: FormData) {
   const institutionId = requireInstitutionId(session);
 
   const instrumentRaw = str(formData, "instrument");
-  const instrument: EneisSurveyInstrument = instrumentRaw === "DOCENTES" ? "DOCENTES" : "ESTUDIANTES";
-  const title = str(formData, "title") || (instrument === "DOCENTES" ? "Encuesta a Docentes — ENEIS" : "Encuesta a Estudiantes — ENEIS");
+  const instrument: EneisSurveyInstrument =
+    instrumentRaw === "DOCENTES" ? "DOCENTES" : instrumentRaw === "REPRESENTANTES" ? "REPRESENTANTES" : "ESTUDIANTES";
+  const defaultTitles: Record<EneisSurveyInstrument, string> = {
+    DOCENTES: "Encuesta a Docentes — ENEIS",
+    REPRESENTANTES: "Encuesta a Padres de Familia — ENEIS",
+    ESTUDIANTES: "Encuesta a Estudiantes — ENEIS",
+  };
+  const title = str(formData, "title") || defaultTitles[instrument];
   const opensAt = dateStr(formData, "opens_at");
   const closesAt = dateStr(formData, "closes_at");
 
