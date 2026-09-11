@@ -6,9 +6,9 @@
 
 export interface MeetingAttendee {
   nombre: string;
-  correo: string;
-  cargo: string;
+  telefono: string;
 }
+/** @deprecated Se reemplazó por un solo bloque narrativo (`desarrollo_narrativo`). Se conserva para imprimir actas antiguas que ya tenían compromisos guardados. */
 export interface MeetingAgendaItem {
   tema: string;
   compromiso: string;
@@ -23,6 +23,9 @@ export const ACCEPTANCE_TEXT =
   "Para constancia de la conformidad de la presente acta y de aceptación de los miembros de la Reunión firman los participantes a la reunión.";
 export const ACCEPTANCE_NOTE =
   "NOTA: Si no existen observaciones a este documento en el periodo de dos (2) días laborales, se lo considera como aceptado.";
+
+/** Nombre completo de la dependencia, tal como figura en el formato oficial. */
+export const DEPENDENCIA_LABEL = "DEPARTAMENTO DE CONSEJERÍA ESTUDIANTIL";
 
 export const AI_FIELD_LABELS = {
   thematic_background:
@@ -39,7 +42,11 @@ function safeArray<T>(raw: string | null | undefined): T[] {
   }
 }
 
-export const parseAttendees = (raw: string | null | undefined) => safeArray<MeetingAttendee>(raw);
+/** Lee asistentes; acepta el campo antiguo `correo` como respaldo del actual `telefono` (actas guardadas antes de este cambio). */
+export function parseAttendees(raw: string | null | undefined): MeetingAttendee[] {
+  const arr = safeArray<{ nombre?: string; telefono?: string; correo?: string }>(raw);
+  return arr.map((a) => ({ nombre: a.nombre || "", telefono: a.telefono || a.correo || "" }));
+}
 export const parseAgenda = (raw: string | null | undefined) => safeArray<MeetingAgendaItem>(raw);
 export const parseSignatories = (raw: string | null | undefined) => safeArray<MeetingSignatory>(raw);
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { generateMeetingMinutesDocx } from "@/lib/meetingMinutesDocx";
-import type { MeetingMinutesRow } from "@/lib/types";
+import type { MeetingMinutesRow, InstitutionRow } from "@/lib/types";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getSession();
@@ -13,8 +13,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     .prepare("SELECT * FROM meeting_minutes WHERE id = ? AND institution_id = ?")
     .get(params.id, institutionId) as MeetingMinutesRow | undefined;
   if (!m) return NextResponse.json({ error: "Acta no encontrada" }, { status: 404 });
+  const institution = db.prepare("SELECT * FROM institutions WHERE id = ?").get(institutionId) as InstitutionRow;
 
-  const buffer = await generateMeetingMinutesDocx(m);
+  const buffer = await generateMeetingMinutesDocx(m, institution.name);
   const safe = (m.meeting_code || "Acta_de_Reunion").replace(/[^a-zA-Z0-9-_]/g, "_").slice(0, 80);
   return new NextResponse(buffer, {
     headers: {
