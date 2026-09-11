@@ -35,11 +35,19 @@ export default async function OvpPage() {
         title="Orientación Vocacional y Profesional (OVP)"
         description="Aplicación del Inventario de Preferencias Profesionales para Jóvenes (IPPJ – MINEDUC). Los estudiantes responden por un enlace, sin cuenta, y el sistema califica automáticamente."
         action={
-          canManage ? (
-            <Link href="/ovp/nueva" className="btn-primary flex items-center gap-1.5">
-              <span>➕</span> Nueva aplicación
+          <div className="flex items-center gap-2">
+            <Link
+              href="/ovp/cronograma"
+              className="px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-semibold flex items-center gap-1.5"
+            >
+              <span>🗓️</span> Cronogramas de citas
             </Link>
-          ) : undefined
+            {canManage ? (
+              <Link href="/ovp/nueva" className="btn-primary flex items-center gap-1.5">
+                <span>➕</span> Nueva aplicación
+              </Link>
+            ) : undefined}
+          </div>
         }
       />
 
