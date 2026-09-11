@@ -11,12 +11,16 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Sistema de Gestión DECE",
-  description: "Software para el Departamento de Consejería Estudiantil",
+  title: "SADEX · Sistema de Acompañamiento, DECE y Expedientes",
+  description: "SADEX: Plataforma integral para Departamentos de Consejería Estudiantil (DECE). Gestión de expedientes, acuerdos, actas de socialización, círculos restaurativos y bienestar escolar.",
+  icons: {
+    icon: "/sadex-logo.png",
+    apple: "/sadex-logo.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "DECE",
+    title: "SADEX",
   },
 };
 

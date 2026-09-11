@@ -12,6 +12,7 @@ import UserSubscriptionStatusBanner from "@/components/UserSubscriptionStatusBan
 import { enterDemoModeAction } from "@/app/(app)/actions/demoMode";
 import { listSchoolYears, getSelectedSchoolYear } from "@/lib/schoolYear";
 import { ROLE_LABELS, type InstitutionRow } from "@/lib/types";
+import SadexLogo from "@/components/SadexLogo";
 
 import { redirect } from "next/navigation";
 
@@ -45,7 +46,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <header className="no-print sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-4 md:px-6 py-2.5 gap-3">
           <div className="flex items-center gap-3">
             <MobileNav role={user.role} institutionName={institution?.name} />
-            <div className="md:hidden font-bold text-brand-800 text-base tracking-tight">DECE</div>
+            <div className="md:hidden">
+              <SadexLogo variant="compact" size="xs" theme="light" showSubtitle={false} />
+            </div>
             {effectiveInstitutionId && schoolYears.length > 0 && (
               <SchoolYearSelector
                 schoolYears={schoolYears}

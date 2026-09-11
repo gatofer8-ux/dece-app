@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Role } from "@/lib/types";
 import { navGroupsFor } from "@/components/nav";
+import SadexLogo from "@/components/SadexLogo";
 
 /**
  * Navegación para móvil: botón hamburguesa en la cabecera + panel deslizante.
@@ -49,16 +50,16 @@ export default function MobileNav({ role, institutionName }: { role: Role; insti
         <div className="fixed inset-0 z-50 no-print">
           <div className="absolute inset-0 bg-slate-900/50" onClick={() => setOpen(false)} />
           <div className="animate-toast-in absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-brand-900 text-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
-              <div className="min-w-0">
-                <div className="truncate font-semibold leading-tight">{institutionName || "Gestión DECE"}</div>
-                <div className="text-xs text-brand-200">Consejería Estudiantil</div>
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3.5">
+              <div className="min-w-0 space-y-1">
+                <SadexLogo variant="horizontal" size="xs" theme="dark" showSubtitle={false} />
+                <div className="truncate text-[11px] text-brand-200 font-medium">{institutionName || "Gestión DECE"}</div>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Cerrar menú"
-                className="text-brand-200 hover:text-white text-xl leading-none"
+                className="text-brand-200 hover:text-white text-xl leading-none p-1"
               >
                 ×
               </button>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Role } from "@/lib/types";
 import { navGroupsFor } from "@/components/nav";
+import SadexLogo from "@/components/SadexLogo";
 
 export default function Sidebar({
   role,
@@ -36,17 +37,23 @@ export default function Sidebar({
 
   return (
     <aside className="no-print hidden md:flex md:flex-col w-64 shrink-0 bg-brand-900 text-white min-h-screen">
-      <div className="px-5 py-6 border-b border-white/10">
-        <div className="flex items-center gap-2">
+      <div className="px-5 py-4 border-b border-white/10 space-y-3">
+        {/* Marca oficial SADEX */}
+        <Link href="/dashboard" className="flex items-center hover:opacity-90 transition-opacity">
+          <SadexLogo variant="horizontal" size="sm" theme="dark" showSubtitle={true} />
+        </Link>
+
+        {/* Perfil de Institución Educativa */}
+        <div className="flex items-center gap-2.5 pt-2 border-t border-white/10">
           {institutionLogo ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={institutionLogo} alt={institutionName || "Logo institucional"} className="h-9 w-9 rounded-lg object-contain bg-white/10" />
+            <img src={institutionLogo} alt={institutionName || "Logo institucional"} className="h-7 w-7 rounded-md object-contain bg-white/10 shrink-0" />
           ) : (
-            <div className="h-9 w-9 rounded-lg bg-white/10 flex items-center justify-center font-bold text-sm">DECE</div>
+            <div className="h-7 w-7 rounded-md bg-white/10 flex items-center justify-center font-bold text-xs shrink-0">🏛️</div>
           )}
           <div className="min-w-0">
-            <div className="font-semibold leading-tight truncate">{institutionName || "Gestión DECE"}</div>
-            <div className="text-xs text-brand-200 truncate">Consejería Estudiantil</div>
+            <div className="font-semibold text-xs leading-tight truncate text-slate-100">{institutionName || "Institución Educativa"}</div>
+            <div className="text-[10px] text-brand-300 truncate">Consejería Estudiantil</div>
           </div>
         </div>
       </div>
