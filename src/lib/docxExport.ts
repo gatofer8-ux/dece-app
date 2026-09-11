@@ -24,6 +24,7 @@ import {
   VerticalPositionAlign,
   PageOrientation,
   TableLayoutType,
+  HeightRule,
 } from "docx";
 import path from "path";
 import fs from "fs";
@@ -5403,31 +5404,36 @@ export async function generateSocializationActDocx(opts: {
     }),
   ];
 
-  const rowsToExport = teacherSignatures.length >= 6
-    ? teacherSignatures
-    : [
-        ...teacherSignatures,
-        ...Array.from({ length: 6 - teacherSignatures.length }).map(() => ({ asignatura: "", docente: "" })),
-      ];
+  const rowsToExport =
+    teacherSignatures.length > 0
+      ? teacherSignatures
+      : Array.from({ length: 18 }).map(() => ({ asignatura: "", docente: "" }));
 
   rowsToExport.forEach((t) => {
     teacherRows.push(
       new TableRow({
         cantSplit: true,
+        height: { value: 480, rule: HeightRule.ATLEAST },
         children: [
           new TableCell({
             width: { size: 2800, type: WidthType.DXA },
             margins: { top: 60, bottom: 60, left: 60, right: 60 },
-            children: [new Paragraph({ children: [new TextRun({ text: t.asignatura || "", font: FONT_NAME, size: FONT_SIZE_XS })] })],
+            verticalAlign: VerticalAlign.CENTER,
+            children: [
+              new Paragraph({
+                children: [new TextRun({ text: t.asignatura || " ", font: FONT_NAME, size: FONT_SIZE_XS })],
+              }),
+            ],
           }),
           new TableCell({
             width: { size: 3400, type: WidthType.DXA },
             margins: { top: 60, bottom: 60, left: 60, right: 60 },
+            verticalAlign: VerticalAlign.CENTER,
             children: [
               new Paragraph({
                 children: [
                   new TextRun({
-                    text: t.docente || (t.asignatura ? "................................................" : ""),
+                    text: t.docente || (t.asignatura ? "................................................" : " "),
                     font: FONT_NAME,
                     size: FONT_SIZE_XS,
                     color: t.docente ? "000000" : "94A3B8",
@@ -5439,12 +5445,22 @@ export async function generateSocializationActDocx(opts: {
           new TableCell({
             width: { size: 1800, type: WidthType.DXA },
             margins: { top: 60, bottom: 60, left: 60, right: 60 },
-            children: [new Paragraph({ text: "" })],
+            verticalAlign: VerticalAlign.CENTER,
+            children: [
+              new Paragraph({
+                children: [new TextRun({ text: " ", font: FONT_NAME, size: FONT_SIZE_XS })],
+              }),
+            ],
           }),
           new TableCell({
             width: { size: 1500, type: WidthType.DXA },
             margins: { top: 60, bottom: 60, left: 60, right: 60 },
-            children: [new Paragraph({ text: "" })],
+            verticalAlign: VerticalAlign.CENTER,
+            children: [
+              new Paragraph({
+                children: [new TextRun({ text: " ", font: FONT_NAME, size: FONT_SIZE_XS })],
+              }),
+            ],
           }),
         ],
       })

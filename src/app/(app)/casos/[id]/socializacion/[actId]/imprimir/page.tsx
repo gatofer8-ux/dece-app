@@ -35,12 +35,10 @@ export default async function ImprimirActaSocializacionPage({ params }: { params
   const courseFormatted = formatStudentCourseFull(student);
   const agreements = parseJsonArray<string>(act.agreements);
   const rawTeacherSignatures = parseJsonArray<TeacherSignatureEntry>(act.teacher_signatures);
-  const teacherSignatures = rawTeacherSignatures.length >= 6
-    ? rawTeacherSignatures
-    : [
-        ...rawTeacherSignatures,
-        ...Array.from({ length: 6 - rawTeacherSignatures.length }).map(() => ({ asignatura: "", docente: "" })),
-      ];
+  const teacherSignatures =
+    rawTeacherSignatures.length > 0
+      ? rawTeacherSignatures
+      : Array.from({ length: 18 }).map(() => ({ asignatura: "", docente: "" }));
 
   return (
     <div className="max-w-4xl mx-auto bg-white">
@@ -149,15 +147,15 @@ export default async function ImprimirActaSocializacionPage({ params }: { params
             </thead>
             <tbody>
               {teacherSignatures.map((t, i) => (
-                <tr key={i} className="h-7">
-                  <td className="border border-slate-300 px-2 py-1 font-normal text-slate-800">
+                <tr key={i} className="h-8 print:h-9">
+                  <td className="border border-slate-300 px-2 py-1.5 font-normal text-slate-800 align-middle">
                     {t.asignatura || <span className="text-slate-300">&nbsp;</span>}
                   </td>
-                  <td className="border border-slate-300 px-2 py-1 font-normal text-slate-800">
+                  <td className="border border-slate-300 px-2 py-1.5 font-normal text-slate-800 align-middle">
                     {t.docente || (t.asignatura ? <span className="text-slate-400">................................................</span> : <span className="text-slate-300">&nbsp;</span>)}
                   </td>
-                  <td className="border border-slate-300 px-2 py-1">&nbsp;</td>
-                  <td className="border border-slate-300 px-2 py-1">&nbsp;</td>
+                  <td className="border border-slate-300 px-2 py-1.5 align-middle">&nbsp;</td>
+                  <td className="border border-slate-300 px-2 py-1.5 align-middle">&nbsp;</td>
                 </tr>
               ))}
             </tbody>

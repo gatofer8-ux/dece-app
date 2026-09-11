@@ -14,7 +14,7 @@ import { parseOfficialObservationData } from "@/lib/observationSheet";
 import { CONFLICT_TYPES_CATALOG } from "@/lib/corresponsibilityCatalog";
 import type { ChecklistCategory, ObservationContext, ObservationSubnivel, ObservationRiskLevel, CorresponsibilityConflictType } from "@/lib/types";
 import { z } from "zod";
-import { str, int, getAllStr } from "@/lib/formData";
+import { str, int, getAllStr, getAllRawStr } from "@/lib/formData";
 import { currentSchoolYearText, currentSchoolYearSpaced } from "@/lib/schoolYearText";
 import { requireOwnedCase, requireOwnedStudent } from "@/lib/scopedDb";
 import { autoMarkChecklistItems } from "@/lib/checklistAutoMark";
@@ -1170,9 +1170,10 @@ export async function createSocializationAct(
 
     const agreements = getAllStr(formData, "agreement").map((a) => a.trim()).filter(Boolean);
 
-    const subjectNames = getAllStr(formData, "teacher_subject");
-    const teacherNames = getAllStr(formData, "teacher_name");
-    const maxTeacherRows = Math.max(subjectNames.length, teacherNames.length);
+    const subjectNames = getAllRawStr(formData, "teacher_subject");
+    const teacherNames = getAllRawStr(formData, "teacher_name");
+    const explicitCount = Math.max(0, int(formData, "teacher_row_count") || 0);
+    const maxTeacherRows = Math.max(subjectNames.length, teacherNames.length, explicitCount);
     const teacherSignatures = Array.from({ length: maxTeacherRows }).map((_, i) => ({
       asignatura: (subjectNames[i] || "").trim(),
       docente: (teacherNames[i] || "").trim(),
@@ -2874,9 +2875,10 @@ export async function updateSocializationAct(
 
     const agreements = getAllStr(formData, "agreement").map((a) => a.trim()).filter(Boolean);
 
-    const subjectNames = getAllStr(formData, "teacher_subject");
-    const teacherNames = getAllStr(formData, "teacher_name");
-    const maxTeacherRows = Math.max(subjectNames.length, teacherNames.length);
+    const subjectNames = getAllRawStr(formData, "teacher_subject");
+    const teacherNames = getAllRawStr(formData, "teacher_name");
+    const explicitCount = Math.max(0, int(formData, "teacher_row_count") || 0);
+    const maxTeacherRows = Math.max(subjectNames.length, teacherNames.length, explicitCount);
     const teacherSignatures = Array.from({ length: maxTeacherRows }).map((_, i) => ({
       asignatura: (subjectNames[i] || "").trim(),
       docente: (teacherNames[i] || "").trim(),

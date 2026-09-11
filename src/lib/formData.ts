@@ -53,6 +53,11 @@ export function getAllStr(fd: FormData, key: string): string[] {
   return fd.getAll(key).filter((v): v is string => typeof v === "string" && v.trim().length > 0);
 }
 
+/** Todas las cadenas para una clave repetida, preservando cadenas vacías (ej: casilleros tabulares para llenado a mano). */
+export function getAllRawStr(fd: FormData, key: string): string[] {
+  return fd.getAll(key).filter((v): v is string => typeof v === "string").map((s) => s.trim());
+}
+
 /** Fecha ISO (YYYY-MM-DD) validada superficialmente, o `null`. */
 export function dateStr(fd: FormData, key: string): string | null {
   const v = str(fd, key);

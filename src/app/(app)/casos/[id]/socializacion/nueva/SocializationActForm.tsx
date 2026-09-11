@@ -222,7 +222,7 @@ export default function SocializationActForm({
           <div>
             <h3 className="text-xs font-semibold text-slate-500 uppercase">Docentes que reciben la socialización</h3>
             <p className="text-xs text-slate-400">
-              Filas visibles: <span className="font-semibold text-slate-700">{teacherRowCount}</span> (por defecto 18, mín. 6, máx. 20). Las filas vacías se imprimirán con renglones en blanco para firma a mano.
+              Filas configuradas: <span className="font-semibold text-slate-700">{teacherRowCount}</span> (por defecto 18, mín. 1, máx. 35). Todos los casilleros agregados (incluso vacíos) se reflejarán en la previsualización, impresión y Word para que los docentes escriban sus datos y firmen a mano.
             </p>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -250,32 +250,50 @@ export default function SocializationActForm({
             </button>
             <button
               type="button"
-              onClick={() => setTeacherRowCount((n) => Math.min(20, n + 1))}
-              disabled={teacherRowCount >= 20}
+              onClick={() => setTeacherRowCount(24)}
+              className={`px-2 py-0.5 text-xs rounded border transition-colors ${teacherRowCount === 24 ? "bg-brand-50 border-brand-500 text-brand-700 font-semibold" : "border-slate-300 hover:bg-slate-50 text-slate-700"}`}
+            >
+              24
+            </button>
+            <button
+              type="button"
+              onClick={() => setTeacherRowCount((n) => Math.min(35, n + 1))}
+              disabled={teacherRowCount >= 35}
               className="px-2 py-0.5 text-xs rounded border border-brand-600 text-brand-700 hover:bg-brand-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium ml-1"
             >
               + Añadir
             </button>
             <button
               type="button"
-              onClick={() => setTeacherRowCount((n) => Math.max(6, n - 1))}
-              disabled={teacherRowCount <= 6}
+              onClick={() => setTeacherRowCount((n) => Math.max(1, n - 1))}
+              disabled={teacherRowCount <= 1}
               className="px-2 py-0.5 text-xs rounded border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               - Quitar
             </button>
           </div>
         </div>
+        <input type="hidden" name="teacher_row_count" value={teacherRowCount} />
         <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1 border border-slate-200 rounded-md p-2 bg-slate-50/50">
           {Array.from({ length: teacherRowCount }).map((_, i) => (
             <div key={i} className="flex items-center gap-2">
               <span className="text-xs text-slate-400 font-mono w-6 text-right shrink-0">#{i + 1}</span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1">
-                <input name="teacher_subject" placeholder={`Asignatura ${i + 1} (ej: Matemáticas)`} className="input bg-white text-xs" />
-                <input name="teacher_name" placeholder={`Nombre del docente ${i + 1}`} className="input bg-white text-xs" />
+                <input name="teacher_subject" placeholder={`Asignatura ${i + 1} (ej: Matemáticas o en blanco)`} className="input bg-white text-xs" />
+                <input name="teacher_name" placeholder={`Nombre del docente ${i + 1} (o en blanco para firma a mano)`} className="input bg-white text-xs" />
               </div>
             </div>
           ))}
+        </div>
+        <div className="flex justify-end mt-1.5">
+          <button
+            type="button"
+            onClick={() => setTeacherRowCount((n) => Math.min(35, n + 1))}
+            disabled={teacherRowCount >= 35}
+            className="text-xs text-brand-700 hover:underline font-medium"
+          >
+            + Agregar casillero adicional para firma a mano
+          </button>
         </div>
       </div>
 

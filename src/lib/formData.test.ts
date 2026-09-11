@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { str, requireStr, int, num, bool, getAllStr, dateStr, parseForm } from "./formData";
+import { str, requireStr, int, num, bool, getAllStr, getAllRawStr, dateStr, parseForm } from "./formData";
 
 function fd(entries: Record<string, string | string[]>): FormData {
   const f = new FormData();
@@ -38,6 +38,10 @@ describe("helpers de FormData", () => {
 
   it("getAllStr descarta valores vacíos", () => {
     expect(getAllStr(fd({ x: ["a", "", "b", "  "] }), "x")).toEqual(["a", "b"]);
+  });
+
+  it("getAllRawStr preserva valores vacíos", () => {
+    expect(getAllRawStr(fd({ x: ["a", "", "b", "  "] }), "x")).toEqual(["a", "", "b", ""]);
   });
 
   it("dateStr valida el formato ISO", () => {

@@ -60,7 +60,7 @@ export default function SocializationActEditForm({
   const existingTeacherSignatures = parseJsonArray<TeacherSignatureEntry>(act.teacher_signatures);
   const [teacherSignatures, setTeacherSignatures] = useState<TeacherRowState[]>(() => {
     const base = existingTeacherSignatures.length > 0 ? existingTeacherSignatures : [];
-    const count = Math.max(18, base.length);
+    const count = base.length > 0 ? base.length : 18;
     const initial: TeacherRowState[] = [];
     for (let i = 0; i < count; i++) {
       initial.push({
@@ -103,7 +103,7 @@ export default function SocializationActEditForm({
   }
 
   function setTeacherRowCount(targetCount: number) {
-    const clamped = Math.max(6, Math.min(20, targetCount));
+    const clamped = Math.max(1, Math.min(35, targetCount));
     setTeacherSignatures((prev) => {
       const next = prev.map((item) => {
         const subInput = document.getElementById(`edit-teacher-subj-${item.key}`) as HTMLInputElement | null;
@@ -133,7 +133,7 @@ export default function SocializationActEditForm({
   }
 
   function removeTeacherRow(key: number) {
-    if (teacherSignatures.length <= 6) return;
+    if (teacherSignatures.length <= 1) return;
     setTeacherSignatures((prev) => {
       const filtered = prev.filter((item) => item.key !== key);
       return filtered.map((item) => {
@@ -305,7 +305,7 @@ export default function SocializationActEditForm({
           <div>
             <h3 className="text-xs font-semibold text-slate-500 uppercase">Docentes que reciben la socialización</h3>
             <p className="text-xs text-slate-400">
-              Filas visibles: <span className="font-semibold text-slate-700">{teacherSignatures.length}</span> (por defecto 18, mín. 6, máx. 20). Las filas vacías se imprimirán con renglones en blanco para firma a mano.
+              Filas configuradas: <span className="font-semibold text-slate-700">{teacherSignatures.length}</span> (por defecto 18, mín. 1, máx. 35). Todos los casilleros agregados (incluso vacíos) se reflejarán en la previsualización, impresión y Word para que los docentes escriban sus datos y firmen a mano.
             </p>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -333,8 +333,15 @@ export default function SocializationActEditForm({
             </button>
             <button
               type="button"
+              onClick={() => setTeacherRowCount(24)}
+              className={`px-2 py-0.5 text-xs rounded border transition-colors ${teacherSignatures.length === 24 ? "bg-brand-50 border-brand-500 text-brand-700 font-semibold" : "border-slate-300 hover:bg-slate-50 text-slate-700"}`}
+            >
+              24
+            </button>
+            <button
+              type="button"
               onClick={addTeacherRow}
-              disabled={teacherSignatures.length >= 20}
+              disabled={teacherSignatures.length >= 35}
               className="px-2 py-0.5 text-xs rounded border border-brand-600 text-brand-700 hover:bg-brand-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium ml-1"
             >
               + Añadir
@@ -342,13 +349,14 @@ export default function SocializationActEditForm({
             <button
               type="button"
               onClick={() => setTeacherRowCount(teacherSignatures.length - 1)}
-              disabled={teacherSignatures.length <= 6}
+              disabled={teacherSignatures.length <= 1}
               className="px-2 py-0.5 text-xs rounded border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               - Quitar
             </button>
           </div>
         </div>
+        <input type="hidden" name="teacher_row_count" value={teacherSignatures.length} />
         <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1 border border-slate-200 rounded-md p-2 bg-slate-50/50">
           {teacherSignatures.map((item, i) => (
             <div key={item.key} className="flex items-center gap-2">
@@ -358,7 +366,7 @@ export default function SocializationActEditForm({
                   id={`edit-teacher-subj-${item.key}`}
                   name="teacher_subject"
                   defaultValue={item.asignatura}
-                  placeholder={`Asignatura ${i + 1} (ej: Matemáticas)`}
+                  placeholder={`Asignatura ${i + 1} (ej: Matemáticas o en blanco)`}
                   className="input bg-white text-xs"
                 />
                 <div className="flex gap-1.5">
@@ -366,10 +374,10 @@ export default function SocializationActEditForm({
                     id={`edit-teacher-name-${item.key}`}
                     name="teacher_name"
                     defaultValue={item.docente}
-                    placeholder={`Nombre del docente ${i + 1}`}
+                    placeholder={`Nombre del docente ${i + 1} (o en blanco para firma a mano)`}
                     className="input bg-white text-xs flex-1"
                   />
-                  {teacherSignatures.length > 6 && (
+                  {teacherSignatures.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeTeacherRow(item.key)}
@@ -383,6 +391,16 @@ export default function SocializationActEditForm({
               </div>
             </div>
           ))}
+        </div>
+        <div className="flex justify-end mt-1.5">
+          <button
+            type="button"
+            onClick={addTeacherRow}
+            disabled={teacherSignatures.length >= 35}
+            className="text-xs text-brand-700 hover:underline font-medium"
+          >
+            + Agregar casillero adicional para firma a mano
+          </button>
         </div>
       </div>
 
