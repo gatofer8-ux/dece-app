@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { pseudonymize } from "./aiPrivacy";
 import { REPRESENTATIVE_AWARENESS_NOTE } from "./interviewDefaults";
+import type { ActionPlanItem } from "./types";
 
 // Asistente de redacción con IA para los documentos técnicos del DECE.
 // Usa Groq (modelos Llama 70B, gratis) como proveedor de IA principal,
@@ -877,6 +878,283 @@ Responde únicamente con el texto formal técnico estructurado con viñetas clar
   }
 
   return { error: "No se pudo generar la evaluación global del plan." };
+}
+
+export interface AutonomousActionPlanResult {
+  updatedItems: ActionPlanItem[];
+  appliedCount: number;
+  rationale: string;
+}
+
+/**
+ * Generador Autónomo de Actividades de Prevención para el Plan de Acción Anual DECE (POA).
+ * Enmarcado estrictamente en el Acuerdo Ministerial MINEDUC-044-A, la realidad poblacional,
+ * el número de profesionales disponibles y la gestión documental ejecutable en SADEX.
+ */
+export async function draftAutonomousActionPlan(opts: {
+  institutionName: string;
+  schoolYear: string;
+  studentsCount: number;
+  professionalsList: string[];
+  availableResources: string;
+  targetScope: "PREVENCION" | "TODO";
+  currentItems: ActionPlanItem[];
+}): Promise<AutonomousActionPlanResult | { error: string }> {
+  const profCount = Math.max(1, opts.professionalsList.length);
+  const students = opts.studentsCount > 0 ? opts.studentsCount : 600;
+  const ratio = Math.round(students / profCount);
+  const staff = opts.professionalsList.length > 0 ? opts.professionalsList : ["Analista DECE"];
+
+  // Helper para asignar responsables de forma equitativa y realista
+  const getResp = (index: number) => {
+    if (staff.length === 1) return staff[0];
+    return staff[index % staff.length];
+  };
+
+  const getSharedResp = () => {
+    if (staff.length <= 2) return staff.join(" y ");
+    return "TODOS (Equipo DECE)";
+  };
+
+  // Base de datos de propuestas realistas del Acuerdo 044-A con articulación documental SADEX
+  const deterministicPicks: Record<string, Partial<ActionPlanItem>> = {
+    item_1: {
+      activities: `1. Capacitación al personal docente y tutores sobre herramientas y enfoque de Proyectos de Vida y OVP. [SADEX: Módulo Actividades / Informes de Taller].\n2. Aplicación grupal de la batería de intereses profesionales y vocacionales (Test IPPJ) para 10mo EGB y 3ro BGU. [SADEX: Módulo OVP (Test IPPJ Digital)].\n3. Entrevistas individuales de orientación y aplicación de la matriz de toma de decisiones vocacionales. [SADEX: Módulo OVP (Cuestionario de Toma de Decisión)].\n4. Retroalimentación individualizada y entrega de informes vocacionales a estudiantes y representantes. [SADEX: Módulo OVP (Informes de Resultados)].`,
+      target_population: `Estudiantes de 10mo EGB y 3ro BGU (${Math.round(students * 0.22)} estudiantes aprox.), Docentes Tutores y Familias.`,
+      execution_term: `1. Octubre (Primer Trimestre)\n2. Diciembre - Enero (Segundo Trimestre)\n3. Febrero - Marzo (Segundo Trimestre)\n4. Abril (Tercer Trimestre)`,
+      supplies_inputs: `Baterías psicométricas IPPJ digitales, cuestionarios de toma de decisión, registros de asistencia con firmas y reportes vocacionales.`,
+      responsible: getResp(0),
+      observations: `INFORMES DE ORIENTACIÓN VOCACIONAL REGISTRADOS EN SADEX.`,
+    },
+    item_2: {
+      activities: `1. ENEIS & Prevención de Violencia: Implementación de la Metodología de Recorrido Participativo ("Estación No. 3: Exigiendo mis Derechos") en Básica Superior y Bachillerato. [SADEX: Módulo Actividades / Informes de Taller (Base LOEI Art. 73)].\n2. Campaña de Autoprotección: Taller vivencial "Semáforo Corporal y Cuidado de mi Intimidad" para Inicial y Básica Elemental. [SADEX: Módulo Actividades / Informes de Taller].\n3. Jornada "Arcoíris de la Protección": Sensibilización institucional en minutos cívicos y periódicos murales sobre derechos de NNA. [SADEX: Registro de Actividades Institucionales].`,
+      target_population: `Estudiantes de Inicial a 3ro de Bachillerato (dosificado por subniveles).`,
+      execution_term: `1. Noviembre - Diciembre (Primer Trimestre)\n2. Febrero - Marzo (Segundo Trimestre)\n3. Mayo (Tercer Trimestre)`,
+      supplies_inputs: `Hojas de ruta ENEIS, láminas didácticas del semáforo corporal, convocatorias oficiales, registros de asistencia y registro fotográfico.`,
+      responsible: getResp(1),
+      observations: `INFORME TÉCNICO DE TALLER REGISTRADO EN SADEX.`,
+    },
+    item_4: {
+      activities: `1. Talleres de Asesoría Técnica a Docentes Tutores: Pautas prácticas para el acompañamiento socioemocional en el aula, identificación de señales tempranas de alerta psicosocial (cambios conductuales, aislamiento, ausentismo, autolesiones) y rutas de derivación. [SADEX: Módulo Alertas Tempranas de Docentes].\n2. Acompañamiento en Juntas de Curso: Socialización de estrategias pedagógicas de apoyo socioemocional y no discriminación. [SADEX: Módulo Juntas de Curso].`,
+      target_population: `100% de Docentes Tutores de Grado y Curso (Jornadas Matutina y Vespertina).`,
+      execution_term: `1. Primer Trimestre (Octubre)\n2. Segundo Trimestre (Enero - Febrero)\n3. Tercer Trimestre (Abril)`,
+      supplies_inputs: `Guías metodológicas del MINEDUC, matriz de alerta temprana, fichas de observación áulica y actas de asesoramiento firmadas.`,
+      responsible: getSharedResp(),
+      observations: `ACTAS DE ASESORAMIENTO Y REPORTES EN JUNTAS DE CURSO EN SADEX.`,
+    },
+    item_5: {
+      activities: `1. Círculos de Reflexión y Autocuidado Docente: Taller vivencial de manejo del estrés laboral, primeros auxilios psicológicos y fortalecimiento del clima institucional para directivos y docentes. [SADEX: Módulo Círculos Restaurativos (Fichas y Acuerdos)].`,
+      target_population: `Personal Docente y Directivo de la institución.`,
+      execution_term: `1. Noviembre (Primer Trimestre)\n2. Marzo (Segundo Trimestre)`,
+      supplies_inputs: `Ficha de círculo restaurativo, dinámicas de relajación y descarga emocional, acta de reunión institucional.`,
+      responsible: getSharedResp(),
+      observations: `FICHAS DE CÍRCULOS RESTAURATIVOS REGISTRADAS EN SADEX.`,
+    },
+    item_6: {
+      activities: `Desarrollo de los Espacios Obligatorios de Prevención Integral de Riesgos Psicosociales (Acuerdo Ministerial MINEDUC-044-A):\n\n` +
+        `• TEMA 1: Prevención del Uso y Consumo de Drogas (Alcohol, Tabaco y Otras Sustancias): Talleres interactivos "Mitos, Realidades y Toma Responsable de Decisiones" y Proyectos de Vida para Básica Superior y Bachillerato. [SADEX: Módulo Actividades / Informe de Taller (Tema DROGAS, Base Legal LOEI Art. 73)].\n\n` +
+        `• TEMA 2: Prevención del Acoso Escolar y Ciberacoso (Bullying / Ciberbullying): Talleres de empatía digital, uso seguro de redes sociales y cultura de paz para Básica Media y Superior. [SADEX: Módulo Actividades (Tema ACOSO_CIBERACOSO)].\n\n` +
+        `• TEMA 3: Prevención del Suicidio y Conductas Autolíticas: Charla-taller "Cuidado de la Salud Mental y Redes de Apoyo entre Pares", tamizaje de factores de riesgo y primeros auxilios emocionales. [SADEX: Módulo Actividades (Tema SUICIDIO)].\n\n` +
+        `• TEMA 4: Prevención del Embarazo Adolescente y ENEIS: Talleres formativos sobre derechos sexuales y reproductivos, afectividad y postergación del inicio sexual temprano. [SADEX: Módulo Actividades (Tema EMBARAZO_ADOLESCENTE / ENEIS)].\n\n` +
+        `• TEMA 5: Escuela para Familias: Taller "Familias Protectoras: Comunicación Asertiva, Límites y Crianza Positiva frente a Riesgos Psicosociales". [SADEX: Módulo Actividades (Tema VINCULO_FAMILIAS) + Esquelas de Citación].`,
+      target_population: `Población estudiantil focalizada por subnivel (${Math.round(students * 0.75)} estudiantes), Docentes y Padres/Madres de Familia.`,
+      execution_term: `• Drogas y Acoso: Primer Trimestre (Octubre - Diciembre)\n• Salud Mental y Suicidio: Segundo Trimestre (Enero - Marzo)\n• ENEIS, Embarazo y Familias: Tercer Trimestre (Abril - Mayo)`,
+      supplies_inputs: `Esquelas de convocatoria oficiales, material audiovisual, guías de dinámicas reflexivas, hojas de trabajo, registros de asistencia con firmas e informes técnicos.`,
+      responsible: getSharedResp(),
+      observations: `INFORMES TÉCNICOS DE TALLERES (ACUERDO 044-A) Y ESQUELAS REGISTRADOS EN SADEX.`,
+    },
+    item_8: {
+      activities: `1. Sensibilización sobre "Diversidad Institucional y Adaptaciones Curriculares": Charla técnica al personal docente para garantizar la permanencia y participación de estudiantes con NEE. [SADEX: Módulo Actividades / Informes de Taller].\n2. Productos Educomunicacionales: Boletines digitales y carteleras sobre empatía, accesibilidad y no discriminación. [SADEX: Registro de Actividades].`,
+      target_population: `Personal Docente, Estudiantes y Familias.`,
+      execution_term: `Todo el año lectivo (Septiembre - Junio)`,
+      supplies_inputs: `Lineamientos UDAI, circulares institucionales, registros de asistencia y productos educomunicacionales compartidos por correo institucional.`,
+      responsible: getResp(0),
+      observations: `INFORME TÉCNICO DE SENSIBILIZACIÓN EN SADEX.`,
+    },
+    item_11: {
+      activities: `1. Detección y Registro de Estudiantes en Vulnerabilidad: Aplicación de fichas de observación y apertura de expedientes confidenciales. [SADEX: Módulo Casos].\n2. Elaboración e Implementación del Plan de Acompañamiento Psicosocial: Definición de acuerdos, compromisos y derivaciones (MSP / JCPDNA / UDAI). [SADEX: Módulo Casos / Informes Situacionales].\n3. Acta de Socialización a Docentes: Socialización de adaptaciones y estrategias psicosociales en el aula, con casilleros y firmas de responsabilidad docente. [SADEX: Módulo Actas de Socialización].`,
+      target_population: `Estudiantes en situación de vulnerabilidad o riesgo psicosocial identificado, sus familias y docentes de asignatura.`,
+      execution_term: `Permanente a lo largo de los tres trimestres del año lectivo.`,
+      supplies_inputs: `Expedientes digitales DECE, fichas de detección, actas de socialización con casilleros para firmas, oficios de derivación externa.`,
+      responsible: getSharedResp(),
+      observations: `EXPEDIENTES Y ACTAS DE SOCIALIZACIÓN CONFIDENCIALES EN SADEX.`,
+    },
+    item_14: {
+      activities: `1. Círculos Restaurativos de Convivencia Armónica: Espacios estructurados de diálogo, empatía y resolución pacífica de desacuerdos entre estudiantes en el aula. [SADEX: Módulo Círculos Restaurativos (Fichas de Fase Preparatoria y Círculo)].\n2. Redes Interinstitucionales: Coordinación con Subcentro de Salud (MSP), Policía Comunitaria / DINAPEN y líderes comunitarios para entornos protectores seguros. [SADEX: Módulo Actividades / Registro de Reuniones].`,
+      target_population: `Comunidad educativa: Estudiantes, docentes tutores y actores de la red interinstitucional de protección.`,
+      execution_term: `1. Primer Trimestre (Noviembre)\n2. Segundo Trimestre (Febrero)\n3. Tercer Trimestre (Mayo)`,
+      supplies_inputs: `Fichas oficiales de círculos restaurativos, actas de acuerdos de convivencia, oficios de coordinación interinstitucional y firmas de compromiso.`,
+      responsible: getResp(1),
+      observations: `FICHAS DE CÍRCULOS RESTAURATIVOS Y ACTAS DE ACUERDO EN SADEX.`,
+    },
+  };
+
+  // Si se solicita TODO el plan, enriquecer también gestión documental e informes
+  const allDeterministicPicks: Record<string, Partial<ActionPlanItem>> = {
+    ...deterministicPicks,
+    item_15: {
+      activities: `1. Actualización sistemática y confidencial de la Matriz Institucional de Riesgos Psicosociales y Casos del DECE. [SADEX: Módulo Reportes / Matriz de Riesgos y Casos Activos].\n2. Respaldo periódico y seguro de la base de datos institucional. [SADEX: Módulo Respaldos].`,
+      target_population: `Población estudiantil con casos activos y expedientes DECE.`,
+      execution_term: `Mensual durante todo el ciclo lectivo.`,
+      supplies_inputs: `Matriz digital DECE, expedientes encriptados y copias de seguridad de la base de datos.`,
+      responsible: getResp(0),
+      observations: `MATRIZ DIGITAL Y RESPALDOS SISTEMÁTICOS EN SADEX.`,
+    },
+    item_16: {
+      activities: `1. Emisión de informes técnicos de acompañamiento psicosocial con recomendaciones pedagógicas individuales para las Juntas de Docentes de Grado y Curso. [SADEX: Módulo Juntas de Curso].`,
+      target_population: `Docentes de grado/curso y directivos.`,
+      execution_term: `Al cierre de cada uno de los 3 trimestres escolares.`,
+      supplies_inputs: `Informes técnicos de junta de curso, actas de junta y registros de recomendaciones.`,
+      responsible: getSharedResp(),
+      observations: `INFORMES DE JUNTA DE CURSO GENERADOS EN SADEX.`,
+    },
+  };
+
+  const pool = opts.targetScope === "PREVENCION" ? deterministicPicks : allDeterministicPicks;
+
+  // Si Groq/Gemini está configurado, intentamos enriquecer y contextualizar con IA
+  if (isAiConfigured()) {
+    try {
+      const prompt = `Eres un especialista experto del Departamento de Consejería Estudiantil (DECE) del Ministerio de Educación de Ecuador.
+Tu labor es estructurar de manera AUTÓNOMA las actividades del PLAN DE ACCIÓN ANUAL (POA) DECE para el año lectivo ${opts.schoolYear}.
+
+PARÁMETROS OBLIGATORIOS SEGÚN EL ACUERDO MINISTERIAL MINEDUC-044-A:
+1. Debes integrar las temáticas oficiales de prevención de riesgos psicosociales:
+   - Prevención de Violencias (física, psicológica y sexual).
+   - Prevención del Acoso Escolar (bullying) y Ciberacoso.
+   - Prevención del Uso y Consumo de Drogas (alcohol, tabaco y estupefacientes).
+   - Prevención del Suicidio y Conductas Autolíticas / Promoción de la Salud Mental.
+   - Educación Integral en Sexualidad (ENEIS) y Prevención del Embarazo Adolescente.
+   - Convivencia Pacífica, Prácticas y Círculos Restaurativos.
+   - Fortalecimiento del Vínculo Familiar (Escuela para Familias).
+   - Alertas Tempranas por Ausentismo y Prevención de la Deserción.
+2. VIABILIDAD OPERATIVA Y CARGA REAL:
+   - Institución: ${opts.institutionName}
+   - Estudiantes matriculados: ${students}
+   - Equipo DECE: ${staff.join(", ")} (${profCount} profesionales, ratio ~${ratio} estudiantes por profesional).
+   - Recursos: ${opts.availableResources || "Papelería, proyectores, formularios DECE"}.
+   - CRITERIO DE REALIDAD: No sobrecargues a los profesionales con decenas de talleres individuales. Utiliza metodologías grupales, por subniveles clave (Básica Superior / Bachillerato), minutos cívicos y capacitación en cascada a docentes tutores.
+   - Distribuye las fechas equilibradamente a lo largo de los 3 trimestres escolares.
+3. ARTICULACIÓN DOCUMENTAL EN SADEX:
+   - Cada actividad propuesta DEBE mencionar su producto documental en SADEX (ej: "[SADEX: Módulo Actividades / Informes de Taller (Base LOEI Art. 73)]", "[SADEX: Módulo Círculos Restaurativos]", "[SADEX: Módulo Casos / Actas de Socialización con firmas]", "[SADEX: Módulo OVP (Test IPPJ)]").
+4. Asigna los profesionales de forma nominativa entre: ${staff.join(", ")}.
+
+Responde ÚNICAMENTE con un arreglo JSON de objetos para los siguientes identificadores de fila a actualizar (${Object.keys(pool).join(", ")}):
+[
+  {
+    "id": "item_6",
+    "activities": "...",
+    "target_population": "...",
+    "execution_term": "...",
+    "supplies_inputs": "...",
+    "responsible": "...",
+    "observations": "..."
+  }
+]`;
+
+      const res = await generateWithFallback({
+        prompt,
+        systemInstruction: "Eres un consultor senior DECE del Ministerio de Educación de Ecuador. Tu especialidad es la planificación anual viable y el cumplimiento del Acuerdo Ministerial 044-A.",
+        temperature: 0.2,
+        maxOutputTokens: 8192,
+      });
+
+      if ("text" in res && res.text) {
+        const jsonMatch = res.text.match(/\[\s*\{[\s\S]*\}\s*\]/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const updatedMap = new Map<string, Partial<ActionPlanItem>>();
+            for (const p of parsed) {
+              if (p && p.id && typeof p.id === "string") {
+                updatedMap.set(p.id, {
+                  activities: String(p.activities || "").trim(),
+                  target_population: String(p.target_population || "").trim(),
+                  execution_term: String(p.execution_term || "").trim(),
+                  supplies_inputs: String(p.supplies_inputs || "").trim(),
+                  responsible: String(p.responsible || "").trim(),
+                  observations: String(p.observations || "").trim(),
+                });
+              }
+            }
+
+            let applied = 0;
+            const updatedItems = opts.currentItems.map((it, idx) => {
+              const fallbackKey = `item_${idx + 1}`;
+              const aiData =
+                updatedMap.get(it.id) ||
+                updatedMap.get(fallbackKey) ||
+                pool[it.id] ||
+                pool[fallbackKey];
+              if (aiData) {
+                applied++;
+                return {
+                  ...it,
+                  activities: aiData.activities || it.activities,
+                  target_population: aiData.target_population || it.target_population,
+                  execution_term: aiData.execution_term || it.execution_term,
+                  supplies_inputs: aiData.supplies_inputs || it.supplies_inputs,
+                  responsible: aiData.responsible || it.responsible || getResp(idx),
+                  observations: aiData.observations || it.observations || "INFORME TÉCNICO DE CUMPLIMIENTO REGISTRADO EN SADEX",
+                };
+              }
+              if (opts.targetScope === "TODO") {
+                applied++;
+                return {
+                  ...it,
+                  responsible: it.responsible || getResp(idx),
+                  observations: it.observations || "REGISTRO Y GESTIÓN EN SADEX",
+                };
+              }
+              return it;
+            });
+
+            return {
+              updatedItems,
+              appliedCount: applied,
+              rationale: `Plan generado por IA considerando ${students} estudiantes, ${profCount} profesional(es) DECE (~${ratio} est/prof), dosificación trimestral y las 12 temáticas de prevención del Acuerdo 044-A articuladas con la gestión documental de SADEX.`,
+            };
+          }
+        }
+      }
+    } catch {
+      // Fallback determinístico abajo si hay error de parseo o conectividad
+    }
+  }
+
+  // Fallback determinístico garantizado de alta calidad legal y técnica
+  let applied = 0;
+  const updatedItems = opts.currentItems.map((it, idx) => {
+    const fallbackKey = `item_${idx + 1}`;
+    const fixedData = pool[it.id] || pool[fallbackKey];
+    if (fixedData) {
+      applied++;
+      return {
+        ...it,
+        activities: fixedData.activities || it.activities,
+        target_population: fixedData.target_population || it.target_population,
+        execution_term: fixedData.execution_term || it.execution_term,
+        supplies_inputs: fixedData.supplies_inputs || it.supplies_inputs,
+        responsible: fixedData.responsible || it.responsible || getResp(idx),
+        observations: fixedData.observations || it.observations || "INFORME TÉCNICO REGISTRADO EN SADEX",
+      };
+    }
+    if (opts.targetScope === "TODO") {
+      applied++;
+      return {
+        ...it,
+        responsible: it.responsible || getResp(idx),
+        observations: it.observations || "REGISTRO Y GESTIÓN EN SADEX",
+      };
+    }
+    return it;
+  });
+
+  return {
+    updatedItems,
+    appliedCount: applied,
+    rationale: `Plan estructurado automáticamente con el modelo oficial del Acuerdo 044-A. Carga calibrada para ${profCount} profesional(es) DECE con ratio de ~${ratio} estudiantes por analista, cubriendo drogas, acoso, salud mental, ENEIS y círculos restaurativos con trazabilidad en SADEX.`,
+  };
 }
 
 

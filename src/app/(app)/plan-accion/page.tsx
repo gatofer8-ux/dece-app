@@ -134,14 +134,23 @@ export default async function PlanAccionPage() {
                 </div>
 
                 <div className="flex flex-wrap sm:flex-col justify-center items-end gap-2 shrink-0 border-t sm:border-t-0 sm:border-l border-slate-100 pt-3 sm:pt-0 sm:pl-5">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/plan-accion/${plan.id}/gestion-documental`}
+                      className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5 bg-cyan-50/80 hover:bg-cyan-100 text-cyan-900 border-cyan-200 font-semibold shadow-xs"
+                      title="Ver y respaldar evidencias documentales de cada actividad en SADEX"
+                    >
+                      <span>📁</span>
+                      <span>Gestión Documental</span>
+                    </Link>
+
                     <Link
                       href={`/plan-accion/${plan.id}/imprimir`}
                       prefetch={false}
                       className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5"
                     >
                       <span>🖨️</span>
-                      <span>Ver e Imprimir</span>
+                      <span>Imprimir</span>
                     </Link>
 
                     {canEdit && (
