@@ -2,10 +2,14 @@
 
 import { useState, useTransition, useMemo } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { useToastOnChange } from "@/components/Toast";
+import { useToast, useToastOnChange } from "@/components/Toast";
 import Link from "next/link";
 import { createActionPlan, updateActionPlan, type ActionState } from "./actions";
-import { generateActionPlanAiSuggestion, generateActionPlanGlobalAiSuggestion } from "./ai-actions";
+import {
+  generateActionPlanAiSuggestion,
+  generateActionPlanGlobalAiSuggestion,
+  generateAutonomousPlanAiSuggestion,
+} from "./ai-actions";
 import type { ActionPlanItem, ActionPlanAnalyst, ActionPlanSignatory } from "@/lib/types";
 import { currentSchoolYearSpaced } from "@/lib/schoolYearText";
 import { DECE_QUALITY_STANDARDS, calculatePlanStats } from "@/lib/actionPlan";
@@ -134,9 +138,53 @@ export default function ActionPlanForm({
   );
 
   // Estados de IA
+  const toast = useToast();
   const [generatingItemAi, setGeneratingItemAi] = useState<string | null>(null);
   const [aiItemError, setAiItemError] = useState<string | null>(null);
   const [isPendingAiGlobal, startTransitionAiGlobal] = useTransition();
+
+  // Estados del Plan Autónomo (Acuerdo 044-A)
+  const [isAutonomousModalOpen, setIsAutonomousModalOpen] = useState(false);
+  const [autonomousScope, setAutonomousScope] = useState<"PREVENCION" | "TODO">("PREVENCION");
+  const [isGeneratingAutonomous, setIsGeneratingAutonomous] = useState(false);
+
+  // Ejecutar generación autónoma del Plan de Acción
+  const handleAutonomousPlanGeneration = async () => {
+    setIsGeneratingAutonomous(true);
+    const profList = analysts.map((a) => a.name).filter(Boolean);
+    if (coordinatorName && !profList.includes(coordinatorName)) {
+      profList.unshift(coordinatorName);
+    }
+    deceStaffNames.forEach((n) => {
+      if (!profList.includes(n)) profList.push(n);
+    });
+
+    try {
+      const res = await generateAutonomousPlanAiSuggestion({
+        institutionName,
+        schoolYear: schoolYearText,
+        studentsCount,
+        availableResources,
+        professionalsList: profList,
+        targetScope: autonomousScope,
+        currentItems: items,
+      });
+
+      setIsGeneratingAutonomous(false);
+      if ("error" in res) {
+        toast.error(res.error || "No se pudo generar el plan autónomo.");
+      } else {
+        setItems(res.updatedItems);
+        setIsAutonomousModalOpen(false);
+        toast.success(
+          `¡Plan estructurado con éxito! Se calibraron ${res.appliedCount} actividades bajo el Acuerdo 044-A con trazabilidad en SADEX.`
+        );
+      }
+    } catch (err: any) {
+      setIsGeneratingAutonomous(false);
+      toast.error(err.message || "Error al procesar la propuesta de IA.");
+    }
+  };
 
   // Estadísticas en tiempo real
   const stats = calculatePlanStats(items);
@@ -615,7 +663,7 @@ export default function ActionPlanForm({
 
       {/* Matriz del Plan de Acción (Dimensiones y Estándares) */}
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
           <div>
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <span>🎯</span>
@@ -626,14 +674,37 @@ export default function ActionPlanForm({
             </p>
           </div>
 
-          {/* Selector de Pestañas de Dimensión */}
-          <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+          <div className="flex flex-wrap items-center gap-2">
+            {planId && (
+              <Link
+                href={`/plan-accion/${planId}/gestion-documental`}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 shadow-xs flex items-center gap-1.5 transition-all"
+                title="Ir al apartado de Gestión Documental del Plan de Acción"
+              >
+                <span>📁</span>
+                <span>Gestión Documental</span>
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={() => setIsAutonomousModalOpen(true)}
+              className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xs flex items-center gap-1.5 transition-all"
+            >
+              <span>⚡</span>
+              <span>Plan Autónomo con IA (044-A)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Selector de Pestañas de Dimensión */}
+        <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
+          <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
               onClick={() => setDimensionFilter("TODAS")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                 dimensionFilter === "TODAS"
-                  ? "bg-white text-brand-900 shadow-xs"
+                  ? "bg-white text-brand-900 shadow-xs border border-slate-200"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
@@ -649,7 +720,7 @@ export default function ActionPlanForm({
                   onClick={() => setDimensionFilter(dim)}
                   className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize transition-all ${
                     dimensionFilter === dim
-                      ? "bg-white text-brand-900 shadow-xs"
+                      ? "bg-white text-brand-900 shadow-xs border border-slate-200"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
@@ -1473,6 +1544,153 @@ export default function ActionPlanForm({
           <SubmitButton isEditing={isEditing} />
         </div>
       </div>
+      {/* Modal de Generación Autónoma con IA (Acuerdo 044-A) */}
+      {isAutonomousModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-xl w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xl shadow-md">
+                  ⚡
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Plan Autónomo con IA (Acuerdo MINEDUC-044-A)
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Propuesta contextualizada a la realidad institucional y vinculada a Gestión Documental.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isGeneratingAutonomous && setIsAutonomousModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 text-lg p-1"
+                disabled={isGeneratingAutonomous}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Parámetros de Realidad Institucional */}
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs space-y-2.5">
+              <div className="font-semibold text-slate-700 flex items-center gap-1.5">
+                <span>📊</span>
+                <span>Calibración de Realidad Operativa:</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-slate-600">
+                <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Población Estudiantil</div>
+                  <div className="text-sm font-extrabold text-slate-800">{studentsCount || 0} estudiantes</div>
+                </div>
+                <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Equipo DECE</div>
+                  <div className="text-sm font-extrabold text-slate-800">
+                    {Math.max(1, analysts.filter((a) => a.name.trim()).length + (coordinatorName.trim() ? 1 : 0))} profesionales (~{Math.round((studentsCount || 0) / Math.max(1, analysts.filter((a) => a.name.trim()).length + (coordinatorName.trim() ? 1 : 0)))} est/prof)
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white p-2.5 rounded-lg border border-slate-200 text-slate-600">
+                <div className="text-[10px] uppercase font-bold text-slate-400">Recursos y Suministros Reportados</div>
+                <div className="text-xs truncate font-medium text-slate-700">
+                  {availableResources.trim() || "Materiales de aula estándar (la IA calibrará actividades con suministros accesibles)"}
+                </div>
+              </div>
+            </div>
+
+            {/* Selección de Alcance */}
+            <div className="space-y-2.5">
+              <label className="text-xs font-bold text-slate-700 block">
+                Selecciona el alcance de la propuesta:
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setAutonomousScope("PREVENCION")}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    autonomousScope === "PREVENCION"
+                      ? "border-emerald-500 bg-emerald-50/70 ring-2 ring-emerald-500/20"
+                      : "border-slate-200 bg-white hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+                      <span>🛡️</span>
+                      <span>Dimensión 2: Prevención</span>
+                    </span>
+                    {autonomousScope === "PREVENCION" && (
+                      <span className="text-[10px] font-extrabold bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded">
+                        Recomendado
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Calibra las 12 temáticas prioritarias del 044-A (violencia, acoso, drogas, salud mental, círculos) respetando las otras 3 dimensiones.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setAutonomousScope("TODO")}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    autonomousScope === "TODO"
+                      ? "border-emerald-500 bg-emerald-50/70 ring-2 ring-emerald-500/20"
+                      : "border-slate-200 bg-white hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <span>📋</span>
+                      <span>Plan Integral (4 Dim.)</span>
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Estructura las actividades de todo el POA institucional dosificadas equitativamente entre los miembros del equipo.
+                  </p>
+                </button>
+              </div>
+            </div>
+
+            {/* Aviso de Trazabilidad en SADEX */}
+            <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
+              <span className="text-base shrink-0">💡</span>
+              <p className="text-[11px] leading-relaxed">
+                Todas las actividades incluirán la etiqueta técnica <strong className="font-semibold">[SADEX: ...]</strong> para vincularse de inmediato al centro de <strong>Gestión Documental</strong> (Informes de Taller Art. 73, Actas de Socialización, Círculos Restaurativos y OVP).
+              </p>
+            </div>
+
+            {/* Botones de acción */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsAutonomousModalOpen(false)}
+                disabled={isGeneratingAutonomous}
+                className="btn-secondary text-xs px-4 py-2"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleAutonomousPlanGeneration}
+                disabled={isGeneratingAutonomous}
+                className="btn-primary text-xs px-5 py-2.5 flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+              >
+                {isGeneratingAutonomous ? (
+                  <>
+                    <span className="animate-spin">⏳</span>
+                    <span>Analizando realidad y generando actividades...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>⚡</span>
+                    <span>Generar Propuesta Autónoma</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
