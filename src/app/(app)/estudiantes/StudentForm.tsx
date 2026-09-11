@@ -264,11 +264,11 @@ export default function StudentForm({
         </div>
         <div>
           <label className="label">Jornada</label>
-          <select name="jornada" defaultValue={student?.jornada || ""} className="select">
-            <option value="">Seleccionar...</option>
+          <select name="jornada" defaultValue={student?.jornada ? student.jornada.toUpperCase() : ""} className="select">
+            <option value="">Seleccionar jornada...</option>
             {JORNADA_OPTIONS.map((j) => (
               <option key={j} value={j}>
-                {j.charAt(0) + j.slice(1).toLowerCase()}
+                {j === "MATUTINA" ? "☀️ Matutina" : j === "VESPERTINA" ? "🌅 Vespertina" : j === "NOCTURNA" ? "🌙 Nocturna" : j}
               </option>
             ))}
           </select>

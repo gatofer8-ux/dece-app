@@ -84,6 +84,8 @@ export default async function EstudianteDetallePage({ params }: { params: { id: 
       <PageHeader
         title={student.full_name}
         description={`${student.course} ${student.parallel || ""}${
+          student.jornada ? ` · Jornada ${student.jornada.charAt(0).toUpperCase() + student.jornada.slice(1).toLowerCase()}` : ""
+        }${
           student.education_level ? ` · ${EDUCATION_LEVEL_LABELS[student.education_level] || student.education_level}` : ""
         }${student.bachillerato_specialty ? ` (${student.bachillerato_specialty})` : ""} · ${formatDocumentId(student.document_type, student.document_id, "short")}`}
         action={
@@ -233,6 +235,16 @@ export default async function EstudianteDetallePage({ params }: { params: { id: 
                 placeholder="Paralelo (A/B)"
                 className="input text-xs py-1 px-2 w-20"
               />
+              <select
+                name="jornada"
+                defaultValue={student.jornada ? student.jornada.toUpperCase() : ""}
+                className="input text-xs py-1 px-2 w-28"
+              >
+                <option value="">Jornada...</option>
+                <option value="MATUTINA">Matutina</option>
+                <option value="VESPERTINA">Vespertina</option>
+                <option value="NOCTURNA">Nocturna</option>
+              </select>
               <button type="submit" className="btn-primary text-xs py-1 px-2.5">
                 + Matricular / Actualizar
               </button>
