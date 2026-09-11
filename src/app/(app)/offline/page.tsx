@@ -15,6 +15,7 @@ import {
 } from "@/lib/offline/db";
 import { syncOutboxToServer, preloadInstitutionData } from "@/lib/offline/syncEngine";
 import { ATTENDEE_TYPE_OPTIONS, actionAxisOptionsFor, type AttendeeType } from "@/lib/dailyAttention";
+import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 
 export default function OfflineHubPage() {
   const [activeTab, setActiveTab] = useState<"attention" | "students" | "interviews" | "alerts" | "outbox">("attention");
@@ -436,6 +437,7 @@ export default function OfflineHubPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <PwaInstallPrompt />
           <button
             onClick={handlePreload}
             disabled={isPreloading || !isOnline}

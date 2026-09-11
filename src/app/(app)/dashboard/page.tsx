@@ -229,8 +229,8 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Tarjetas KPI — clicables, con tendencia de 6 meses donde aplica */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3.5">
+      {/* Tarjetas KPI — clicables, perfectamente alineadas y simétricas */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3.5 items-stretch">
         <KpiCard label="Estudiantes" value={totalStudents} hint="Matrícula activa" tone="brand" href="/estudiantes" />
         <KpiCard label="Casos activos" value={openCases} hint="En acompañamiento" tone="amber" href="/casos" trend={casesTrend} />
         <KpiCard label="Prioridad alta" value={highPriority} hint="Riesgo urgente" tone="rose" href="/casos?priority=ALTA" />

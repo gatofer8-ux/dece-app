@@ -12,8 +12,8 @@ export function PageHeader({
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
-        {description && <p className="text-sm text-slate-500 mt-0.5">{description}</p>}
+        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{title}</h1>
+        {description && <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{description}</div>}
       </div>
       {action && <div className="flex gap-2">{action}</div>}
     </div>
@@ -21,12 +21,12 @@ export function PageHeader({
 }
 
 const COLOR_MAP: Record<string, string> = {
-  slate: "bg-slate-100 text-slate-700",
-  green: "bg-green-100 text-green-700",
-  amber: "bg-amber-100 text-amber-700",
-  red: "bg-red-100 text-red-700",
-  blue: "bg-blue-100 text-blue-700",
-  purple: "bg-purple-100 text-purple-700",
+  slate: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300",
+  green: "bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-300",
+  amber: "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300",
+  red: "bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300",
+  blue: "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300",
+  purple: "bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300",
 };
 
 export function Badge({ children, color = "slate" }: { children: React.ReactNode; color?: string }) {
@@ -46,11 +46,11 @@ export function EmptyState({
 }) {
   return (
     <div className="card flex flex-col items-center justify-center text-center py-16 px-6">
-      <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-2xl">
+      <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-2xl">
         {icon}
       </div>
-      <h3 className="font-semibold text-slate-800">{title}</h3>
-      {description && <p className="text-sm text-slate-500 mt-1 max-w-sm">{description}</p>}
+      <h3 className="font-semibold text-slate-800 dark:text-slate-100">{title}</h3>
+      {description && <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-sm">{description}</p>}
       {action && <div className="mt-5">{action}</div>}
     </div>
   );
