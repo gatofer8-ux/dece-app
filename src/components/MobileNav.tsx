@@ -49,17 +49,17 @@ export default function MobileNav({ role, institutionName }: { role: Role; insti
       {open && (
         <div className="fixed inset-0 z-50 no-print">
           <div className="absolute inset-0 bg-slate-900/50" onClick={() => setOpen(false)} />
-          <div className="animate-toast-in absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-brand-900 text-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3.5">
+          <div className="animate-toast-in absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-[#0b1220] text-slate-100 border-r border-slate-800 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3.5">
               <div className="min-w-0 space-y-1">
                 <SadexLogo variant="horizontal" size="xs" theme="dark" showSubtitle={false} />
-                <div className="truncate text-[11px] text-brand-200 font-medium">{institutionName || "Gestión DECE"}</div>
+                <div className="truncate text-[11px] text-slate-400 font-medium">{institutionName || "Gestión DECE"}</div>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Cerrar menú"
-                className="text-brand-200 hover:text-white text-xl leading-none p-1"
+                className="text-slate-400 hover:text-white text-xl leading-none p-1"
               >
                 ×
               </button>
@@ -69,7 +69,7 @@ export default function MobileNav({ role, institutionName }: { role: Role; insti
               {groups.map((group, gi) => (
                 <div key={group.name} className={gi > 0 ? "mt-4" : ""}>
                   {group.name !== "Principal" && group.name !== "Global" && (
-                    <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-brand-300/80">
+                    <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                       {group.name}
                     </div>
                   )}
@@ -80,8 +80,8 @@ export default function MobileNav({ role, institutionName }: { role: Role; insti
                         <Link
                           key={item.href}
                           href={item.href}
-                          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${
-                            active ? "bg-white text-brand-900 font-semibold" : "text-brand-100 hover:bg-white/10"
+                          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                            active ? "bg-slate-800 text-cyan-300 font-semibold border-l-2 border-cyan-400 pl-2.5" : "text-slate-400 hover:bg-slate-800/60 hover:text-white"
                           }`}
                         >
                           <span aria-hidden>{item.icon}</span>

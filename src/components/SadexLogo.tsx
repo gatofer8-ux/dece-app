@@ -47,7 +47,7 @@ export default function SadexLogo({
   const iconElement = (
     <div
       className={`relative ${iconSizeClasses} shrink-0 overflow-hidden shadow-md border ${
-        isLight ? "border-brand-200 bg-brand-900/5 shadow-brand-500/10" : "border-white/20 bg-brand-950 shadow-black/40 ring-1 ring-white/10"
+        isLight ? "border-slate-200 bg-white shadow-slate-200/50" : "border-white/15 bg-slate-900 shadow-black/50 ring-1 ring-white/10"
       } flex items-center justify-center`}
     >
       <img
@@ -69,7 +69,7 @@ export default function SadexLogo({
         <div className="flex items-center gap-1.5">
           <span
             className={`font-black tracking-wider uppercase font-sans ${titleSizeClasses} ${
-              isLight ? "text-brand-900" : "text-white"
+              isLight ? "text-slate-900" : "text-white"
             }`}
           >
             SADEX
@@ -81,7 +81,7 @@ export default function SadexLogo({
         {showSubtitle && (
           <p
             className={`${subtitleSizeClasses} ${
-              isLight ? "text-slate-500" : "text-brand-200/90"
+              isLight ? "text-slate-500" : "text-slate-300"
             } tracking-tight mt-0.5 max-w-[260px]`}
           >
             Sistema de Acompañamiento, DECE y Expedientes
@@ -99,7 +99,7 @@ export default function SadexLogo({
         <div className="flex items-center gap-1.5 leading-none">
           <span
             className={`font-black tracking-wider uppercase font-sans ${titleSizeClasses} ${
-              isLight ? "text-brand-900" : "text-white"
+              isLight ? "text-slate-900" : "text-white"
             }`}
           >
             SADEX
@@ -111,7 +111,7 @@ export default function SadexLogo({
         {showSubtitle && (
           <span
             className={`${subtitleSizeClasses} ${
-              isLight ? "text-slate-500" : "text-brand-200/90"
+              isLight ? "text-slate-500" : "text-slate-400"
             } truncate leading-tight font-medium mt-0.5`}
           >
             Sistema de Acompañamiento

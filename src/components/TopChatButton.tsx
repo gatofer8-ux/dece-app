@@ -34,7 +34,7 @@ export default function TopChatButton() {
       title="Mensajería y Chat DECE"
       className={`relative inline-flex items-center justify-center h-9 px-3 rounded-lg text-sm font-medium transition-all ${
         isActive
-          ? "bg-brand-900 text-white shadow-xs"
+          ? "bg-slate-900 text-white shadow-xs"
           : "bg-slate-100 text-slate-700 hover:bg-slate-200"
       }`}
     >

@@ -237,6 +237,15 @@ const PDF_EXTRACTION_PROMPT =
   'Asegurate de aplicar el Curso, Paralelo y Jornada del encabezado a TODOS los estudiantes de la tabla.';
 
 /** Le pide a Gemini que extraiga la lista de estudiantes de un único PDF, con reintento entre modelos. */
+const GEMINI_CALL_TIMEOUT_MS = 25_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Tiempo de espera agotado (${label}).`)), ms)),
+  ]);
+}
+
 async function extractStudentsFromPdfWithAi(
   ai: GoogleGenAI,
   base64Data: string
@@ -248,16 +257,20 @@ async function extractStudentsFromPdfWithAi(
   let lastErr: any = null;
   for (const model of modelsToTry) {
     try {
-      const result = await ai.models.generateContent({
-        model,
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: PDF_EXTRACTION_PROMPT }, { inlineData: { data: base64Data, mimeType: "application/pdf" } }],
-          },
-        ],
-        config: { systemInstruction: "Eres un asistente experto en extraer datos de PDFs a JSON de manera estricta.", temperature: 0.1 },
-      });
+      const result = await withTimeout(
+        ai.models.generateContent({
+          model,
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: PDF_EXTRACTION_PROMPT }, { inlineData: { data: base64Data, mimeType: "application/pdf" } }],
+            },
+          ],
+          config: { systemInstruction: "Eres un asistente experto en extraer datos de PDFs a JSON de manera estricta.", temperature: 0.1 },
+        }),
+        GEMINI_CALL_TIMEOUT_MS,
+        model
+      );
       text = (result.text || "").trim();
       if (text) break;
     } catch (err: any) {
@@ -351,22 +364,28 @@ export async function importStudentsFromPdfAi(
       pdfFiles.push({ label: file.name, base64: buf.toString("base64") });
     }
 
-    // 2. Extraer con la IA, PDF por PDF (si uno falla, se sigue con los demás en vez de abortar todo).
+    // 2. Extraer con la IA. En PARALELO (no uno por uno): con un .zip de varios
+    // PDF, procesarlos en serie multiplica el tiempo de espera por cada modelo de
+    // reintento y puede superar el tiempo máximo de una petición, cortando la
+    // conexión a medio camino (el mismo síntoma que un cuerpo demasiado grande).
+    // Si uno falla, no aborta a los demás.
+    const extractions = await Promise.all(pdfFiles.map((pdf) => extractStudentsFromPdfWithAi(ai, pdf.base64)));
+
     const skipped: SkippedRow[] = [...zipReadErrors];
     const rawStudents: { source: string; data: any }[] = [];
     let seq = zipReadErrors.length;
-    for (const pdf of pdfFiles) {
-      const extracted = await extractStudentsFromPdfWithAi(ai, pdf.base64);
+    pdfFiles.forEach((pdf, i) => {
+      const extracted = extractions[i];
       if ("error" in extracted) {
         seq++;
         skipped.push({ row: seq, name: `(archivo completo: ${pdf.label})`, reason: extracted.error });
-        continue;
+        return;
       }
       for (const st of extracted.list) {
         seq++;
         rawStudents.push({ source: pdf.label, data: st });
       }
-    }
+    });
 
     if (rawStudents.length === 0) {
       return { error: null, result: { created: 0, skipped } };
