@@ -20,11 +20,14 @@ describe("draftAutonomousActionPlan (Acuerdo MINEDUC-044-A)", () => {
       currentItems: initialItems,
     });
 
+    expect("error" in res).toBe(false);
+    if ("error" in res) return;
+
     expect(res.appliedCount).toBeGreaterThan(0);
     expect(res.updatedItems.length).toBe(initialItems.length);
 
     // Filtrar actividades actualizadas con etiquetas SADEX
-    const sadexTagged = res.updatedItems.filter((it) =>
+    const sadexTagged = res.updatedItems.filter((it: any) =>
       it.meansOfVerification?.includes("[SADEX:") ||
       it.activities?.includes("[SADEX:") ||
       it.observations?.includes("SADEX")
@@ -32,12 +35,12 @@ describe("draftAutonomousActionPlan (Acuerdo MINEDUC-044-A)", () => {
     expect(sadexTagged.length).toBeGreaterThan(0);
 
     // Verificar distribución equitativa de profesionales
-    const responsibles = res.updatedItems.map((it) => it.responsible).filter(Boolean);
+    const responsibles = res.updatedItems.map((it: any) => it.responsible).filter(Boolean);
     expect(responsibles).toContain("Lcda. Maria Perez");
     expect(responsibles).toContain("Ps. Juan Rodriguez");
 
     // Verificar que aborde temáticas 044-A (violencia, drogas, acoso, salud mental, círculos restaurativos)
-    const allText = res.updatedItems.map((it) => it.activities + " " + it.observations).join(" ");
+    const allText = res.updatedItems.map((it: any) => it.activities + " " + it.observations).join(" ");
     const has044Topics = /violencia|acoso|drogas|suicid|embarazo|socioemocional|restaurativo|convivencia/i.test(allText);
     expect(has044Topics).toBe(true);
   });
@@ -53,9 +56,12 @@ describe("draftAutonomousActionPlan (Acuerdo MINEDUC-044-A)", () => {
       currentItems: initialItems,
     });
 
+    expect("error" in res).toBe(false);
+    if ("error" in res) return;
+
     expect(res.appliedCount).toBe(initialItems.length);
     // Cada item debe tener responsable asignado
-    const assignedCount = res.updatedItems.filter((it) => it.responsible?.trim()).length;
+    const assignedCount = res.updatedItems.filter((it: any) => it.responsible?.trim()).length;
     expect(assignedCount).toBe(initialItems.length);
   });
 });
