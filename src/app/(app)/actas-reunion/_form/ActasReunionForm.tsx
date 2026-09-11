@@ -8,7 +8,6 @@ import {
   parseAgenda,
   parseSignatories,
   type MeetingAttendee,
-  type MeetingAgendaItem,
   type MeetingSignatory,
 } from "@/lib/meetingMinutes";
 import type { MeetingMinutesRow } from "@/lib/types";
@@ -78,12 +77,13 @@ export default function ActasReunionForm({
   const [attendees, setAttendees] = useState<MeetingAttendee[]>(
     initialData ? parseAttendees(initialData.attendees_json) : []
   );
-  const [agenda, setAgenda] = useState<MeetingAgendaItem[]>(
-    initialData ? parseAgenda(initialData.agenda_json) : [{ tema: "", compromiso: "", responsable: "", fecha_plazo: "" }]
-  );
   const [signatories, setSignatories] = useState<MeetingSignatory[]>(
     initialData ? parseSignatories(initialData.signatories_json) : []
   );
+
+  const legacyAgenda = initialData && !((initialData.desarrollo_narrativo || "").trim())
+    ? parseAgenda(initialData.agenda_json)
+    : [];
 
   const action = mode === "edit" ? updateMeetingMinutes.bind(null, meetingId!) : createMeetingMinutes;
 
@@ -116,6 +116,12 @@ export default function ActasReunionForm({
           {IN({ name: "meeting_date", type: "date" })}
           {IN({ name: "next_meeting_date", type: "date" })}
         </div>
+        <div className="mt-3">
+          {IN({ name: "title_suffix", voice: true })}
+          <p className="text-[11px] text-slate-400 mt-1">
+            Se muestra junto al título, por ejemplo &quot;de Asesoramiento a Autoridades&quot;. Déjalo en blanco para el título genérico.
+          </p>
+        </div>
         <div className="border rounded-lg p-3 space-y-2 mt-3">
           <p className="text-xs font-semibold text-slate-600">Responsable del acta</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -132,9 +138,6 @@ export default function ActasReunionForm({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {IN({ name: "meeting_topic", voice: true, w: "sm:col-span-2" })}
           {IN({ name: "location", voice: true })}
-          <div />
-          {IN({ name: "start_time", type: "time" })}
-          {IN({ name: "end_time", type: "time" })}
         </div>
         <div className="mt-3">
           <div className="flex items-center justify-between mb-1">
@@ -164,7 +167,7 @@ export default function ActasReunionForm({
           <h3 className="text-xs font-semibold text-slate-500 uppercase">Asistentes</h3>
           <button
             type="button"
-            onClick={() => setAttendees((a) => [...a, { nombre: "", correo: "", cargo: "" }])}
+            onClick={() => setAttendees((a) => [...a, { nombre: "", telefono: "" }])}
             className="text-xs bg-slate-200 px-2 py-1 rounded font-semibold"
           >
             + Asistente
@@ -172,7 +175,7 @@ export default function ActasReunionForm({
         </div>
         <div className="space-y-2">
           {attendees.map((a, i) => (
-            <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
+            <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-center">
               <input
                 name="att_nombre"
                 defaultValue={a.nombre}
@@ -180,12 +183,11 @@ export default function ActasReunionForm({
                 className="input text-sm"
               />
               <input
-                name="att_correo"
-                defaultValue={a.correo}
-                placeholder="Correo electrónico"
+                name="att_telefono"
+                defaultValue={a.telefono}
+                placeholder="Teléfono de contacto"
                 className="input text-sm"
               />
-              <input name="att_cargo" defaultValue={a.cargo} placeholder="Cargo" className="input text-sm" />
               <button
                 type="button"
                 onClick={() => setAttendees((arr) => arr.filter((_, j) => j !== i))}
@@ -196,72 +198,30 @@ export default function ActasReunionForm({
             </div>
           ))}
           {attendees.length === 0 && (
-            <p className="text-xs text-slate-400">Sin asistentes registrados. El acta reservará filas en blanco.</p>
+            <p className="text-xs text-slate-400">Sin asistentes registrados. El acta reservará filas en blanco para la firma.</p>
           )}
         </div>
       </section>
 
       <section>
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-1">
           <h3 className="text-xs font-semibold text-slate-500 uppercase">Desarrollo de la reunión</h3>
-          <button
-            type="button"
-            onClick={() =>
-              setAgenda((a) => [...a, { tema: "", compromiso: "", responsable: "", fecha_plazo: "" }])
-            }
-            className="text-xs bg-slate-200 px-2 py-1 rounded font-semibold"
-          >
-            + Punto / compromiso
-          </button>
+          <VoiceDictationButton targetId="f-desarrollo_narrativo" />
         </div>
-        <div className="space-y-3">
-          {agenda.map((it, i) => (
-            <div key={i} className="border rounded-lg p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">Punto {i + 1}</span>
-                {agenda.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => setAgenda((arr) => arr.filter((_, j) => j !== i))}
-                    className="text-red-600 text-xs"
-                  >
-                    quitar
-                  </button>
-                )}
-              </div>
-              <div>
-                <div className="flex items-center justify-between">
-                  <Label>Tema</Label>
-                  <VoiceDictationButton targetId={`f-ag_tema_${i}`} />
-                </div>
-                <input id={`f-ag_tema_${i}`} name="ag_tema" defaultValue={it.tema} className="input text-sm" />
-              </div>
-              <div>
-                <div className="flex items-center justify-between">
-                  <Label>Compromiso</Label>
-                  <VoiceDictationButton targetId={`f-ag_compromiso_${i}`} />
-                </div>
-                <textarea
-                  id={`f-ag_compromiso_${i}`}
-                  name="ag_compromiso"
-                  rows={2}
-                  defaultValue={it.compromiso}
-                  className="textarea text-sm"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div>
-                  <Label>Responsable</Label>
-                  <input name="ag_responsable" defaultValue={it.responsable} className="input text-sm" />
-                </div>
-                <div>
-                  <Label>Fecha plazo</Label>
-                  <input name="ag_fecha_plazo" type="date" defaultValue={it.fecha_plazo} className="input text-sm" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        {legacyAgenda.length > 0 && (
+          <p className="text-[11px] text-amber-600 mb-1">
+            Esta acta tiene {legacyAgenda.length} compromiso(s) guardados con el formato anterior; se seguirán mostrando al
+            imprimir mientras este campo esté vacío.
+          </p>
+        )}
+        <textarea
+          id="f-desarrollo_narrativo"
+          name="desarrollo_narrativo"
+          rows={8}
+          defaultValue={v("desarrollo_narrativo")}
+          className="textarea text-sm"
+          placeholder="Redacta en un solo texto lo tratado en la reunión, acuerdos y compromisos."
+        />
       </section>
 
       <section>
@@ -328,14 +288,13 @@ const LABELS: Record<string, string> = {
   meeting_code: "Código del acta",
   meeting_date: "Fecha de la reunión",
   next_meeting_date: "Fecha próxima reunión",
+  title_suffix: "Asunto / tipo de reunión (opcional)",
   responsible_name: "Nombre",
   responsible_role: "Cargo",
   responsible_email: "Correo electrónico",
   responsible_phone_ext: "Extensión telefónica",
   meeting_topic: "Tema de la reunión",
   location: "Lugar",
-  start_time: "Hora de inicio",
-  end_time: "Hora de fin",
   thematic_background: "Antecedentes de la temática",
   additional_comments: "Observaciones y comentarios adicionales",
 };

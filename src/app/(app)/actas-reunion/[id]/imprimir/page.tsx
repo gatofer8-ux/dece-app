@@ -10,6 +10,7 @@ import {
   parseSignatories,
   ACCEPTANCE_TEXT,
   ACCEPTANCE_NOTE,
+  DEPENDENCIA_LABEL,
 } from "@/lib/meetingMinutes";
 import type { MeetingMinutesRow, InstitutionRow } from "@/lib/types";
 
@@ -34,8 +35,12 @@ export default async function ImprimirActaReunionPage({ params }: { params: { id
   const attendees = parseAttendees(m.attendees_json);
   const agenda = parseAgenda(m.agenda_json);
   const signatories = parseSignatories(m.signatories_json);
-  const attRows = [...attendees, ...Array(Math.max(2, 8 - attendees.length)).fill({ nombre: "", correo: "", cargo: "" })];
+  const attRows = [...attendees, ...Array(Math.max(2, 8 - attendees.length)).fill({ nombre: "", telefono: "" })];
   const sigRows = [...signatories, ...Array(Math.max(2, 8 - signatories.length)).fill({ nombre: "" })];
+  // Compatibilidad: actas antiguas guardaron una tabla de compromisos en vez
+  // del texto narrativo único del formato oficial.
+  const hasNarrativo = (m.desarrollo_narrativo || "").trim().length > 0;
+  const legacyAgenda = !hasNarrativo && agenda.length > 0 ? agenda : [];
 
   const cell = "border border-slate-500 px-2 py-1 align-top text-[10pt]";
   const lbl = `${cell} bg-[#DEEAF6] font-bold text-[#1F3864] text-center`;
@@ -55,7 +60,7 @@ export default async function ImprimirActaReunionPage({ params }: { params: { id
       <div id="printable-content" className="p-6 print:p-0 text-black">
         <style>{`@media print { @page { size: A4; margin: 1.4cm; } }`}</style>
         <DocumentHeader
-          title="Acta de Reunión"
+          title={`Acta de Reunión${m.title_suffix ? ` ${m.title_suffix}` : ""}`}
           subtitle="Ministerio de Educación — Departamento de Consejería Estudiantil (DECE)"
           institutionName={institution.name}
           sealImage={institution.seal_image}
@@ -71,7 +76,7 @@ export default async function ImprimirActaReunionPage({ params }: { params: { id
             </tr>
             <tr>
               <td className={lbl}>Fecha próxima reunión</td><td className={cell}>{fmt(m.next_meeting_date)}</td>
-              <td className={lbl}>Dependencia</td><td className={cell}>DECE</td>
+              <td className={lbl}>Dependencia</td><td className={cell}>{DEPENDENCIA_LABEL}</td>
             </tr>
             <tr>
               <td className={lbl}>Responsable del Acta</td>
@@ -83,11 +88,10 @@ export default async function ImprimirActaReunionPage({ params }: { params: { id
             <tr><td className={bar} colSpan={4}>ANTECEDENTES DE LA REUNIÓN</td></tr>
             <tr>
               <td className={lbl}>Tema Reunión</td><td className={cell}>{m.meeting_topic || "—"}</td>
-              <td className={lbl}>Hora Inicio</td><td className={cell}>{m.start_time || "—"}</td>
+              <td className={lbl}>Institución</td><td className={cell}>{institution.name}</td>
             </tr>
             <tr>
-              <td className={lbl}>Lugar</td><td className={cell}>{m.location || "—"}</td>
-              <td className={lbl}>Hora Fin</td><td className={cell}>{m.end_time || "—"}</td>
+              <td className={lbl}>Lugar</td><td className={cell} colSpan={3}>{m.location || "—"}</td>
             </tr>
             <tr>
               <td className={lbl}>Antecedentes de la Temática</td>
@@ -102,12 +106,12 @@ export default async function ImprimirActaReunionPage({ params }: { params: { id
         <table className="w-full border-collapse mt-2">
           <tbody>
             <tr><td className={bar} colSpan={3}>ASISTENTES</td></tr>
-            <tr><td className={lbl}>Nombre</td><td className={lbl}>Contacto (correo electrónico)</td><td className={lbl}>Cargo</td></tr>
+            <tr><td className={lbl}>Nombre</td><td className={lbl}>Teléfono de contacto</td><td className={lbl}>Firma</td></tr>
             {attRows.map((a, i) => (
               <tr key={i}>
-                <td className={cell}>{a.nombre || " "}</td>
-                <td className={cell}>{a.correo || " "}</td>
-                <td className={cell}>{a.cargo || " "}</td>
+                <td className={cell}>{a.nombre || " "}</td>
+                <td className={cell}>{a.telefono || " "}</td>
+                <td className={cell} style={{ height: 30 }}>&nbsp;</td>
               </tr>
             ))}
           </tbody>
@@ -116,20 +120,31 @@ export default async function ImprimirActaReunionPage({ params }: { params: { id
         <table className="w-full border-collapse mt-2">
           <tbody>
             <tr><td className={bar} colSpan={4}>DESARROLLO DE LA REUNIÓN</td></tr>
-            <tr>
-              <td className={lbl} style={{ width: "18%" }}>Tema</td>
-              <td className={lbl}>Compromiso</td>
-              <td className={lbl} style={{ width: "18%" }}>Responsable</td>
-              <td className={lbl} style={{ width: "14%" }}>Fecha Plazo</td>
-            </tr>
-            {(agenda.length ? agenda : [{ tema: "", compromiso: "", responsable: "", fecha_plazo: "" }]).map((it, i) => (
-              <tr key={i}>
-                <td className={cell}>{it.tema || " "}</td>
-                <td className={`${cell} text-justify`}>{it.compromiso || " "}</td>
-                <td className={cell}>{it.responsable || " "}</td>
-                <td className={cell}>{fmt(it.fecha_plazo)}</td>
+            {legacyAgenda.length ? (
+              <>
+                <tr>
+                  <td className={lbl} style={{ width: "18%" }}>Tema</td>
+                  <td className={lbl}>Compromiso</td>
+                  <td className={lbl} style={{ width: "18%" }}>Responsable</td>
+                  <td className={lbl} style={{ width: "14%" }}>Fecha Plazo</td>
+                </tr>
+                {legacyAgenda.map((it, i) => (
+                  <tr key={i}>
+                    <td className={cell}>{it.tema || " "}</td>
+                    <td className={`${cell} text-justify`}>{it.compromiso || " "}</td>
+                    <td className={cell}>{it.responsable || " "}</td>
+                    <td className={cell}>{fmt(it.fecha_plazo)}</td>
+                  </tr>
+                ))}
+              </>
+            ) : (
+              <tr>
+                <td className={`${cell} text-justify`} colSpan={4}>
+                  {lines(m.desarrollo_narrativo).map((l, i) => <p key={i} className="mb-1">{l}</p>)}
+                  {lines(m.desarrollo_narrativo).length === 0 && "—"}
+                </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
 
@@ -145,7 +160,7 @@ export default async function ImprimirActaReunionPage({ params }: { params: { id
             <tr><td className={lbl}>NOMBRE</td><td className={lbl}>FIRMA</td></tr>
             {sigRows.map((s, i) => (
               <tr key={i}>
-                <td className={cell}>{s.nombre || " "}</td>
+                <td className={cell}>{s.nombre || " "}</td>
                 <td className={cell} style={{ height: 34 }}>&nbsp;</td>
               </tr>
             ))}
@@ -158,7 +173,7 @@ export default async function ImprimirActaReunionPage({ params }: { params: { id
             <tr>
               <td className={`${cell} text-justify`} style={{ minHeight: 60 }}>
                 {lines(m.additional_comments).map((l, i) => <p key={i} className="mb-1">{l}</p>)}
-                {lines(m.additional_comments).length === 0 && " "}
+                {lines(m.additional_comments).length === 0 && " "}
               </td>
             </tr>
           </tbody>

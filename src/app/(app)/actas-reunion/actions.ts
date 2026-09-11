@@ -14,26 +14,16 @@ import type { MeetingMinutesRow } from "@/lib/types";
 const TEXT_COLS = [
   "meeting_code", "meeting_date", "next_meeting_date",
   "responsible_name", "responsible_email", "responsible_phone_ext", "responsible_role",
-  "meeting_topic", "start_time", "end_time", "location", "thematic_background", "additional_comments",
+  "meeting_topic", "location", "thematic_background", "additional_comments",
+  "title_suffix", "desarrollo_narrativo",
 ] as const;
 
 function collectAttendees(fd: FormData) {
   const nombres = getAllStr(fd, "att_nombre");
-  const correos = getAllStr(fd, "att_correo");
-  const cargos = getAllStr(fd, "att_cargo");
+  const telefonos = getAllStr(fd, "att_telefono");
   const out = nombres
-    .map((n, i) => ({ nombre: n, correo: correos[i] || "", cargo: cargos[i] || "" }))
-    .filter((a) => a.nombre || a.correo || a.cargo);
-  return JSON.stringify(out);
-}
-function collectAgenda(fd: FormData) {
-  const temas = getAllStr(fd, "ag_tema");
-  const comps = getAllStr(fd, "ag_compromiso");
-  const resps = getAllStr(fd, "ag_responsable");
-  const plazos = getAllStr(fd, "ag_fecha_plazo");
-  const out = temas
-    .map((t, i) => ({ tema: t, compromiso: comps[i] || "", responsable: resps[i] || "", fecha_plazo: plazos[i] || "" }))
-    .filter((x) => x.tema || x.compromiso || x.responsable || x.fecha_plazo);
+    .map((n, i) => ({ nombre: n, telefono: telefonos[i] || "" }))
+    .filter((a) => a.nombre || a.telefono);
   return JSON.stringify(out);
 }
 function collectSignatories(fd: FormData) {
@@ -45,7 +35,6 @@ function payload(fd: FormData) {
   const o: Record<string, string | null> = {};
   for (const c of TEXT_COLS) o[c] = str(fd, c);
   o.attendees_json = collectAttendees(fd);
-  o.agenda_json = collectAgenda(fd);
   o.signatories_json = collectSignatories(fd);
   return o;
 }
@@ -54,7 +43,10 @@ export async function createMeetingMinutes(formData: FormData) {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
   const id = randomUUID();
-  const v = payload(formData);
+  // agenda_json ya no se llena desde el formulario (se reemplazó por
+  // desarrollo_narrativo); se conserva vacío en las actas nuevas y solo
+  // existe con datos en actas creadas antes de este cambio.
+  const v = { ...payload(formData), agenda_json: "[]" };
   const cols = Object.keys(v);
   db.prepare(
     `INSERT INTO meeting_minutes (id, institution_id, created_by_id, ${cols.join(", ")})
@@ -70,6 +62,8 @@ export async function updateMeetingMinutes(id: string, formData: FormData) {
   const institutionId = requireInstitutionId(session);
   const exists = db.prepare("SELECT id FROM meeting_minutes WHERE id = ? AND institution_id = ?").get(id, institutionId);
   if (!exists) throw new Error("Acta no encontrada.");
+  // agenda_json no se toca al editar: si el acta es antigua y todavía tiene
+  // compromisos guardados, se conservan tal cual para no perder información.
   const v = payload(formData);
   const cols = Object.keys(v);
   db.prepare(

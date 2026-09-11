@@ -785,6 +785,8 @@ export interface MeetingMinutesRow {
   agenda_json: string;
   signatories_json: string;
   additional_comments: string | null;
+  title_suffix: string | null;
+  desarrollo_narrativo: string | null;
   created_at: string;
   updated_at: string;
 }
