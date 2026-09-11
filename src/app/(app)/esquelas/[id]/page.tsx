@@ -2,9 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { getEsquelaById } from "@/lib/esquelas";
+import { db } from "@/lib/db";
 import { PageHeader, Badge, formatDate } from "@/components/ui";
 import TalonStatusForm from "./TalonStatusForm";
 import DeleteEsquelaButton from "./DeleteEsquelaButton";
+import WhatsAppNotificationButton from "@/components/WhatsAppNotificationButton";
 
 export default async function EsquelaDetailPage({
   params,
@@ -16,6 +18,14 @@ export default async function EsquelaDetailPage({
 
   const esquela = getEsquelaById(params.id, institutionId);
   if (!esquela) notFound();
+
+  const student = db
+    .prepare("SELECT rep_phone FROM students WHERE id = ?")
+    .get(esquela.student_id) as { rep_phone?: string } | undefined;
+
+  const institution = db
+    .prepare("SELECT name FROM institutions WHERE id = ?")
+    .get(institutionId) as { name?: string } | undefined;
 
   const attendedBadge = () => {
     switch (esquela.talon_attended) {
@@ -46,7 +56,18 @@ export default async function EsquelaDetailPage({
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <WhatsAppNotificationButton
+            phoneNumber={esquela.representative_phone || student?.rep_phone}
+            recipientName={esquela.representative_name}
+            studentName={esquela.student_name}
+            citationNumber={esquela.citation_number}
+            date={formatDate(esquela.citation_date)}
+            time={esquela.citation_time}
+            reason={esquela.citation_reason}
+            institutionName={institution?.name}
+          />
+
           <Link
             href={`/esquelas/${esquela.id}/editar`}
             className="btn-secondary text-xs flex items-center gap-1 font-medium"

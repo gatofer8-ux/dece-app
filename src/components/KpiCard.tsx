@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Sparkline from "./Sparkline";
+import AnimatedCounter from "./AnimatedCounter";
 
 const TONES: Record<string, { ring: string; num: string; label: string; spark: string }> = {
   slate: { ring: "border-slate-200", num: "text-slate-900", label: "text-slate-600", spark: "text-slate-400" },
@@ -37,14 +38,18 @@ export default function KpiCard({
         {href && <span className="text-slate-300 text-xs group-hover:text-slate-500 transition-colors">→</span>}
       </div>
       <div className="mt-1 flex items-end justify-between gap-2">
-        <div className={`text-2xl font-bold tabular-nums ${t.num}`}>{value}</div>
+        <div className={`text-2xl font-bold tabular-nums ${t.num}`}>
+          <AnimatedCounter value={value} />
+        </div>
         {trend && trend.length >= 2 && <Sparkline data={trend} className={t.spark} />}
       </div>
       {hint && <div className="text-[11px] text-slate-500 mt-0.5">{hint}</div>}
     </>
   );
 
-  const cls = `card p-3.5 border ${t.ring} ${href ? "group hover:shadow-md transition-shadow" : ""}`;
+  const cls = `card p-3.5 border ${t.ring} hover:-translate-y-1 hover:shadow-md transition-all duration-200 ${
+    href ? "group cursor-pointer" : ""
+  }`;
 
   return href ? (
     <Link href={href} className={cls}>

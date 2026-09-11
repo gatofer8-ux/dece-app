@@ -9,11 +9,11 @@
     text-rendering: optimizeLegibility;
   }
   body {
-    @apply bg-slate-50 text-slate-900;
+    @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200;
   }
   /* Foco visible y consistente en toda la app (accesibilidad) */
   :focus-visible {
-    @apply outline-none ring-2 ring-slate-900/20 ring-offset-1 ring-offset-white rounded-sm;
+    @apply outline-none ring-2 ring-slate-900/20 dark:ring-slate-100/20 ring-offset-1 ring-offset-white dark:ring-offset-slate-900 rounded-sm;
   }
   h1, h2, h3 {
     @apply tracking-tight;
@@ -25,38 +25,41 @@
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer;
   }
   .btn-primary {
-    @apply btn bg-slate-900 text-white hover:bg-slate-800 shadow-xs hover:shadow-sm active:bg-slate-950;
+    @apply btn bg-slate-900 dark:bg-brand-600 text-white hover:bg-slate-800 dark:hover:bg-brand-500 shadow-xs hover:shadow-sm active:bg-slate-950 dark:active:bg-brand-700;
   }
   .btn-secondary {
-    @apply btn bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:border-slate-400 shadow-xs;
+    @apply btn bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/80 hover:border-slate-400 dark:hover:border-slate-600 shadow-xs;
   }
   .btn-danger {
     @apply btn bg-red-600 text-white hover:bg-red-700 shadow-xs hover:shadow-sm active:bg-red-800;
   }
   .btn-ghost {
-    @apply btn bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900;
+    @apply btn bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100;
   }
   .card {
-    @apply bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_0_rgba(0,0,0,0.03),0_1px_2px_-1px_rgba(0,0,0,0.03)] transition-all duration-200 hover:border-slate-300/80 hover:shadow-xs;
+    @apply bg-white/90 dark:bg-slate-900/85 backdrop-blur-md rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-[0_1px_3px_0_rgba(0,0,0,0.03),0_1px_2px_-1px_rgba(0,0,0,0.03)] transition-all duration-200 hover:border-slate-300/90 dark:hover:border-slate-700 hover:shadow-xs;
+  }
+  .glass-panel {
+    @apply bg-white/75 dark:bg-slate-900/75 backdrop-blur-xl border border-slate-200/70 dark:border-slate-800 shadow-xs;
   }
   .label {
-    @apply block text-sm font-medium text-slate-700 mb-1;
+    @apply block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1;
   }
   .input {
-    @apply w-full rounded-lg border border-slate-300 px-3 py-2 text-sm transition-all duration-150 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none bg-white text-slate-900 placeholder:text-slate-400;
+    @apply w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm transition-all duration-150 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500;
   }
   .select {
-    @apply input bg-white text-slate-900;
+    @apply input bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100;
   }
   .textarea {
-    @apply input bg-white text-slate-900 placeholder:text-slate-400;
+    @apply input bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500;
   }
   .badge {
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
   /* Bloque animado para estados de carga */
   .skeleton {
-    @apply animate-pulse rounded-md bg-slate-200/70;
+    @apply animate-pulse rounded-md bg-slate-200/70 dark:bg-slate-800/70;
   }
 }
 
@@ -68,6 +71,54 @@
   }
   .animate-toast-in {
     animation: toast-in 0.18s ease-out;
+  }
+
+  /* Animación suave de entrada para páginas y módulos */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-fade-in-up {
+    animation: fadeInUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* Movimiento suave de orbes ambientales (GPU acelerado) */
+  @keyframes floatOrb1 {
+    0%, 100% { transform: translate(0px, 0px) scale(1); }
+    50% { transform: translate(35px, 25px) scale(1.05); }
+  }
+  @keyframes floatOrb2 {
+    0%, 100% { transform: translate(0px, 0px) scale(1); }
+    50% { transform: translate(-30px, 35px) scale(0.96); }
+  }
+  @keyframes floatOrb3 {
+    0%, 100% { transform: translate(0px, 0px) scale(1); }
+    50% { transform: translate(25px, -30px) scale(1.04); }
+  }
+
+  .ambient-orb-1 {
+    animation: floatOrb1 24s ease-in-out infinite;
+  }
+  .ambient-orb-2 {
+    animation: floatOrb2 28s ease-in-out infinite;
+  }
+  .ambient-orb-3 {
+    animation: floatOrb3 22s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ambient-orb-1,
+    .ambient-orb-2,
+    .ambient-orb-3,
+    .animate-fade-in-up {
+      animation: none !important;
+    }
   }
 }
 

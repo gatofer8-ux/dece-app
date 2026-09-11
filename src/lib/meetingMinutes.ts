@@ -17,6 +17,7 @@ export interface MeetingAgendaItem {
 }
 export interface MeetingSignatory {
   nombre: string;
+  firma_data_url?: string;
 }
 
 export const ACCEPTANCE_TEXT =

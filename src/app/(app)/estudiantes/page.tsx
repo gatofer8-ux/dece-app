@@ -115,6 +115,9 @@ export default async function EstudiantesPage({
         description="Registro base de estudiantes de la institución."
         action={
           <>
+            <Link href="/estudiantes/carnets" className="btn-secondary">
+              🪪 Carnets con QR
+            </Link>
             <Link href="/estudiantes/importar" className="btn-secondary">
               📥 Importar estudiantes
             </Link>
