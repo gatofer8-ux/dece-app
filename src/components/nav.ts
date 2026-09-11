@@ -40,6 +40,7 @@ export const NAV_ITEMS: NavItem[] = [
   // ENEIS
   { href: "/eneis", label: "Fichas de Aplicación ENEIS", icon: "🧩", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "ENEIS" },
   { href: "/eneis/encuestas", label: "Encuestas de percepción", icon: "📊", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "ENEIS" },
+  { href: "/eneis/informe", label: "Informe trimestral/semestral", icon: "📄", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "ENEIS" },
 
   // Informes
   { href: "/reportes", label: "Reportes", icon: "📈", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Informes" },

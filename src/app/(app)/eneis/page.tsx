@@ -36,6 +36,12 @@ export default async function EneisPage() {
             >
               <span>📊</span> Encuestas de percepción
             </Link>
+            <Link
+              href="/eneis/informe"
+              className="px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-semibold flex items-center gap-1.5"
+            >
+              <span>📄</span> Informe trimestral/semestral
+            </Link>
             {canManage ? (
               <Link href="/eneis/nueva" className="btn-primary flex items-center gap-1.5">
                 <span>➕</span> Nueva convocatoria
