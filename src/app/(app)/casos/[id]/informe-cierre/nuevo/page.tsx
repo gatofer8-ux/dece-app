@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { currentSchoolYearText } from "@/lib/schoolYearText";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow, InstitutionRow, SchoolYearRow } from "@/lib/types";
@@ -36,7 +37,7 @@ export default async function NuevoInformeCierrePage({
     .prepare("SELECT * FROM school_years WHERE institution_id = ? AND is_active = 1")
     .get(institutionId) as SchoolYearRow | undefined;
 
-  const schoolYearText = activeYear?.name || "2025/2026";
+  const schoolYearText = activeYear?.name || currentSchoolYearText();
   const preview = previewNextReportNumber({
     institutionId,
     schoolYearText,

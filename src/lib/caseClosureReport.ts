@@ -2,6 +2,7 @@ import type {
   ClosureType,
   BimonthlyProcessItem,
 } from "@/lib/types";
+import { currentSchoolYearText } from "@/lib/schoolYearText";
 
 export const DEFAULT_LEGAL_FRAMEWORK = `La Constitución de la República (2008) determina a Ecuador como un Estado constitucional de derechos y justicia social. Establece principios de aplicación de los derechos, reconoce los derechos individuales y colectivos de la ciudadanía, y define la organización del Estado y los mecanismos de protección de derechos. El Art. 44 establece: “El Estado, la sociedad y la familia promoverán de forma prioritaria el desarrollo integral de las niñas, niños y adolescentes, y asegurarán el ejercicio pleno de sus derechos; se atenderá al principio de su interés superior y sus derechos prevalecerán sobre los de las demás personas. Las niñas, niños y adolescentes tendrán derecho a su desarrollo integral, entendido como proceso de crecimiento, maduración y despliegue de su intelecto y de sus capacidades, potencialidades y aspiraciones, en un entorno familiar, escolar, social y comunitario de afectividad y seguridad. Este entorno permitirá la satisfacción de sus necesidades sociales, afectivo-emocionales y culturales, con el apoyo de políticas intersectoriales nacionales y locales”.
 
@@ -99,7 +100,7 @@ export function generateReportNumber(
         .slice(0, 6)
     : "UE";
 
-  const cleanYear = (schoolYearText || "2024-2025").replace(/\s+/g, "");
+  const cleanYear = (schoolYearText || currentSchoolYearText()).replace(/\s+/g, "");
   const randNum = String(Math.floor(10 + Math.random() * 90));
   return `IT-DECE-${acronym}-${cleanYear}-${randNum}`;
 }

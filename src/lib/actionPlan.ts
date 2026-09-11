@@ -1,5 +1,6 @@
 // Catálogo oficial de Estándares de Calidad y Plantilla Base del Plan de Acción Anual DECE
 import { ActionPlanItem, ActionPlanAnalyst, ActionPlanSignatory } from './types';
+import { currentSchoolYearText } from './schoolYearText';
 
 export interface QualityStandardInfo {
   code: string;
@@ -559,9 +560,12 @@ export function getDefaultActionPlanItems(
   institutionalDeceName?: string,
   coordinatorName?: string
 ): ActionPlanItem[] {
+  const year = currentSchoolYearText();
   return DEFAULT_ACTION_PLAN_ITEMS.map((item, idx) => {
     return {
       ...item,
+      // El año lectivo de la plantilla se actualiza al año en curso.
+      execution_term: (item.execution_term || "").replace(/20\d{2}\s*-?\s*20\d{2}/g, year),
       id:
         typeof crypto !== "undefined" && crypto.randomUUID
           ? crypto.randomUUID()

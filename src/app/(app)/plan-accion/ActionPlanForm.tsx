@@ -7,6 +7,7 @@ import Link from "next/link";
 import { createActionPlan, updateActionPlan, type ActionState } from "./actions";
 import { generateActionPlanAiSuggestion, generateActionPlanGlobalAiSuggestion } from "./ai-actions";
 import type { ActionPlanItem, ActionPlanAnalyst, ActionPlanSignatory } from "@/lib/types";
+import { currentSchoolYearSpaced } from "@/lib/schoolYearText";
 import { DECE_QUALITY_STANDARDS, calculatePlanStats } from "@/lib/actionPlan";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
 import AIAssistButton from "@/components/AIAssistButton";
@@ -449,7 +450,7 @@ export default function ActionPlanForm({
                 value={schoolYearText}
                 onChange={(e) => setSchoolYearText(e.target.value)}
                 className="input w-full text-sm"
-                placeholder="2025 - 2026"
+                placeholder={currentSchoolYearSpaced()}
               />
             )}
           </div>

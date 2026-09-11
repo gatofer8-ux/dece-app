@@ -5,6 +5,7 @@ import { useFormState, useFormStatus } from "react-dom";
 import { updateOwnInstitutionDetails, type ActionState } from "../instituciones/actions";
 import { useToastOnChange } from "@/components/Toast";
 import type { InstitutionRow } from "@/lib/types";
+import { currentSchoolYearText } from "@/lib/schoolYearText";
 import {
   formatZoneCode,
   formatDistrictCode,
@@ -51,7 +52,7 @@ export default function InstitutionSettingsForm({ institution }: { institution: 
     institution: effAcr,
     dece: deceCode || "DECE",
     professional: "MJ",
-    schoolYear: "2025/2026",
+    schoolYear: currentSchoolYearText(),
     sequence: 1,
   });
 

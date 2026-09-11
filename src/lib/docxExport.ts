@@ -45,6 +45,7 @@ import type {
   CaseCorresponsibilityActRow,
 } from "./types";
 import { LEGAL_BASIS_TEXT, parseStringList } from "./situationalReport";
+import { currentSchoolYearText } from "./schoolYearText";
 import { parseProcessesData } from "./bimonthlyReport";
 import { formatDate } from "@/components/ui";
 import { parseOfficialObservationData } from "./observationSheet";
@@ -224,7 +225,7 @@ activeYear?: SchoolYearRow | null;
                   new TableCell({
                     columnSpan: 2,
                     width: { size: 53, type: WidthType.PERCENTAGE },
-                    children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `Mineduc-CZ3-18D02-UESR-DECE-2025/2026-${report.id.substring(0, 4).toUpperCase()}`, bold: true, size: 14 })] })],
+                    children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: (report as { report_number?: string | null }).report_number || `Mineduc-CZ3-18D02-UESR-DECE-${currentSchoolYearText()}-${report.id.substring(0, 4).toUpperCase()}`, bold: true, size: 14 })] })],
                   }),
                 ],
               }),

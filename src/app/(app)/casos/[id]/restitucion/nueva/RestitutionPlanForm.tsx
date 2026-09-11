@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { studentGradeLabel } from "@/lib/studentCourse";
+import { currentSchoolYearSpaced } from "@/lib/schoolYearText";
 import { useFormState, useFormStatus } from "react-dom";
 import { useToastOnChange } from "@/components/Toast";
 import Link from "next/link";
@@ -257,7 +258,7 @@ export default function RestitutionPlanForm({
             <label className="label text-xs font-semibold text-slate-600">Año Lectivo</label>
             <input
               name="school_year"
-              defaultValue={initialData?.school_year || activeYear?.name || "2025 - 2026"}
+              defaultValue={initialData?.school_year || activeYear?.name || currentSchoolYearSpaced()}
               placeholder="Ej. 2025 - 2026"
               className="input"
               required

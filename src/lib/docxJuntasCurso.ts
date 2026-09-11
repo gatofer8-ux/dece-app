@@ -14,6 +14,7 @@ import {
   DEFAULT_CONCLUSIONES,
   DEFAULT_RECOMENDACIONES,
 } from "./juntasCursoConstants";
+import { currentSchoolYearText } from "./schoolYearText";
 
 export interface JuntasCursoDocxData {
   nombre_institucion: string;
@@ -164,7 +165,7 @@ export function formatCourseBoardReportTemplateData(
     });
   }
 
-  const tema = `INFORME GENERAL PARA JUNTAS DE GRADO O CURSO DEL ${trimesterLabel.toUpperCase()} DE LA ${institutionName.toUpperCase()}, AÑO LECTIVO ${report.school_year_text || "2025-2026"} DEL ${report.course.toUpperCase()} PARALELO ${(report.parallel || "A").toUpperCase()} - JORNADA ${(report.jornada || "MATUTINA").toUpperCase()}.`;
+  const tema = `INFORME GENERAL PARA JUNTAS DE GRADO O CURSO DEL ${trimesterLabel.toUpperCase()} DE LA ${institutionName.toUpperCase()}, AÑO LECTIVO ${report.school_year_text || currentSchoolYearText()} DEL ${report.course.toUpperCase()} PARALELO ${(report.parallel || "A").toUpperCase()} - JORNADA ${(report.jornada || "MATUTINA").toUpperCase()}.`;
 
   const coordRole = report.user_role_label?.includes("Coord")
     ? report.user_role_label
@@ -187,7 +188,7 @@ export function formatCourseBoardReportTemplateData(
     tutor_telefono: report.tutor_contact || "0998877665",
     tutor_email: report.tutor_email || "tutor@institucion.edu.ec",
     tema_informe: tema,
-    anio_lectivo: report.school_year_text || "2025-2026",
+    anio_lectivo: report.school_year_text || currentSchoolYearText(),
     casos: casosData,
     conclusiones: report.conclusiones || DEFAULT_CONCLUSIONES(trimesterLabel),
     recomendaciones: report.recomendaciones || DEFAULT_RECOMENDACIONES,

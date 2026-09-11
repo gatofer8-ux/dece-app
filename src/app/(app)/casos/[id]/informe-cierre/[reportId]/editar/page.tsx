@@ -14,6 +14,7 @@ import {
   getCasePsychosocialActionsSummary,
 } from "@/lib/caseClosureReportServer";
 import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
+import { currentSchoolYearSpaced } from "@/lib/schoolYearText";
 import CaseClosureReportForm from "../../nuevo/CaseClosureReportForm";
 
 export default async function EditarInformeCierrePage({
@@ -49,7 +50,7 @@ export default async function EditarInformeCierrePage({
     .prepare("SELECT * FROM school_years WHERE institution_id = ? AND is_active = 1")
     .get(institutionId) as SchoolYearRow | undefined;
 
-  const schoolYearText = report.school_year_text || activeYear?.name || "2024 - 2025";
+  const schoolYearText = report.school_year_text || activeYear?.name || currentSchoolYearSpaced();
   const defaultPsychosocialSummary =
     report.activities_psychosocial || getCasePsychosocialActionsSummary(caseFile.id);
   const bimonthlyItems = getCaseBimonthlyReports(caseFile.id);

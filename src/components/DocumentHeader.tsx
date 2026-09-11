@@ -1,12 +1,14 @@
 // Encabezado oficial estándar para los documentos impresos y PDF del DECE Ecuador
 // Basado en la imagen corporativa oficial del Ministerio de Educación, Deporte y Cultura ("El Nuevo Ecuador")
 
+import { currentSchoolYearSpaced } from "@/lib/schoolYearText";
+
 export default function DocumentHeader({
   title,
   subtitle,
   institutionName,
   sealImage,
-  schoolYear = "2025 - 2026",
+  schoolYear,
   compact = false,
   headerMode = "DUAL",
 }: {
@@ -22,6 +24,7 @@ export default function DocumentHeader({
 }) {
   const showMineduc = headerMode === "DUAL" || headerMode === "MINEDUC";
   const showInstitutionSeal = headerMode === "DUAL" || headerMode === "INSTITUTIONAL";
+  const displaySchoolYear = schoolYear && schoolYear.trim() ? schoolYear : currentSchoolYearSpaced();
 
   const defaultInst = "UNIDAD EDUCATIVA “SANTA ROSA” - 18H00313";
   const displayName = institutionName
@@ -57,7 +60,7 @@ export default function DocumentHeader({
             DEPARTAMENTO DE CONSEJERÍA ESTUDIANTIL
           </p>
           <p className="text-[9px] sm:text-[10px] font-bold text-[#767171] uppercase tracking-widest" style={{ fontFamily: "Agency FB, Arial, sans-serif" }}>
-            AÑO LECTIVO {schoolYear}
+            AÑO LECTIVO {displaySchoolYear}
           </p>
         </div>
 

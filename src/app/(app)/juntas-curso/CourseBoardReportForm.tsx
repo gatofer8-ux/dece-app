@@ -12,6 +12,7 @@ import type {
   SchoolYearRow,
 } from "@/lib/types";
 import { TRIMESTER_LABELS } from "@/lib/types";
+import { currentSchoolYearText } from "@/lib/schoolYearText";
 import {
   DEFAULT_ANTECEDENTES,
   DEFAULT_OBJETIVO,
@@ -60,7 +61,7 @@ export default function CourseBoardReportForm({
   const activeYear = schoolYears.find((y) => y.id === (report?.school_year_id || selectedYearId)) || schoolYears[0];
   const [schoolYearId, setSchoolYearId] = useState(report?.school_year_id || activeYear?.id || "");
   const [schoolYearText, setSchoolYearText] = useState(
-    report?.school_year_text || activeYear?.name || "2025-2026"
+    report?.school_year_text || activeYear?.name || currentSchoolYearText()
   );
 
   // Trimestre

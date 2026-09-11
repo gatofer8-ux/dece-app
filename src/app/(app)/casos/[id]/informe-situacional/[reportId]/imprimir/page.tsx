@@ -5,6 +5,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { formatDate } from "@/components/ui";
 import type { CaseFileRow, StudentRow, SituationalReportRow, InstitutionRow } from "@/lib/types";
 import { LEGAL_BASIS_TEXT, parseStringList } from "@/lib/situationalReport";
+import { currentSchoolYearText } from "@/lib/schoolYearText";
 import { formatStudentCourseFull } from "@/lib/studentCourse";
 import PrintButton from "@/components/PrintButton";
 
@@ -131,7 +132,7 @@ export default async function ImprimirInformeSituacionalPage({
                       <td className="border border-black p-[2px] w-[20%] bg-white">{formatDate(report.report_date)}</td>
                       <td className="border border-black p-[2px] font-bold text-[#1b2d73] w-[15%] bg-gray-100">No. De Informe</td>
                       <td colSpan={2} className="border border-black p-[2px] font-bold bg-white w-[53%] text-[8px]">
-                        Mineduc-CZ3-18D02-UESR-DECE-2025/2026-{report.id.substring(0,4).toUpperCase()}
+                        {report.report_number || `Mineduc-CZ3-18D02-UESR-DECE-${currentSchoolYearText()}-${report.id.substring(0,4).toUpperCase()}`}
                       </td>
                     </tr>
                     <tr className="bg-gray-100">

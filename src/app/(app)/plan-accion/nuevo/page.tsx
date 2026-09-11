@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { currentSchoolYearSpaced } from "@/lib/schoolYearText";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { listSchoolYears, getSelectedSchoolYear, ensureDefaultSchoolYear } from "@/lib/schoolYear";
 import { getDefaultActionPlanItems } from "@/lib/actionPlan";
@@ -67,7 +68,7 @@ export default async function NuevoPlanAccionPage() {
         institutionName={institution.name}
         schoolYears={schoolYears}
         defaultSchoolYearId={activeYear?.id || ""}
-        defaultSchoolYearText={activeYear?.name || "2025 - 2026"}
+        defaultSchoolYearText={activeYear?.name || currentSchoolYearSpaced()}
         defaultStudentsCount={realStudentsCount > 0 ? realStudentsCount : 1922}
         defaultCoordinatorName={defaultCoordinator}
         defaultAnalysts={defaultAnalysts}
