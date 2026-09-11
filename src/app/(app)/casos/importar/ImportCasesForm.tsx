@@ -7,7 +7,10 @@ import { useToastOnChange } from "@/components/Toast";
 import {
   importCaseMatrixAction,
   deleteImportedCasesAction,
+  getImportedCasesListAction,
+  deleteSelectedImportedCasesAction,
   type CaseImportActionState,
+  type ImportedCaseItem,
 } from "./actions";
 
 const initialState: CaseImportActionState = { error: null, result: null };
@@ -40,20 +43,73 @@ export default function ImportCasesForm() {
   useToastOnChange(state.error, "error");
   const formRef = useRef<HTMLFormElement>(null);
 
+  // Estados para eliminación manual selectiva
   const [isDeleting, startDeleteTransition] = useTransition();
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteFeedback, setDeleteFeedback] = useState<string | null>(null);
+  const [isLoadingList, startLoadingList] = useTransition();
+  const [importedCases, setImportedCases] = useState<ImportedCaseItem[] | null>(null);
+  const [selectedCaseIds, setSelectedCaseIds] = useState<Set<string>>(new Set());
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+  const [searchFilter, setSearchFilter] = useState("");
 
-  const handleDeleteImported = () => {
+  const loadImportedCases = () => {
+    startLoadingList(async () => {
+      setActionFeedback(null);
+      const list = await getImportedCasesListAction();
+      setImportedCases(list);
+      // Por defecto, pre-seleccionar todos para comodidad del usuario
+      setSelectedCaseIds(new Set(list.map((c) => c.id)));
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (!importedCases) return;
+    if (selectedCaseIds.size === filteredCases.length) {
+      setSelectedCaseIds(new Set());
+    } else {
+      setSelectedCaseIds(new Set(filteredCases.map((c) => c.id)));
+    }
+  };
+
+  const toggleCase = (id: string) => {
+    const next = new Set(selectedCaseIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedCaseIds(next);
+  };
+
+  const filteredCases = (importedCases || []).filter((c) => {
+    if (!searchFilter.trim()) return true;
+    const term = searchFilter.toLowerCase();
+    return (
+      c.code.toLowerCase().includes(term) ||
+      c.studentName.toLowerCase().includes(term) ||
+      (c.documentId && c.documentId.toLowerCase().includes(term)) ||
+      c.course.toLowerCase().includes(term) ||
+      c.riskType.toLowerCase().includes(term)
+    );
+  });
+
+  const handleDeleteSelected = () => {
+    const idsToDelete = Array.from(selectedCaseIds);
+    if (idsToDelete.length === 0) return;
+
     startDeleteTransition(async () => {
-      const res = await deleteImportedCasesAction();
-      setShowDeleteModal(false);
+      const res = await deleteSelectedImportedCasesAction(idsToDelete);
+      setShowConfirmModal(false);
       if (res.error) {
-        setDeleteFeedback(`⚠️ ${res.error}`);
+        setActionFeedback(`⚠️ ${res.error}`);
       } else {
-        setDeleteFeedback(
-          `✓ Se eliminaron exitosamente ${res.deletedCount} casos importados y se limpiaron los registros erróneos.`
+        setActionFeedback(
+          `✓ Se eliminaron exitosamente ${res.deletedCount} casos seleccionados y se limpiaron los registros correspondientes.`
         );
+        // Actualizar lista local
+        const nextList = (importedCases || []).filter((c) => !selectedCaseIds.has(c.id));
+        setImportedCases(nextList);
+        setSelectedCaseIds(new Set());
       }
     });
   };
@@ -293,72 +349,173 @@ export default function ImportCasesForm() {
               </div>
             </div>
           )}
-
-          {/* Tabla de omitidos */}
-          {state.result.skipped.length > 0 && (
-            <div className="space-y-2 pt-2 border-t border-slate-100">
-              <h3 className="text-xs font-bold text-amber-800 uppercase tracking-wider">
-                Filas omitidas ({state.result.skipped.length}):
-              </h3>
-              <div className="overflow-x-auto border border-amber-200 rounded-xl bg-amber-50/30 max-h-60 overflow-y-auto">
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-amber-100/60 text-amber-900 border-b border-amber-200 sticky top-0">
-                    <tr>
-                      <th className="py-2.5 px-3">Fila</th>
-                      <th className="py-2.5 px-3">Identificación</th>
-                      <th className="py-2.5 px-3">Motivo de omisión</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-amber-100">
-                    {state.result.skipped.map((s, idx) => (
-                      <tr key={idx}>
-                        <td className="py-1.5 px-3 font-mono text-slate-500">{s.row}</td>
-                        <td className="py-1.5 px-3 font-medium text-slate-800">{s.name}</td>
-                        <td className="py-1.5 px-3 text-amber-900">{s.reason}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </section>
       )}
 
-      {/* Herramienta de Limpieza y Reversión */}
-      <section className="card p-6 border border-slate-200 bg-slate-50/60 rounded-xl">
+      {/* Menú de Selección Manual para Eliminar Casos Importados */}
+      <section className="card p-6 border border-slate-200 bg-white rounded-xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <span>🧹</span>
-              <span>Herramienta de Reversión y Limpieza</span>
+              <span>📋</span>
+              <span>Menú de Selección Manual para Borrar Casos Importados</span>
             </h3>
             <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
-              ¿Deseas corregir o eliminar los casos aperturados desde la matriz? Esta opción elimina exclusivamente
-              los expedientes y estudiantes huérfanos creados mediante importación de matrices, protegiendo todos
-              los casos creados manualmente por el equipo DECE.
+              Consulta la lista de casos creados desde matrices para ver cuáles se borran y cuáles se conservan.
+              Puedes marcar y desmarcar casos individualmente según tus necesidades.
             </p>
           </div>
           <button
             type="button"
-            onClick={() => setShowDeleteModal(true)}
-            disabled={isDeleting}
-            className="btn-danger text-xs flex items-center gap-1.5 whitespace-nowrap self-start sm:self-auto shadow-xs"
+            onClick={loadImportedCases}
+            disabled={isLoadingList}
+            className="btn-secondary text-xs flex items-center gap-1.5 whitespace-nowrap self-start sm:self-auto shadow-xs"
           >
-            <span>🗑️</span>
-            <span>Eliminar casos importados</span>
+            {isLoadingList ? (
+              <>
+                <span className="animate-spin">⏳</span>
+                <span>Cargando lista...</span>
+              </>
+            ) : (
+              <>
+                <span>🔍</span>
+                <span>Ver lista para selección manual</span>
+              </>
+            )}
           </button>
         </div>
 
-        {deleteFeedback && (
-          <div className="mt-4 p-3 rounded-xl text-xs bg-white border border-slate-200 shadow-xs font-medium text-slate-800">
-            {deleteFeedback}
+        {actionFeedback && (
+          <div className="p-3 rounded-xl text-xs bg-slate-50 border border-slate-200 font-medium text-slate-800">
+            {actionFeedback}
+          </div>
+        )}
+
+        {/* Tabla interactiva con checkboxes cuando se carga la lista */}
+        {importedCases !== null && (
+          <div className="space-y-3 pt-2 border-t border-slate-100 animate-in fade-in duration-150">
+            {importedCases.length === 0 ? (
+              <div className="p-4 text-center text-xs text-slate-500 bg-slate-50 rounded-xl border border-slate-200">
+                No hay ningún caso creado por importación de matriz registrado en tu institución actualmente.
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Filtrar por estudiante, cédula o curso..."
+                      value={searchFilter}
+                      onChange={(e) => setSearchFilter(e.target.value)}
+                      className="input input-sm input-bordered w-64 text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={toggleSelectAll}
+                      className="btn-ghost btn-sm text-xs text-slate-700 underline"
+                    >
+                      {selectedCaseIds.size === filteredCases.length
+                        ? "Deseleccionar todos"
+                        : "Seleccionar todos"}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-slate-600 font-medium">
+                      Seleccionados:{" "}
+                      <strong className="text-red-700">{selectedCaseIds.size}</strong> de{" "}
+                      {filteredCases.length}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmModal(true)}
+                      disabled={selectedCaseIds.size === 0 || isDeleting}
+                      className="btn-danger btn-sm text-xs flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                    >
+                      <span>🗑️</span>
+                      <span>Eliminar seleccionados ({selectedCaseIds.size})</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Tabla de selección */}
+                <div className="overflow-x-auto border border-slate-200 rounded-xl max-h-80 overflow-y-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-50 text-slate-700 border-b border-slate-200 sticky top-0">
+                      <tr>
+                        <th className="py-2.5 px-3 w-10 text-center">
+                          <input
+                            type="checkbox"
+                            checked={
+                              filteredCases.length > 0 &&
+                              selectedCaseIds.size === filteredCases.length
+                            }
+                            onChange={toggleSelectAll}
+                            className="checkbox checkbox-xs rounded"
+                          />
+                        </th>
+                        <th className="py-2.5 px-3">Código</th>
+                        <th className="py-2.5 px-3">Estudiante</th>
+                        <th className="py-2.5 px-3">Curso / Par.</th>
+                        <th className="py-2.5 px-3">Tipología</th>
+                        <th className="py-2.5 px-3">Fecha importación</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredCases.map((c) => {
+                        const isChecked = selectedCaseIds.has(c.id);
+                        return (
+                          <tr
+                            key={c.id}
+                            onClick={() => toggleCase(c.id)}
+                            className={`cursor-pointer transition-colors ${
+                              isChecked ? "bg-red-50/50 hover:bg-red-50" : "hover:bg-slate-50"
+                            }`}
+                          >
+                            <td className="py-2 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => toggleCase(c.id)}
+                                className="checkbox checkbox-xs rounded checkbox-error"
+                              />
+                            </td>
+                            <td className="py-2 px-3 font-mono font-semibold text-slate-800">
+                              {c.code}
+                            </td>
+                            <td className="py-2 px-3 font-medium text-slate-900">
+                              {c.studentName}
+                              {c.documentId && (
+                                <span className="text-[11px] text-slate-400 block font-mono">
+                                  CI: {c.documentId}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2 px-3 text-slate-600">
+                              {c.course} {c.parallel ? `"${c.parallel}"` : ""}
+                            </td>
+                            <td className="py-2 px-3">
+                              <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                                {c.riskType}
+                              </span>
+                            </td>
+                            <td className="py-2 px-3 text-slate-400 font-mono text-[11px]">
+                              {c.createdAt ? c.createdAt.slice(0, 16) : "-"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
         )}
       </section>
 
-      {/* Modal de Confirmación de Eliminación */}
-      {showDeleteModal && (
+      {/* Modal de Confirmación de Eliminación Selectiva */}
+      {showConfirmModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
             <div className="flex items-center gap-3">
@@ -367,23 +524,22 @@ export default function ImportCasesForm() {
               </span>
               <div>
                 <h3 className="text-sm font-bold text-slate-900">
-                  ¿Confirmar eliminación de casos importados?
+                  ¿Eliminar los {selectedCaseIds.size} casos seleccionados?
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Esta acción eliminará todos los casos aperturados desde matrices de importación.
+                  Esta acción eliminará únicamente los expedientes que marcaste en la lista.
                 </p>
               </div>
             </div>
 
             <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200">
-              Se revertirán las aperturas de caso y se eliminarán los estudiantes nuevos creados que no tengan otras
-              atenciones ni citas en el sistema.
+              Los casos no seleccionados y todos los casos creados manualmente por el equipo DECE permanecerán intactos en el sistema.
             </p>
 
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setShowDeleteModal(false)}
+                onClick={() => setShowConfirmModal(false)}
                 disabled={isDeleting}
                 className="btn-secondary text-xs"
               >
@@ -391,7 +547,7 @@ export default function ImportCasesForm() {
               </button>
               <button
                 type="button"
-                onClick={handleDeleteImported}
+                onClick={handleDeleteSelected}
                 disabled={isDeleting}
                 className="btn-danger text-xs flex items-center gap-1.5"
               >
@@ -403,7 +559,7 @@ export default function ImportCasesForm() {
                 ) : (
                   <>
                     <span>🗑️</span>
-                    <span>Sí, eliminar casos importados</span>
+                    <span>Confirmar eliminación ({selectedCaseIds.size})</span>
                   </>
                 )}
               </button>
