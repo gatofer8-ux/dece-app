@@ -306,153 +306,182 @@ export async function importStudentsFromPdfAi(
     return { error: "La IA no está configurada (falta GEMINI_API_KEY). Usa la importación desde Excel mientras tanto.", result: null };
   }
 
-  // 1. Reunir los PDF a procesar: uno solo, o todos los que traiga el .zip.
-  const pdfFiles: { label: string; base64: string }[] = [];
-  if (isZip) {
-    let zip: JSZip;
-    try {
-      zip = await JSZip.loadAsync(await file.arrayBuffer());
-    } catch {
-      return { error: "No se pudo abrir el archivo .zip. Verifica que no esté dañado ni protegido con contraseña.", result: null };
-    }
-    const entries = Object.values(zip.files).filter((f) => !f.dir && f.name.toLowerCase().endsWith(".pdf"));
-    if (entries.length === 0) {
-      return { error: "El .zip no contiene ningún archivo PDF.", result: null };
-    }
-    for (const entry of entries) {
-      const buf = await entry.async("nodebuffer");
-      pdfFiles.push({ label: entry.name.split("/").pop() || entry.name, base64: buf.toString("base64") });
-    }
-  } else {
-    const buf = Buffer.from(await file.arrayBuffer());
-    pdfFiles.push({ label: file.name, base64: buf.toString("base64") });
-  }
-
-  // 2. Extraer con la IA, PDF por PDF (si uno falla, se sigue con los demás en vez de abortar todo).
-  const skipped: SkippedRow[] = [];
-  const rawStudents: { source: string; data: any }[] = [];
-  let seq = 0;
-  for (const pdf of pdfFiles) {
-    const extracted = await extractStudentsFromPdfWithAi(ai, pdf.base64);
-    if ("error" in extracted) {
-      seq++;
-      skipped.push({ row: seq, name: `(archivo completo: ${pdf.label})`, reason: extracted.error });
-      continue;
-    }
-    for (const st of extracted.list) {
-      seq++;
-      rawStudents.push({ source: pdf.label, data: st });
-    }
-  }
-
-  if (rawStudents.length === 0) {
-    return { error: null, result: { created: 0, skipped } };
-  }
-
-  // 3. Validar y detectar duplicados, igual que en la importación desde Excel.
-  const existingDocs = new Set(
-    (
-      db
-        .prepare("SELECT document_id FROM students WHERE institution_id = ? AND document_id IS NOT NULL")
-        .all(institutionId) as { document_id: string }[]
-    ).map((r) => r.document_id)
-  );
-  const seenInFile = new Set<string>();
-  const multipleFiles = pdfFiles.length > 1;
-
-  type ParsedRow = {
-    full_name: string;
-    document_type: DocumentType;
-    document_id: string | null;
-    course: string;
-    parallel: string;
-    jornada: string | null;
-    rep_email: string | null;
-    bachillerato_specialty: string | null;
-  };
-  const toInsert: ParsedRow[] = [];
-
-  rawStudents.forEach(({ source, data: st }, idx) => {
-    const row = idx + 1;
-    const prefix = multipleFiles ? `[${source}] ` : "";
-    const fullNameRaw = st.full_name || st.NOMBRES_COMPLETOS || st.nombres || st.nombre || st.Nombres;
-    const fullName = fullNameRaw ? String(fullNameRaw).trim().toUpperCase() : "";
-    const label = fullName ? `${prefix}${fullName}` : `${prefix}(sin nombre reconocido)`;
-
-    if (!fullName) {
-      skipped.push({ row, name: label, reason: "La IA no pudo leer el nombre completo en esta fila." });
-      return;
-    }
-
-    const rawDoc = st.document_id || st.cedula || st.CEDULA || st.Cédula || null;
-    const document_id = rawDoc ? normalizeDocumentId(String(rawDoc)) : null;
-    const document_type: DocumentType = document_id ? detectDocumentType(document_id) : "CEDULA";
-
-    if (document_id && existingDocs.has(document_id)) {
-      skipped.push({ row, name: label, reason: `La cédula/documento "${document_id}" ya está registrada en esta institución.` });
-      return;
-    }
-    if (document_id && seenInFile.has(document_id)) {
-      skipped.push({ row, name: label, reason: `La cédula/documento "${document_id}" está repetida dentro del documento.` });
-      return;
-    }
-    if (document_id) seenInFile.add(document_id);
-
-    toInsert.push({
-      full_name: fullName,
-      document_type,
-      document_id,
-      course: String(st.course || st.curso || st.Año_Escolar || "SIN ESPECIFICAR").toUpperCase(),
-      parallel: String(st.parallel || st.paralelo || "A").toUpperCase(),
-      jornada: st.jornada ? String(st.jornada).toUpperCase() : null,
-      rep_email: st.rep_email || st.cuenta || st.CUENTA || null,
-      bachillerato_specialty: st.bachillerato_specialty || null,
-    });
-  });
-
-  if (toInsert.length === 0) {
-    return { error: null, result: { created: 0, skipped } };
-  }
-
-  // 4. Guardar. INSERT directo (no OR IGNORE) para que un choque real de la base
-  // se reporte como error visible en vez de perderse en silencio.
-  const insertStmt = db.prepare(
-    `INSERT INTO students (id, institution_id, full_name, document_type, document_id, course, parallel, jornada, rep_email, created_by_id, bachillerato_specialty)
-     VALUES (@id, @institution_id, @full_name, @document_type, @document_id, @course, @parallel, @jornada, @rep_email, @created_by_id, @bachillerato_specialty)`
-  );
-
-  const tx = db.transaction((rows: ParsedRow[]) => {
-    for (const r of rows) {
-      insertStmt.run({
-        id: randomUUID(),
-        institution_id: institutionId,
-        full_name: r.full_name,
-        document_type: r.document_type,
-        document_id: r.document_id,
-        course: r.course,
-        parallel: r.parallel,
-        jornada: r.jornada,
-        rep_email: r.rep_email,
-        created_by_id: session.user.id,
-        bachillerato_specialty: r.bachillerato_specialty,
-      });
-    }
-  });
-
+  // Todo lo que sigue puede fallar de formas imprevistas (un .zip con una entrada
+  // corrupta, un PDF ilegible, un corte de red con la IA, etc.). Se envuelve en un
+  // try/catch general para que CUALQUIER excepción llegue al cliente como un
+  // mensaje legible en vez de romper useFormState con un error genérico de React.
   try {
-    tx(toInsert);
+    // 1. Reunir los PDF a procesar: uno solo, o todos los que traiga el .zip.
+    const pdfFiles: { label: string; base64: string }[] = [];
+    const zipReadErrors: SkippedRow[] = [];
+    if (isZip) {
+      let zip: JSZip;
+      try {
+        zip = await JSZip.loadAsync(await file.arrayBuffer());
+      } catch {
+        return { error: "No se pudo abrir el archivo .zip. Verifica que no esté dañado ni protegido con contraseña.", result: null };
+      }
+      const entries = Object.values(zip.files).filter(
+        (f) =>
+          !f.dir &&
+          f.name.toLowerCase().endsWith(".pdf") &&
+          !f.name.includes("__MACOSX/") &&
+          !(f.name.split("/").pop() || "").startsWith("._")
+      );
+      if (entries.length === 0) {
+        return { error: "El .zip no contiene ningún archivo PDF.", result: null };
+      }
+      let entrySeq = 0;
+      for (const entry of entries) {
+        entrySeq++;
+        const label = entry.name.split("/").pop() || entry.name;
+        try {
+          const buf = await entry.async("nodebuffer");
+          pdfFiles.push({ label, base64: buf.toString("base64") });
+        } catch (err: any) {
+          // Una entrada dañada dentro del .zip no debe abortar el resto del lote.
+          zipReadErrors.push({ row: entrySeq, name: `(archivo completo: ${label})`, reason: `No se pudo leer este archivo dentro del .zip: ${err?.message || "error desconocido"}.` });
+        }
+      }
+      if (pdfFiles.length === 0) {
+        return { error: "No se pudo leer ningún PDF dentro del .zip.", result: null };
+      }
+    } else {
+      const buf = Buffer.from(await file.arrayBuffer());
+      pdfFiles.push({ label: file.name, base64: buf.toString("base64") });
+    }
+
+    // 2. Extraer con la IA, PDF por PDF (si uno falla, se sigue con los demás en vez de abortar todo).
+    const skipped: SkippedRow[] = [...zipReadErrors];
+    const rawStudents: { source: string; data: any }[] = [];
+    let seq = zipReadErrors.length;
+    for (const pdf of pdfFiles) {
+      const extracted = await extractStudentsFromPdfWithAi(ai, pdf.base64);
+      if ("error" in extracted) {
+        seq++;
+        skipped.push({ row: seq, name: `(archivo completo: ${pdf.label})`, reason: extracted.error });
+        continue;
+      }
+      for (const st of extracted.list) {
+        seq++;
+        rawStudents.push({ source: pdf.label, data: st });
+      }
+    }
+
+    if (rawStudents.length === 0) {
+      return { error: null, result: { created: 0, skipped } };
+    }
+
+    // 3. Validar y detectar duplicados, igual que en la importación desde Excel.
+    const existingDocs = new Set(
+      (
+        db
+          .prepare("SELECT document_id FROM students WHERE institution_id = ? AND document_id IS NOT NULL")
+          .all(institutionId) as { document_id: string }[]
+      ).map((r) => r.document_id)
+    );
+    const seenInFile = new Set<string>();
+    const multipleFiles = pdfFiles.length > 1;
+
+    type ParsedRow = {
+      full_name: string;
+      document_type: DocumentType;
+      document_id: string | null;
+      course: string;
+      parallel: string;
+      jornada: string | null;
+      rep_email: string | null;
+      bachillerato_specialty: string | null;
+    };
+    const toInsert: ParsedRow[] = [];
+
+    rawStudents.forEach(({ source, data: st }, idx) => {
+      const row = idx + 1;
+      const prefix = multipleFiles ? `[${source}] ` : "";
+      const fullNameRaw = st?.full_name || st?.NOMBRES_COMPLETOS || st?.nombres || st?.nombre || st?.Nombres;
+      const fullName = fullNameRaw ? String(fullNameRaw).trim().toUpperCase() : "";
+      const label = fullName ? `${prefix}${fullName}` : `${prefix}(sin nombre reconocido)`;
+
+      if (!fullName) {
+        skipped.push({ row, name: label, reason: "La IA no pudo leer el nombre completo en esta fila." });
+        return;
+      }
+
+      const rawDoc = st?.document_id || st?.cedula || st?.CEDULA || st?.Cédula || null;
+      const document_id = rawDoc ? normalizeDocumentId(String(rawDoc)) : null;
+      const document_type: DocumentType = document_id ? detectDocumentType(document_id) : "CEDULA";
+
+      if (document_id && existingDocs.has(document_id)) {
+        skipped.push({ row, name: label, reason: `La cédula/documento "${document_id}" ya está registrada en esta institución.` });
+        return;
+      }
+      if (document_id && seenInFile.has(document_id)) {
+        skipped.push({ row, name: label, reason: `La cédula/documento "${document_id}" está repetida dentro del documento.` });
+        return;
+      }
+      if (document_id) seenInFile.add(document_id);
+
+      toInsert.push({
+        full_name: fullName,
+        document_type,
+        document_id,
+        course: String(st?.course || st?.curso || st?.Año_Escolar || "SIN ESPECIFICAR").toUpperCase(),
+        parallel: String(st?.parallel || st?.paralelo || "A").toUpperCase(),
+        jornada: st?.jornada ? String(st.jornada).toUpperCase() : null,
+        rep_email: st?.rep_email || st?.cuenta || st?.CUENTA || null,
+        bachillerato_specialty: st?.bachillerato_specialty || null,
+      });
+    });
+
+    if (toInsert.length === 0) {
+      return { error: null, result: { created: 0, skipped } };
+    }
+
+    // 4. Guardar. INSERT directo (no OR IGNORE) para que un choque real de la base
+    // se reporte como error visible en vez de perderse en silencio.
+    const insertStmt = db.prepare(
+      `INSERT INTO students (id, institution_id, full_name, document_type, document_id, course, parallel, jornada, rep_email, created_by_id, bachillerato_specialty)
+       VALUES (@id, @institution_id, @full_name, @document_type, @document_id, @course, @parallel, @jornada, @rep_email, @created_by_id, @bachillerato_specialty)`
+    );
+
+    const tx = db.transaction((rows: ParsedRow[]) => {
+      for (const r of rows) {
+        insertStmt.run({
+          id: randomUUID(),
+          institution_id: institutionId,
+          full_name: r.full_name,
+          document_type: r.document_type,
+          document_id: r.document_id,
+          course: r.course,
+          parallel: r.parallel,
+          jornada: r.jornada,
+          rep_email: r.rep_email,
+          created_by_id: session.user.id,
+          bachillerato_specialty: r.bachillerato_specialty,
+        });
+      }
+    });
+
+    try {
+      tx(toInsert);
+    } catch (err: any) {
+      return { error: `Error al guardar los estudiantes: ${err?.message || "error desconocido"}. No se creó ningún registro.`, result: null };
+    }
+
+    logAudit({
+      userId: session.user.id,
+      action: "IMPORTAR",
+      entityType: "Student",
+      details: `Importación con IA desde PDF: ${toInsert.length} creados, ${skipped.length} omitidos (${pdfFiles.length} archivo(s) procesado(s)).`,
+      institutionId,
+    });
+
+    revalidatePath("/estudiantes");
+    return { error: null, result: { created: toInsert.length, skipped } };
   } catch (err: any) {
-    return { error: `Error al guardar los estudiantes: ${err?.message || "error desconocido"}. No se creó ningún registro.`, result: null };
+    return {
+      error: `Ocurrió un error inesperado al procesar el archivo: ${err?.message || "error desconocido"}. Intenta de nuevo o usa la importación desde Excel.`,
+      result: null,
+    };
   }
-
-  logAudit({
-    userId: session.user.id,
-    action: "IMPORTAR",
-    entityType: "Student",
-    details: `Importación con IA desde PDF: ${toInsert.length} creados, ${skipped.length} omitidos (${pdfFiles.length} archivo(s) procesado(s)).`,
-    institutionId,
-  });
-
-  revalidatePath("/estudiantes");
-  return { error: null, result: { created: toInsert.length, skipped } };
 }
