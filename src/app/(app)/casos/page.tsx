@@ -87,9 +87,19 @@ export default async function CasosPage({
         title="Casos y fichas de atención"
         description="Registro de casos de riesgo psicosocial y su seguimiento."
         action={
-          <Link href="/casos/nuevo" className="btn-primary">
-            + Nuevo caso
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/casos/importar"
+              className="btn-secondary flex items-center gap-1.5 text-xs sm:text-sm"
+              title="Cargar matriz Excel de estudiantes en vulnerabilidad y abrir casos en lote"
+            >
+              <span>📥</span>
+              <span>Importar matriz</span>
+            </Link>
+            <Link href="/casos/nuevo" className="btn-primary">
+              + Nuevo caso
+            </Link>
+          </div>
         }
       />
 
