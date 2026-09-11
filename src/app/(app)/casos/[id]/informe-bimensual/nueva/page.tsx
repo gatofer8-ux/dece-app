@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui";
 import type { CaseFileRow, StudentRow, InstitutionRow, SchoolYearRow } from "@/lib/types";
 import { getStudentInitials } from "@/lib/bimonthlyReport";
 import { getCaseDocumentDefaults } from "@/lib/caseDocumentDefaults";
+import { currentSchoolYearText } from "@/lib/schoolYearText";
 import { previewNextReportNumber } from "@/lib/reportNumbering";
 import BimonthlyReportForm from "./BimonthlyReportForm";
 
@@ -23,7 +24,7 @@ export default async function NuevoInformeBimensualPage({ params }: { params: { 
     .prepare("SELECT * FROM school_years WHERE institution_id = ? AND is_active = 1")
     .get(institutionId) as SchoolYearRow | undefined;
 
-  const schoolYearText = activeYear?.name || "2025-2026";
+  const schoolYearText = activeYear?.name || currentSchoolYearText();
   const preview = previewNextReportNumber({
     institutionId,
     schoolYearText,

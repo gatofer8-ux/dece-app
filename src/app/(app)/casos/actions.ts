@@ -15,6 +15,7 @@ import { CONFLICT_TYPES_CATALOG } from "@/lib/corresponsibilityCatalog";
 import type { ChecklistCategory, ObservationContext, ObservationSubnivel, ObservationRiskLevel, CorresponsibilityConflictType } from "@/lib/types";
 import { z } from "zod";
 import { str, int, getAllStr } from "@/lib/formData";
+import { currentSchoolYearText, currentSchoolYearSpaced } from "@/lib/schoolYearText";
 import { requireOwnedCase, requireOwnedStudent } from "@/lib/scopedDb";
 import { autoMarkChecklistItems } from "@/lib/checklistAutoMark";
 import { assignNextReportNumber } from "@/lib/reportNumbering";
@@ -1615,7 +1616,7 @@ export async function createBimonthlyReport(
   requireOwnedCase(caseId, institutionId);
 
   const id = randomUUID();
-  const schoolYearText = str(formData, "school_year_text") || "2025-2026";
+  const schoolYearText = str(formData, "school_year_text") || currentSchoolYearText();
   const periodMonths = str(formData, "period_months") || "Mayo - Junio";
   const institutionName = str(formData, "institution_name") || "";
   const amieCode = str(formData, "amie_code") || "";
@@ -1709,7 +1710,7 @@ export async function updateBimonthlyReport(
   const institutionId = requireInstitutionId(session);
   requireOwnedCase(caseId, institutionId);
 
-  const schoolYearText = str(formData, "school_year_text") || "2025-2026";
+  const schoolYearText = str(formData, "school_year_text") || currentSchoolYearText();
   const periodMonths = str(formData, "period_months") || "Mayo - Junio";
   const institutionName = str(formData, "institution_name") || "";
   const amieCode = str(formData, "amie_code") || "";
@@ -2357,7 +2358,7 @@ export async function createCaseClosureReport(caseId: string, _prev: ActionState
     .prepare("SELECT * FROM school_years WHERE institution_id = ? AND is_active = 1")
     .get(institutionId) as any;
 
-  const schoolYearText = str(formData, "school_year_text") || activeYear?.name || "2024 - 2025";
+  const schoolYearText = str(formData, "school_year_text") || activeYear?.name || currentSchoolYearSpaced();
   const reportDate = str(formData, "report_date") || new Date().toISOString().split("T")[0];
 
   const assigned = assignNextReportNumber({
@@ -2535,7 +2536,7 @@ export async function updateCaseClosureReport(reportId: string, caseId: string, 
   const institutionId = requireInstitutionId(session);
   requireOwnedCase(caseId, institutionId);
 
-  const schoolYearText = str(formData, "school_year_text") || "2024 - 2025";
+  const schoolYearText = str(formData, "school_year_text") || currentSchoolYearSpaced();
   const reportDate = str(formData, "report_date") || new Date().toISOString().split("T")[0];
   const reportNumber = str(formData, "report_number") || "";
   const closureType = (str(formData, "closure_type") || "FINALIZACION_ANO_LECTIVO") as any;

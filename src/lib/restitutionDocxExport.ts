@@ -14,6 +14,7 @@ import {
   WidthType,
 } from "docx";
 import { smartAlign } from "./wordJustify";
+import { currentSchoolYearText } from "./schoolYearText";
 import path from "path";
 import fs from "fs";
 import type {
@@ -204,7 +205,7 @@ export async function generateRestitutionPlanDocx(data: {
       alignment: AlignmentType.CENTER,
       children: [
         new TextRun({
-          text: `Año lectivo ${plan.school_year || activeYear?.name || "2025-2026"}`,
+          text: `Año lectivo ${plan.school_year || activeYear?.name || currentSchoolYearText()}`,
           bold: true,
           font: FONT_NAME,
           size: 22,

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { currentSchoolYearSpaced } from "@/lib/schoolYearText";
 import type { CaseFileRow, StudentRow, InstitutionRow, SchoolYearRow } from "@/lib/types";
 
 /**
@@ -127,7 +128,7 @@ export function getSignatureDefaults(session: SessionLike, institutionId: string
   return {
     institution,
     schoolYear,
-    schoolYearText: schoolYear?.name || "2024 - 2025",
+    schoolYearText: schoolYear?.name || currentSchoolYearSpaced(),
     deceProfessional,
     authority,
     deceCoordinator,

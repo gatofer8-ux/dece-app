@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { currentSchoolYearSpaced } from "@/lib/schoolYearText";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import {
   getActiveDistributivo,
@@ -326,7 +327,7 @@ export default async function ImprimirDistributivoPage({
           subtitle="DEPARTAMENTO DE CONSEJERÍA ESTUDIANTIL (DECE)"
           institutionName={institution.name}
           sealImage={institution.seal_image}
-          schoolYear={distributivo.school_year_text || "2025 - 2026"}
+          schoolYear={distributivo.school_year_text || currentSchoolYearSpaced()}
         />
 
       {/* Institutional Metadata Grid */}

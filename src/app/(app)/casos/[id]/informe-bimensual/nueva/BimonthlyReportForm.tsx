@@ -8,6 +8,7 @@ import { createBimonthlyReport, updateBimonthlyReport, type ActionState } from "
 import { generateBimonthlyMatrixSuggestions } from "../../ai-actions";
 import type { BimonthlyReportRow, BimonthlyProcessItem } from "@/lib/types";
 import { BIMONTHLY_PERIODS, getDefaultBimonthlyProcesses, parseProcessesData } from "@/lib/bimonthlyReport";
+import { currentSchoolYearText } from "@/lib/schoolYearText";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
 import AIAssistButton from "@/components/AIAssistButton";
 
@@ -154,10 +155,10 @@ export default function BimonthlyReportForm({
             <input
               type="text"
               name="school_year_text"
-              defaultValue={report?.school_year_text || schoolYearText || "2025-2026"}
+              defaultValue={report?.school_year_text || schoolYearText || currentSchoolYearText()}
               required
               className="input text-xs"
-              placeholder="2025-2026"
+              placeholder={currentSchoolYearText()}
             />
           </div>
 

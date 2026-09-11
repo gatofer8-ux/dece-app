@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { currentSchoolYearText } from "@/lib/schoolYearText";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import PrintButton from "@/components/PrintButton";
 import type {
@@ -239,7 +240,7 @@ export default async function ImprimirPlanRestitucionPage({
               PLAN DE ACOMPAÑAMIENTO Y RESTITUCIÓN
             </h1>
             <h2 className="text-[12px] font-bold tracking-wide">
-              Año lectivo {plan.school_year || activeYear?.name || "2025-2026"}
+              Año lectivo {plan.school_year || activeYear?.name || currentSchoolYearText()}
             </h2>
             <p className="text-[11px] font-bold">
               Fecha de elaboración: {formattedElabDate}

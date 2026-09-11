@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { currentSchoolYearText } from "@/lib/schoolYearText";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { logAudit } from "@/lib/audit";
 
@@ -30,7 +31,7 @@ export async function createActionPlan(prevState: ActionState, formData: FormDat
   const institutionId = requireInstitutionId(session);
 
   const schoolYearId = str(formData, "school_year_id");
-  const schoolYearText = str(formData, "school_year_text") || "2025-2026";
+  const schoolYearText = str(formData, "school_year_text") || currentSchoolYearText();
   const studentsCount = num(formData, "students_count", 0);
   const coordinatorName = str(formData, "coordinator_name") || session.user.name || "Coordinador DECE";
   const analystsData = str(formData, "analysts_data") || "[]";

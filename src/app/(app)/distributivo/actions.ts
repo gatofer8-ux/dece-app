@@ -1,6 +1,7 @@
 "use server";
 
 import { saveInstitutionCourseQuotas, getInstitutionCourseQuotas, getInstitutionCoursesWithCounts, normalizeCourseKey, parseParallelKey } from "@/lib/distributivo";
+import { currentSchoolYearText } from "@/lib/schoolYearText";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -35,7 +36,7 @@ export async function saveDistributivo(
   }
 
   const schoolYear = getSchoolYearById(schoolYearId, institutionId);
-  const schoolYearText = schoolYear?.name || str(formData, "school_year_text") || "2025-2026";
+  const schoolYearText = schoolYear?.name || str(formData, "school_year_text") || currentSchoolYearText();
 
   const title = str(formData, "title") || "Distributivo Institucional de Cobertura DECE";
   const coordinatorName = str(formData, "coordinator_name") || session.user.name || "Coordinador/a DECE";

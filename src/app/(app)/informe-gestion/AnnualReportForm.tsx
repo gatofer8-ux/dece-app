@@ -4,6 +4,7 @@ import { useState, useTransition, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
+import { currentSchoolYearText } from "@/lib/schoolYearText";
 import type {
   AnnualManagementReportRow,
   ManagementReportType,
@@ -76,7 +77,7 @@ export default function AnnualReportForm({
     report?.school_year_id || activeYear?.id || ""
   );
   const [schoolYearText, setSchoolYearText] = useState(
-    report?.school_year_text || activeYear?.name || "2025-2026"
+    report?.school_year_text || activeYear?.name || currentSchoolYearText()
   );
 
   // Modalidad de Informe (Departamental vs Individual)

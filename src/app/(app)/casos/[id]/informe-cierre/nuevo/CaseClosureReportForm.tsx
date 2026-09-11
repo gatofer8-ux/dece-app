@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { studentGradeLabel } from "@/lib/studentCourse";
+import { currentSchoolYearSpaced } from "@/lib/schoolYearText";
 import { useFormState, useFormStatus } from "react-dom";
 import { useToastOnChange } from "@/components/Toast";
 import Link from "next/link";
@@ -89,7 +90,7 @@ export default function CaseClosureReportForm({
   const [state, formAction] = useFormState(actionFn, initialState);
   useToastOnChange(state.error, "error");
 
-  const activeSchoolYear = schoolYearText || report?.school_year_text || "2024 - 2025";
+  const activeSchoolYear = schoolYearText || report?.school_year_text || currentSchoolYearSpaced();
   const calculatedAge = student.birth_date
     ? Math.floor((Date.now() - new Date(student.birth_date).getTime()) / (365.25 * 24 * 3600 * 1000))
     : "";
@@ -279,7 +280,7 @@ export default function CaseClosureReportForm({
               defaultValue={report?.school_year_text || activeSchoolYear}
               required
               className="input text-xs"
-              placeholder="2024-2025"
+              placeholder={currentSchoolYearSpaced()}
             />
           </div>
           <div>

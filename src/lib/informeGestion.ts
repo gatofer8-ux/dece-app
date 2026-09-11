@@ -63,6 +63,7 @@ export interface AggregateStatsResult {
 }
 
 import { previewNextReportNumber } from "./reportNumbering";
+import { currentSchoolYearText } from "./schoolYearText";
 
 /**
  * Genera el código oficial correlativo del informe anual.
@@ -82,7 +83,7 @@ export function generateAnnualManagementReportCode(
     });
     return preview.reportNumber;
   } catch {
-    return "Mineduc-CZ3-18D02-UESR-DECE-MJ-2025/2026-001";
+    return `Mineduc-CZ3-18D02-UESR-DECE-MJ-${currentSchoolYearText()}-001`;
   }
 }
 
@@ -167,7 +168,7 @@ export function aggregateAnnualStats(
 
   const instName = institution?.name || "UNIDAD EDUCATIVA";
   const distName = institution?.district ? `Distrito ${institution.district}` : "Distrito de Educación";
-  const yearText = schoolYear?.name || "2025-2026";
+  const yearText = schoolYear?.name || currentSchoolYearText();
 
   const reportCode = generateAnnualManagementReportCode(
     institutionId,

@@ -3,6 +3,7 @@ import { studentGradeOnly } from "@/lib/studentCourse";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { db } from "@/lib/db";
 import { getSelectedSchoolYear } from "@/lib/schoolYear";
+import { currentSchoolYearText } from "@/lib/schoolYearText";
 import { previewNextCitationNumber } from "@/lib/esquelas";
 import { PageHeader } from "@/components/ui";
 import EsquelaForm from "@/app/(app)/esquelas/EsquelaForm";
@@ -29,7 +30,7 @@ export default async function NuevaEsquelaCasoPage({
   if (!student) notFound();
 
   const selectedYear = await getSelectedSchoolYear(institutionId);
-  const schoolYearText = selectedYear?.name || `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`;
+  const schoolYearText = selectedYear?.name || currentSchoolYearText();
 
   const preview = previewNextCitationNumber({
     institutionId,
