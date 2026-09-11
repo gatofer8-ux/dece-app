@@ -835,6 +835,25 @@ export interface EneisDiagnosticoRow {
   updated_at: string;
 }
 
+export interface EneisFichaTecnicaRow {
+  id: string;
+  institution_id: string;
+  created_by_id: string | null;
+  coordinacion_zonal_distrito: string | null;
+  fecha_elaboracion: string | null;
+  funcionarios_json: string;
+  nivel_preparacion_index: number | null;
+  temas_seleccionados_json: string;
+  recursos_seleccionados_json: string;
+  cronograma_json: string;
+  avances_json: string;
+  nudos_criticos: string | null;
+  firmas_escolares_json: string;
+  firmas_distritales_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface TapasSessionRow {
   id: string;
   institution_id: string;
