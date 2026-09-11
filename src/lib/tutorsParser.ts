@@ -97,12 +97,12 @@ export function normalizeCourseName(rawLevel: string | number): {
     return null;
   }
 
-  // Inicial
-  if (lower.includes("3 año") || lower.includes("3 ano") || lower.includes("inicial 1") || lower.includes("grupo 3")) {
-    return { course: "Inicial 1 (3 años)", level: "INICIAL", specialty: null, defStudents: 25 };
+  // Inicial — "inicial ii" se revisa antes que "inicial i" porque la incluye como subcadena.
+  if (lower.includes("4 año") || lower.includes("4 ano") || lower.includes("inicial 2") || lower.includes("inicial ii") || lower.includes("grupo 4")) {
+    return { course: "Inicial II (4 años)", level: "INICIAL", specialty: null, defStudents: 25 };
   }
-  if (lower.includes("4 año") || lower.includes("4 ano") || lower.includes("inicial 2") || lower.includes("grupo 4")) {
-    return { course: "Inicial 2 (4 años)", level: "INICIAL", specialty: null, defStudents: 25 };
+  if (lower.includes("3 año") || lower.includes("3 ano") || lower.includes("inicial 1") || lower.includes("inicial i") || lower.includes("grupo 3")) {
+    return { course: "Inicial I (3 años)", level: "INICIAL", specialty: null, defStudents: 25 };
   }
   if (lower.includes("inicial")) {
     return { course: "Inicial", level: "INICIAL", specialty: null, defStudents: 25 };

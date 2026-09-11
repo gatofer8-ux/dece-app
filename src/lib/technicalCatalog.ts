@@ -252,7 +252,7 @@ export const EDUCATION_LEVEL_PRESETS: EducationLevelPreset[] = [
     label: "Educación Inicial (3 a 4 años)",
     shortLabel: "Inicial",
     isBachillerato: false,
-    defaultCourses: ["Inicial 1 (3 años)", "Inicial 2 (4 años)"],
+    defaultCourses: ["Inicial I (3 años)", "Inicial II (4 años)"],
   },
   {
     id: "BASICA_PREPARATORIA",

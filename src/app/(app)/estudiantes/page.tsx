@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import UploadStudentListPDFButton from "@/components/UploadStudentListPDFButton";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader, Badge, EmptyState } from "@/components/ui";
 import type { StudentRow } from "@/lib/types";
@@ -104,9 +103,8 @@ export default async function EstudiantesPage({
         description="Registro base de estudiantes de la institución."
         action={
           <>
-            <UploadStudentListPDFButton />
             <Link href="/estudiantes/importar" className="btn-secondary">
-              Importar desde Excel
+              📥 Importar estudiantes
             </Link>
             <Link href="/estudiantes/nuevo" className="btn-primary">
               + Nuevo estudiante

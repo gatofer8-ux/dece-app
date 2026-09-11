@@ -451,14 +451,14 @@ export default function DisponibilidadClient({
                 </h3>
                 <button
                   type="button"
-                  onClick={() => handleSelectLevel(["Inicial 1", "Inicial 2", "1ro EGB (Preparatoria)"])}
+                  onClick={() => handleSelectLevel(["Inicial I", "Inicial II", "1ro EGB (Preparatoria)"])}
                   className="text-xs text-brand-600 font-semibold hover:underline"
                 >
                   Seleccionar nivel
                 </button>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {["Inicial 1", "Inicial 2", "1ro EGB (Preparatoria)"].map((c) => (
+                {["Inicial I", "Inicial II", "1ro EGB (Preparatoria)"].map((c) => (
                   <label
                     key={c}
                     className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer transition ${

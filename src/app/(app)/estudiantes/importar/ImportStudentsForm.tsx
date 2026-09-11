@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useRef } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { useToastOnChange } from "@/components/Toast";
 import { importStudents, type ImportActionState } from "./actions";
+import ImportResultCard from "./ImportResultCard";
 
 const initialState: ImportActionState = { error: null, result: null };
 
@@ -63,51 +63,7 @@ export default function ImportStudentsForm() {
         </form>
       </section>
 
-      {state.result && (
-        <section className="card p-5">
-          <h2 className="text-sm font-semibold text-slate-700 mb-3">Resultado de la importación</h2>
-          <p className="text-sm mb-3">
-            <span className="font-semibold text-green-700">{state.result.created}</span> estudiante(s) creado(s) correctamente.
-            {state.result.skipped.length > 0 && (
-              <>
-                {" "}
-                <span className="font-semibold text-amber-700">{state.result.skipped.length}</span> fila(s) omitida(s).
-              </>
-            )}
-          </p>
-
-          {state.result.skipped.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-slate-500 border-b border-slate-200">
-                    <th className="py-1 pr-3">Fila</th>
-                    <th className="py-1 pr-3">Nombre</th>
-                    <th className="py-1">Motivo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {state.result.skipped.map((s) => (
-                    <tr key={s.row} className="border-b border-slate-100">
-                      <td className="py-1 pr-3 text-slate-400">{s.row}</td>
-                      <td className="py-1 pr-3">{s.name}</td>
-                      <td className="py-1 text-slate-600">{s.reason}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {state.result.created > 0 && (
-            <div className="mt-4">
-              <Link href="/estudiantes" className="btn-secondary inline-block">
-                Ver lista de estudiantes
-              </Link>
-            </div>
-          )}
-        </section>
-      )}
+      {state.result && <ImportResultCard result={state.result} />}
     </div>
   );
 }

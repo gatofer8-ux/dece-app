@@ -1,8 +1,8 @@
 import type { UserRow } from "./types";
 
 export const STANDARD_ECUADOR_COURSES = [
-  "Inicial 1",
-  "Inicial 2",
+  "Inicial I",
+  "Inicial II",
   "1ro EGB (Preparatoria)",
   "2do EGB (Elemental)",
   "3ro EGB (Elemental)",
