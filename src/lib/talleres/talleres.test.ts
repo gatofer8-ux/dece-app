@@ -3,8 +3,8 @@ import { WORKSHOPS_DATABASE, getWorkshopById } from "./talleresData";
 import { generateWorkshopMaterialDocx } from "./workshopMaterialsDocx";
 
 describe("Módulo de Talleres y Guiones Metodológicos (SADEX)", () => {
-  it("debe contener los 25 talleres oficiales estructurados (2023 a 2026)", () => {
-    expect(WORKSHOPS_DATABASE.length).toBe(25);
+  it("debe contener los 26 talleres oficiales estructurados (2023 a 2027)", () => {
+    expect(WORKSHOPS_DATABASE.length).toBe(26);
 
     const ids = WORKSHOPS_DATABASE.map((w) => w.id);
     expect(ids).toContain("prevencion-suicidio");
@@ -33,6 +33,8 @@ describe("Módulo de Talleres y Guiones Metodológicos (SADEX)", () => {
     expect(ids).toContain("descarga-emocional-basica-superior");
     expect(ids).toContain("descarga-emocional-bachillerato");
     expect(ids).toContain("intervencion-crisis-afectacion-alta");
+    // 2026-2027
+    expect(ids).toContain("acuerdo-0044a-cuidamos-juntos");
   });
 
   it("cada taller debe poseer fases con guiones de facilitación y tiempos válidos", () => {
@@ -59,11 +61,15 @@ describe("Módulo de Talleres y Guiones Metodológicos (SADEX)", () => {
     expect(w3).toBeDefined();
     expect(w3?.targetAudienceLabel).toContain("Inicial");
 
+    const w4 = getWorkshopById("acuerdo-0044a-cuidamos-juntos");
+    expect(w4).toBeDefined();
+    expect(w4?.title).toContain("Cuidamos Juntos");
+
     const wNone = getWorkshopById("id-inexistente");
     expect(wNone).toBeUndefined();
   });
 
-  it("debe generar documentos Word (.docx) válidos para todos los 45 materiales prácticos y recortables", async () => {
+  it("debe generar documentos Word (.docx) válidos para todos los 49 materiales prácticos y recortables", async () => {
     const allMaterials: { wId: string; mId: string }[] = [];
     for (const w of WORKSHOPS_DATABASE) {
       for (const m of w.downloadableMaterials) {
@@ -71,7 +77,7 @@ describe("Módulo de Talleres y Guiones Metodológicos (SADEX)", () => {
       }
     }
 
-    expect(allMaterials.length).toBe(45);
+    expect(allMaterials.length).toBe(49);
 
     for (const { wId, mId } of allMaterials) {
       const res = await generateWorkshopMaterialDocx(wId, mId, "Unidad Educativa Modelo");

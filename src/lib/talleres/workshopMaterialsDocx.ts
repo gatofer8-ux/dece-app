@@ -95,6 +95,64 @@ function headerBanner(title: string, subtitle: string, institutionName?: string)
   ];
 }
 
+function instructionBox(text: string): Paragraph {
+  return new Paragraph({
+    spacing: { before: 80, after: 120 },
+    children: [pRun("📌 " + text, { italics: true, size: 16, color: "334155" })],
+  });
+}
+
+function tableCell(text: string, o: { fill?: string; bold?: boolean; color?: string } = {}): TableCell {
+  return new TableCell({
+    borders: ALL_CUT_BORDERS,
+    shading: o.fill ? { fill: o.fill, type: ShadingType.CLEAR } : undefined,
+    margins: { top: 100, bottom: 100, left: 140, right: 140 },
+    children: [
+      new Paragraph({
+        children: [
+          pRun(text, { bold: o.bold, color: o.color ?? "0F172A", size: 15 }),
+        ],
+      }),
+    ],
+  });
+}
+
+function calloutBox(text: string, o: { fill?: string; bold?: boolean; color?: string } = {}): Table {
+  return new Table({
+    width: { size: USABLE, type: WidthType.DXA },
+    rows: [
+      new TableRow({
+        children: [
+          tableCell(text, o),
+        ],
+      }),
+    ],
+  });
+}
+
+function cutoutGrid(cards: { title: string; text: string }[]): Table[] {
+  const rows: TableRow[] = cards.map((c) =>
+    new TableRow({
+      children: [
+        new TableCell({
+          borders: ALL_CUT_BORDERS,
+          margins: { top: 120, bottom: 120, left: 160, right: 160 },
+          children: [
+            new Paragraph({
+              spacing: { after: 40 },
+              children: [pRun("✂️ RECORTAR • " + c.title, { bold: true, size: 16, color: "0284C7" })],
+            }),
+            new Paragraph({
+              children: [pRun(c.text, { size: 15, color: "1E293B" })],
+            }),
+          ],
+        }),
+      ],
+    })
+  );
+  return [new Table({ width: { size: USABLE, type: WidthType.DXA }, rows })];
+}
+
 // -------------------------------------------------------------
 // 1. Casos de Simulación Suicidio
 // -------------------------------------------------------------
@@ -1648,7 +1706,298 @@ export async function generateTarjetasHonrarVidaDocx(institutionName?: string): 
 }
 
 // -------------------------------------------------------------
-// DESPACHADOR CENTRAL DE MATERIALES (45 MATERIALES OFICIALES)
+// 46. Tablero y Tarjetas: La Ruta del Caso (Acuerdo 0044-A)
+// -------------------------------------------------------------
+export async function generateTableroRutaCaso0044aDocx(institutionName?: string): Promise<Buffer> {
+  const doc = new Document({
+    sections: [
+      {
+        properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
+        children: [
+          ...headerBanner("JUEGO DE MESA: 'LA RUTA DEL CASO' (ACUERDO 0044-A)", "Tablero de 24 Casillas, Preguntas, Retos de Actuación y Trampas del Art. 30", institutionName),
+          instructionBox("TABLERO DE LA RUTA DEL CASO (24 CASILLAS): Recorrido por las etapas del acompañamiento integral (Prevención → Detección → Atención → Contención → Derivación → Seguimiento → Reparación Socioeducativa). Tiren el dado y avancen. En casillas '❓ Pregunta', respondan la trivia; en '🎭 Reto', representen la acción en 30 segundos; en '⚠️ Trampa', retrocedan 3 casillas por violar el Art. 30."),
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              new TableRow({
+                children: [
+                  tableCell("1. ❓ INICIO: Señal de alerta detectada (Art. 28)", { fill: "D1FAE5", bold: true }),
+                  tableCell("2. Escucha activa y empatía sin juicio (Art. 4)", { fill: "F1F5F9" }),
+                  tableCell("3. 🎭 RETO: Mini actuación contención cálida", { fill: "FEF3C7", bold: true }),
+                  tableCell("4. Registro objetivo de hechos observados", { fill: "F1F5F9" }),
+                ]
+              }),
+              new TableRow({
+                children: [
+                  tableCell("8. Comunicación inmediata con la familia (Art. 29)", { fill: "F1F5F9" }),
+                  tableCell("7. ⚠️ TRAMPA: Exigir relato repetido (-3 casillas)", { fill: "FEE2E2", bold: true }),
+                  tableCell("6. Consentimiento informado revisado (Art. 21)", { fill: "F1F5F9" }),
+                  tableCell("5. ❓ PREGUNTA: Plazo contención DECE", { fill: "D1FAE5", bold: true }),
+                ]
+              }),
+              new TableRow({
+                children: [
+                  tableCell("9. ❓ PREGUNTA: Principio de no abstención", { fill: "D1FAE5", bold: true }),
+                  tableCell("10. Activación Equipo de Cuidado (Art. 9)", { fill: "F1F5F9" }),
+                  tableCell("11. 🎭 RETO: Explicar acta a la familia", { fill: "FEF3C7", bold: true }),
+                  tableCell("12. No revictimización en el aula (Art. 30)", { fill: "F1F5F9" }),
+                ]
+              }),
+              new TableRow({
+                children: [
+                  tableCell("16. Derivación externa a salud/justicia", { fill: "F1F5F9" }),
+                  tableCell("15. ⚠️ TRAMPA: Confrontar víctima y agresor (-3 casillas)", { fill: "FEE2E2", bold: true }),
+                  tableCell("14. Contención emocional en 48 horas (Art. 13)", { fill: "F1F5F9" }),
+                  tableCell("13. ❓ PREGUNTA: 10 Apartados Plan Acompañamiento", { fill: "D1FAE5", bold: true }),
+                ]
+              }),
+              new TableRow({
+                children: [
+                  tableCell("17. ❓ PREGUNTA: Asistencia técnica UDAI/DIE", { fill: "D1FAE5", bold: true }),
+                  tableCell("18. Ajustes razonables pedagógicos", { fill: "F1F5F9" }),
+                  tableCell("19. 🎭 RETO: Adulto referente en shock", { fill: "FEF3C7", bold: true }),
+                  tableCell("20. Cuidado al cuidador y equipo DECE (Art. 42)", { fill: "F1F5F9" }),
+                ]
+              }),
+              new TableRow({
+                children: [
+                  tableCell("24. 🌱 META: Reparación socioeducativa (Art. 35)", { fill: "10B981", bold: true, color: "FFFFFF" }),
+                  tableCell("23. Seguimiento continuo no concluye con derivación", { fill: "F1F5F9" }),
+                  tableCell("22. ⚠️ TRAMPA: Difundir caso en WhatsApp (-3 casillas)", { fill: "FEE2E2", bold: true }),
+                  tableCell("21. ❓ PREGUNTA: Negligencia y reporte", { fill: "D1FAE5", bold: true }),
+                ]
+              }),
+            ]
+          }),
+          new Paragraph({ spacing: { before: 180, after: 80 }, children: [pRun("TARJETAS DE TRIVIA, RETOS Y TRAMPAS (RECORTAR POR LA LÍNEA ✂️)", { bold: true, color: "065F46" })] }),
+          ...cutoutGrid([
+            { title: "❓ PREGUNTA 1 (Art. 13)", text: "P: ¿Cuál es el plazo máximo que tiene el DECE para activar la contención emocional inmediata?\nR: 48 horas máximo (Art. 13 num. 6)." },
+            { title: "❓ PREGUNTA 2 (Art. 9)", text: "P: ¿Con qué frecuencia mínima se reúne el Equipo de Cuidado y Respuesta?\nR: Ordinaria al menos 1 vez al mes, y extraordinaria ante cualquier riesgo." },
+            { title: "❓ PREGUNTA 3 (Art. 11)", text: "P: ¿El Equipo Institucional de Cuidado reemplaza o sustituye al DECE?\nR: No, nunca lo sustituye. Trabajan coordinadamente." },
+            { title: "❓ PREGUNTA 4 (Art. 17)", text: "P: ¿Quién recopila los consentimientos informados de familias al inicio del año escolar?\nR: El docente tutor de grado o curso." },
+            { title: "❓ PREGUNTA 5 (Art. 27)", text: "P: ¿Es necesario esperar certeza plena sobre la gravedad de un caso para reportarlo?\nR: No. Se comunica de inmediato sin esperar certeza plena." },
+            { title: "❓ PREGUNTA 6 (Art. 20)", text: "P: ¿Qué dice el principio de no abstención?\nR: Ningún actor institucional podrá abstenerse de actuar por falta de competencia directa." },
+            { title: "🎭 RETO 1 (30 segundos)", text: "Muestren cómo un docente informa a la familia de manera respetuosa y empática sobre una señal de alerta detectada en el aula." },
+            { title: "🎭 RETO 2 (30 segundos)", text: "Muestren cómo actúa un 'adulto referente' acompañando físicamente y en calma a un estudiante en estado de conmoción o llanto." },
+            { title: "⚠️ TRAMPA 1 (-3 casillas)", text: "¡ERROR PROHIBIDO! Confrontaron a la víctima con la persona presunta agresora para 'aclarar' los hechos (Violación Art. 30 num. 2). Retroceden 3 casillas." },
+            { title: "⚠️ TRAMPA 2 (-3 casillas)", text: "¡ERROR PROHIBIDO! Le pidieron al estudiante que contara la historia por tercera vez frente a otro docente (Violación Art. 30 num. 3). Retroceden 3 casillas." },
+            { title: "⚠️ TRAMPA 3 (-3 casillas)", text: "¡ERROR PROHIBIDO! Comentaron detalles sensibles del caso en la sala de profesores o en WhatsApp escolar (Violación Arts. 30 y 33). Retroceden 3 casillas." },
+            { title: "🌱 REPARACIÓN FINAL", text: "¡LLEGARON A LA META! El Art. 35 establece que el acompañamiento no concluye con la derivación externa, sino con la restitución de derechos y bienestar del NNA." }
+          ])
+        ],
+      },
+    ],
+  });
+  return await Packer.toBuffer(doc);
+}
+
+// -------------------------------------------------------------
+// 47. Tarjetas Roles y Semáforo de Alerta (Acuerdo 0044-A)
+// -------------------------------------------------------------
+export async function generateTarjetasRolesSemaforoAlerta0044aDocx(institutionName?: string): Promise<Buffer> {
+  const doc = new Document({
+    sections: [
+      {
+        properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
+        children: [
+          ...headerBanner("TARJETAS DE ROLES Y SEMÁFORO DE ALERTA (ACUERDO 0044-A)", "Dinámicas Vivenciales: '¿Quién soy en el sistema?' y 'Semáforo de Detección Temprana'", institutionName),
+          instructionBox("INSTRUCCIONES: Imprimir y recortar con tijeras (✂️). Las Tarjetas de Roles se usan en el Bloque 1 para simular la red del Art. 6. Las Tarjetas del Semáforo entrenan el reflejo de actuar sin certeza plena (Art. 27 y 28)."),
+          new Paragraph({ spacing: { before: 120, after: 60 }, children: [pRun("SET 1: 12 ACTORES CORRESPONSABLES DEL SISTEMA DE CUIDADO (ART. 6)", { bold: true, color: "065F46" })] }),
+          ...cutoutGrid([
+            { title: "1. AUTORIDAD INSTITUCIONAL", text: "Activa el Equipo de Cuidado, suscribe derivaciones externas, garantiza medidas de protección inmediata y no revictimización." },
+            { title: "2. DECE INSTITUCIONAL", text: "Brinda contención emocional en máx. 48h, diseña y coordina el Plan de Acompañamiento Integral y da seguimiento." },
+            { title: "3. DOCENTE TUTOR/A", text: "Recopila consentimientos informados al inicio de año, primer detector de cambios conductuales y enlace directo con familias." },
+            { title: "4. DOCENTE DE AULA", text: "Detecta señales de alerta en clase (Art. 28), aplica el principio de no abstención (Art. 20) y adapta ajustes curriculares." },
+            { title: "5. DAI / DIE", text: "Docente de Apoyo a la Inclusión y Departamento de Inclusión: asesoran en NEE, adaptaciones y apoyos pedagógicos específicos." },
+            { title: "6. UDAI DISTRITAL", text: "Unidad Distrital de Apoyo a la Inclusión: emite evaluaciones psicopedagógicas integrales y asesora en inclusión educativa." },
+            { title: "7. DECE DISTRITAL", text: "Articula con la red interinstitucional cantonal, apoya en casos de alta complejidad y traslados por riesgo psicosocial." },
+            { title: "8. ASESORÍA JURÍDICA DISTRITAL", text: "Asesora legalmente a la institución y canaliza denuncias formales ante Fiscalía o Juntas Cantonales de Protección." },
+            { title: "9. MADRE / PADRE / REPRESENTANTE", text: "Corresponsable del cuidado, firma consentimientos, asiste a convocatorias y cumple acuerdos para proteger al NNA." },
+            { title: "10. ESTUDIANTE (NNA)", text: "Sujeto titular de derechos, centro de todo el acompañamiento, con derecho a ser escuchado en confidencialidad y respetado." },
+            { title: "11. SECTOR SALUD (MSP / IESS)", text: "Brinda atención médica, psicológica externa y psiquiátrica especializada; coordina contrarreferencias con el DECE." },
+            { title: "12. SISTEMA DE JUSTICIA", text: "Fiscalía, DINAPEN y Juntas Cantonales: dictan medidas de protección y sancionan vulneraciones graves de derechos." }
+          ]),
+          new Paragraph({ spacing: { before: 200, after: 60 }, children: [pRun("SET 2: TARJETAS DEL SEMÁFORO DE ALERTA (ARTS. 27 Y 28)", { bold: true, color: "065F46" })] }),
+          ...cutoutGrid([
+            { title: "CASO 1: Lunes por la mañana", text: "Situación: Un estudiante llega cansado y bostezando un lunes por la mañana.\nSemáforo: 🟢 VERDE\nJustificación: Comportamiento esperable de la edad sin patrón de riesgo reiterado." },
+            { title: "CASO 2: Participación interrumpida", text: "Situación: Un estudiante muy activo deja de hablar y participar por 2 semanas seguidas.\nSemáforo: 🟡 AMARILLO\nJustificación: Cambio a observar y registrar en bitácora; acercarse a dialogar." },
+            { title: "CASO 3: Llanto inexplicable", text: "Situación: Estudiante presenta llanto frecuente en clase sin causa aparente.\nSemáforo: 🔴 ROJO (Art. 28)\nJustificación: Señal de alerta expresa; comunicar de inmediato al DECE." },
+            { title: "CASO 4: Verbalización de desesperanza", text: "Situación: Estudiante comenta: 'A veces preferiría no estar aquí ni despertar'.\nSemáforo: 🔴 ROJO (Art. 28)\nJustificación: Riesgo autolítico prioritario; activar contención inmediata." },
+            { title: "CASO 5: Lesión visible no coherente", text: "Situación: Estudiante presenta moretones en brazos con explicaciones contradictorias.\nSemáforo: 🔴 ROJO (Art. 28)\nJustificación: Lesión inexplicada; prohibido interrogar, reportar de inmediato." },
+            { title: "CASO 6: Aislamiento en el recreo", text: "Situación: Estudiante permanece solo contra la pared en todos los recreos hace un mes.\nSemáforo: 🔴 ROJO (Art. 28)\nJustificación: Aislamiento sostenido y pérdida de red de pares." }
+          ])
+        ],
+      },
+    ],
+  });
+  return await Packer.toBuffer(doc);
+}
+
+// -------------------------------------------------------------
+// 48. Tarjetas Casos Sociodrama y Guía de Esquinas (Acuerdo 0044-A)
+// -------------------------------------------------------------
+export async function generateTarjetasCasosSociodramaEsquinas0044aDocx(institutionName?: string): Promise<Buffer> {
+  const doc = new Document({
+    sections: [
+      {
+        properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
+        children: [
+          ...headerBanner("CASOS PARA SOCIODRAMA Y GUÍA DE ESQUINAS (ACUERDO 0044-A)", "Taller Lúdico 'Cuidamos Juntos': Dinámicas de Actuación y Postura Corporal", institutionName),
+          instructionBox("INSTRUCCIONES DE TRABAJO: 1) Recortar las 8 tarjetas de casos. En grupos de 4-5 docentes, preparan una dramatización de 2 minutos mostrando primero el error habitual del sistema, dicen '¡REBOBINAR!' y actúan la respuesta legal correcta. 2) Utilizar los 3 letreros para la dinámica de movimiento en esquinas del salón."),
+          new Paragraph({ spacing: { before: 120, after: 60 }, children: [pRun("8 TARJETAS DE CASOS FICTICIOS PARA SOCIODRAMA (BLOQUE 5)", { bold: true, color: "065F46" })] }),
+          ...cutoutGrid([
+            { title: "CASO 1: El comentario en el recreo", text: "Una docente escucha por casualidad que un estudiante le dice a otro: 'Ojalá no tuviera que volver a mi casa hoy'.\nPregunta: ¿Qué hace la docente en los próximos 5 minutos?\nArtículos clave: 27, 28 y 29 (actuación sin esperar certeza)." },
+            { title: "CASO 2: El relato repetido", text: "Un estudiante cuenta a su tutor lo que le sucedió. El tutor lo lleva ante el vicerrector, quien le pide que lo cuente 'otra vez con calma'.\nPregunta: ¿Qué grave error se comete y cómo se corrige?\nArtículo clave: Art. 30 num. 3 (prohibición de revictimización)." },
+            { title: "CASO 3: La familia que no firma", text: "Una madre se niega a firmar el consentimiento informado sin dar motivo alguno.\nPregunta: ¿Qué ruta obligatoria sigue la institución?\nArtículo clave: Art. 21 (acta de compromiso / reporte por negligencia)." },
+            { title: "CASO 4: 'Eso es del DECE, no mío'", text: "Un profesor de Educación Física nota marcas inexplicadas, pero piensa: 'Yo solo doy deportes, que lo vea otro'.\nPregunta: ¿Qué infracción comete según el Art. 20 (no abstención)?" },
+            { title: "CASO 5: El grupo de WhatsApp", text: "Tras un hecho en el recreo, docentes comentan detalles sensibles en el chat grupal 'para mantenerse al tanto'.\nPregunta: ¿Qué principios de confidencialidad y no exposición se violan? (Art. 33)." },
+            { title: "CASO 6: La reunión que nunca llega", text: "Se detecta un riesgo un lunes, pero el comité decide esperar a la reunión ordinaria de fin de mes para tratarlo.\nPregunta: ¿Por qué el Art. 9 exige reunión extraordinaria inmediata?" },
+            { title: "CASO 7: Barreras no diagnosticadas", text: "Un docente nota graves dificultades de comprensión en un estudiante pero no sabe a quién acudir.\nPregunta: ¿Cómo se articula con DAI, DIE y UDAI según los Arts. 18 y 19?" },
+            { title: "CASO 8: El caso que ya se derivó", text: "Un estudiante fue derivado a salud mental hace un mes. El colegio piensa que 'ya no es su responsabilidad'.\nPregunta: ¿Por qué el Art. 35 dice que el seguimiento nunca termina ahí?" }
+          ]),
+          new Paragraph({ spacing: { before: 200, after: 60 }, children: [pRun("GUÍA Y ENUNCIADOS PARA LA DINÁMICA DE ESQUINAS (BLOQUE 4)", { bold: true, color: "065F46" })] }),
+          calloutBox("LETREROS DE PARED: Colocar un letrero en cada esquina: [HACERLO] (Verde), [PROHIBIDO] (Rojo), [DEPENDE DEL CASO] (Amarillo)", { fill: "F1F5F9", bold: true }),
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              new TableRow({
+                children: [
+                  tableCell("Enunciado a leer en voz alta", { fill: "E2E8F0", bold: true }),
+                  tableCell("Esquina Correcta", { fill: "E2E8F0", bold: true }),
+                  tableCell("Fundamento Normativo", { fill: "E2E8F0", bold: true })
+                ]
+              }),
+              new TableRow({
+                children: [
+                  tableCell("Acompañar al estudiante con un adulto referente mientras se activa el protocolo."),
+                  tableCell("HACERLO", { fill: "D1FAE5", bold: true }),
+                  tableCell("Art. 29 (Medida de contención segura)")
+                ]
+              }),
+              new TableRow({
+                children: [
+                  tableCell("Confrontar a la presunta víctima con su presunto agresor en una sala para que hablen."),
+                  tableCell("PROHIBIDO", { fill: "FEE2E2", bold: true }),
+                  tableCell("Art. 30 num. 2 (Prohibición expresa)")
+                ]
+              }),
+              new TableRow({
+                children: [
+                  tableCell("Decir 'ese caso no es de mi materia' ante una señal de alerta clara."),
+                  tableCell("PROHIBIDO", { fill: "FEE2E2", bold: true }),
+                  tableCell("Art. 20 (Principio de no abstención)")
+                ]
+              }),
+              new TableRow({
+                children: [
+                  tableCell("Exigir al estudiante que repita lo que le pasó ante varios profesores."),
+                  tableCell("PROHIBIDO", { fill: "FEE2E2", bold: true }),
+                  tableCell("Art. 30 num. 3 (Revictimización)")
+                ]
+              }),
+              new TableRow({
+                children: [
+                  tableCell("Esperar a estar 100% seguros y tener pruebas antes de avisar al DECE."),
+                  tableCell("PROHIBIDO", { fill: "FEE2E2", bold: true }),
+                  tableCell("Art. 27 (Obligación de actuar sin certeza previa)")
+                ]
+              }),
+              new TableRow({
+                children: [
+                  tableCell("Creer que la responsabilidad del colegio terminó porque ya se derivó al hospital."),
+                  tableCell("PROHIBIDO", { fill: "FEE2E2", bold: true }),
+                  tableCell("Art. 35 (Seguimiento continuo obligatorio)")
+                ]
+              })
+            ]
+          })
+        ],
+      },
+    ],
+  });
+  return await Packer.toBuffer(doc);
+}
+
+// -------------------------------------------------------------
+// 49. Bingo DECE, Semillas y Certificados (Acuerdo 0044-A)
+// -------------------------------------------------------------
+export async function generateBingoDeceSemillasCertificados0044aDocx(institutionName?: string): Promise<Buffer> {
+  const doc = new Document({
+    sections: [
+      {
+        properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: MARGIN } },
+        children: [
+          ...headerBanner("BINGO DECE, SEMILLAS DE COMPROMISO Y CERTIFICADOS", "Herramientas de Cierre, Evaluación y Compromiso Institucional (Acuerdo 0044-A)", institutionName),
+          instructionBox("KIT DE CIERRE PEDAGÓGICO: 1) Cartones de Bingo DECE para fijar vocabulario normativo con pistas conceptuales; 2) Semillas de Compromiso recortables para el mural del colegio; 3) Certificado oficial de participación editable; 4) Ficha de evaluación rápida."),
+          new Paragraph({ spacing: { before: 120, after: 60 }, children: [pRun("CARTONES DE BINGO DECE (MATRIZ DE TÉRMINOS TÉCNICOS)", { bold: true, color: "065F46" })] }),
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              new TableRow({
+                children: [
+                  tableCell("DECE", { fill: "E0F2FE", bold: true }),
+                  tableCell("DAI", { fill: "F1F5F9" }),
+                  tableCell("UDAI", { fill: "F1F5F9" }),
+                  tableCell("DIE", { fill: "F1F5F9" }),
+                  tableCell("48 HORAS", { fill: "FEF3C7", bold: true }),
+                ]
+              }),
+              new TableRow({
+                children: [
+                  tableCell("No revictimización", { fill: "F1F5F9" }),
+                  tableCell("Interés superior", { fill: "F1F5F9" }),
+                  tableCell("Confidencialidad", { fill: "F1F5F9" }),
+                  tableCell("Consentimiento", { fill: "F1F5F9" }),
+                  tableCell("Equipo Cuidado", { fill: "F1F5F9" }),
+                ]
+              }),
+              new TableRow({
+                children: [
+                  tableCell("Señal de alerta", { fill: "F1F5F9" }),
+                  tableCell("Debida diligencia", { fill: "F1F5F9" }),
+                  tableCell("★ LIBRE ★", { fill: "10B981", bold: true, color: "FFFFFF" }),
+                  tableCell("Reparación", { fill: "F1F5F9" }),
+                  tableCell("Derivación externa", { fill: "F1F5F9" }),
+                ]
+              }),
+              new TableRow({
+                children: [
+                  tableCell("Ruta negligencia", { fill: "F1F5F9" }),
+                  tableCell("Acta compromiso", { fill: "F1F5F9" }),
+                  tableCell("No abstención", { fill: "FEF3C7", bold: true }),
+                  tableCell("Cuidado cuidador", { fill: "F1F5F9" }),
+                  tableCell("Plan integral", { fill: "F1F5F9" }),
+                ]
+              }),
+              new TableRow({
+                children: [
+                  tableCell("Enfoque restaurativo", { fill: "F1F5F9" }),
+                  tableCell("Ajustes razonables", { fill: "F1F5F9" }),
+                  tableCell("Seguimiento", { fill: "F1F5F9" }),
+                  tableCell("Prevención universal", { fill: "F1F5F9" }),
+                  tableCell("Corresponsabilidad", { fill: "E0F2FE", bold: true }),
+                ]
+              }),
+            ]
+          }),
+          new Paragraph({ spacing: { before: 180, after: 60 }, children: [pRun("PLANTILLAS RECORTABLES: 'SEMILLA DE COMPROMISO' (BLOQUE 7)", { bold: true, color: "065F46" })] }),
+          ...cutoutGrid([
+            { title: "🌱 MI COMPROMISO SEMANAL", text: "Esta semana, en mi rol dentro del sistema de cuidado institucional, me comprometo formalmente a:\n____________________________________________________________________\n____________________________________________________________________\nFirma del Docente: _______________________" },
+            { title: "🌱 MI COMPROMISO SEMANAL", text: "Esta semana, en mi rol dentro del sistema de cuidado institucional, me comprometo formalmente a:\n____________________________________________________________________\n____________________________________________________________________\nFirma del Docente: _______________________" },
+            { title: "🌱 MI COMPROMISO SEMANAL", text: "Esta semana, en mi rol dentro del sistema de cuidado institucional, me comprometo formalmente a:\n____________________________________________________________________\n____________________________________________________________________\nFirma del Docente: _______________________" },
+            { title: "🌱 MI COMPROMISO SEMANAL", text: "Esta semana, en mi rol dentro del sistema de cuidado institucional, me comprometo formalmente a:\n____________________________________________________________________\n____________________________________________________________________\nFirma del Docente: _______________________" }
+          ]),
+          new Paragraph({ spacing: { before: 200, after: 60 }, children: [pRun("CERTIFICADO OFICIAL DE PARTICIPACIÓN", { bold: true, color: "065F46" })] }),
+          calloutBox("CERTIFICADO DE PARTICIPACIÓN DOCENTE\n\nSe otorga el presente reconocimiento a:\n_________________________________________________________________\nPor su destacada y activa participación en el Taller Lúdico Institucional:\n'CUIDAMOS JUNTOS'\nSocialización vivencial del Acuerdo Ministerial MINEDEC-MINEDEC-2026-00044-A sobre Acompañamiento Integral y Protección de la Niñez y Adolescencia.\n\nDado en: ________________________ el _____ de ______________ de 2026.\n\n\n_________________________________          _________________________________\n  Coordinación DECE Institucional                   Rectorado / Dirección", { fill: "F8FAFC", bold: true })
+        ],
+      },
+    ],
+  });
+  return await Packer.toBuffer(doc);
+}
+
+// -------------------------------------------------------------
+// DESPACHADOR CENTRAL DE MATERIALES (49 MATERIALES OFICIALES)
 // -------------------------------------------------------------
 export async function generateWorkshopMaterialDocx(
   workshopId: string,
@@ -1752,7 +2101,15 @@ export async function generateWorkshopMaterialDocx(
     case "tarjetas-honrar-vida-redes-cuidado":
       return { buffer: await generateTarjetasHonrarVidaDocx(institutionName), fileName: "Tarjetas_Honrar_Vida_Redes_Cuidado_Postvencion_SADEX.docx" };
 
-    default:
+        case "tablero-y-tarjetas-ruta-del-caso-0044a":
+      return { buffer: await generateTableroRutaCaso0044aDocx(institutionName), fileName: "Juego_Mesa_La_Ruta_del_Caso_Acuerdo_0044A_SADEX.docx" };
+    case "tarjetas-roles-y-semaforo-alerta-0044a":
+      return { buffer: await generateTarjetasRolesSemaforoAlerta0044aDocx(institutionName), fileName: "Tarjetas_Roles_y_Semaforo_Alerta_Acuerdo_0044A_SADEX.docx" };
+    case "tarjetas-casos-sociodrama-esquinas-0044a":
+      return { buffer: await generateTarjetasCasosSociodramaEsquinas0044aDocx(institutionName), fileName: "Casos_Sociodrama_y_Guia_Esquinas_Acuerdo_0044A_SADEX.docx" };
+    case "bingo-dece-semillas-certificados-0044a":
+      return { buffer: await generateBingoDeceSemillasCertificados0044aDocx(institutionName), fileName: "Bingo_DECE_Semillas_Compromiso_Certificados_0044A_SADEX.docx" };
+default:
       return null;
   }
 }
