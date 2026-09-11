@@ -2,7 +2,7 @@
 
 import { requireRole, requireInstitutionId } from "./session";
 import { runAiContextEngine, type AiContextEngineInput, type AiContextEngineResult } from "./aiContextEngine";
-import { buildCaseContext } from "@/app/(app)/casos/[id]/ai-actions";
+import { buildCaseContext } from "./caseContext";
 import { db } from "./db";
 import { isHeightenedConfidentiality } from "./aiPrivacy";
 
