@@ -36,6 +36,9 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/ovp/cronograma", label: "Cronogramas de citas", icon: "🗓️", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Orientación Vocacional y Profesional (OVP)" },
   { href: "/tapas", label: "Juego de arquetipos (TaPas)", icon: "🃏", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Orientación Vocacional y Profesional (OVP)" },
 
+  // ENEIS
+  { href: "/eneis", label: "Fichas de Aplicación ENEIS", icon: "🧩", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "ENEIS" },
+
   // Informes
   { href: "/reportes", label: "Reportes", icon: "📈", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Informes" },
   { href: "/reportes/estadisticas", label: "Cuadros estadísticos", icon: "📊", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Informes" },
@@ -61,6 +64,7 @@ export const GROUP_ORDER = [
   "Principal",
   "Acompañamiento y prevención",
   "Orientación Vocacional y Profesional (OVP)",
+  "ENEIS",
   "Informes",
   "Administración",
   "Cuenta",
