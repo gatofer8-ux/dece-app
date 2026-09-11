@@ -808,6 +808,35 @@ export interface EneisActaRow {
   updated_at: string;
 }
 
+export interface AlertIdentificationSessionRow {
+  id: string;
+  institution_id: string;
+  created_by_id: string | null;
+  curso: string | null;
+  fecha: string | null;
+  lugar: string | null;
+  responsible_name: string | null;
+  responsible_email: string | null;
+  responsible_phone_ext: string | null;
+  responsible_role: string | null;
+  attendees_json: string;
+  observaciones: string | null;
+  access_code: string;
+  status: "ABIERTA" | "CERRADA";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AlertIdentificationEntryRow {
+  id: string;
+  session_id: string;
+  institution_id: string;
+  student_name: string;
+  risk_type: string;
+  teacher_name: string;
+  created_at: string;
+}
+
 export interface EneisInformeDeceRow {
   id: string;
   institution_id: string;
