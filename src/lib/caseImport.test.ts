@@ -5,6 +5,7 @@ import { db } from "./db";
 import {
   mapTypologyToRiskType,
   resolveColumnIndices,
+  detectHeaderRow,
   processCaseMatrixWorkbook,
 } from "./caseImport";
 
@@ -55,35 +56,66 @@ describe("caseImport - Mapeo Inteligente de Tipologías de Riesgo", () => {
     expect(otherResult.riskType).toBe("OTRO");
     expect(otherResult.riskTypeOther).toBe("Situación particular no registrada");
   });
+
+  it("reconoce acrónimos y abreviaturas oficiales del DECE en Ecuador", () => {
+    expect(mapTypologyToRiskType("AS").riskType).toBe("VIOLENCIA_SEXUAL");
+    expect(mapTypologyToRiskType("VS").riskType).toBe("VIOLENCIA_SEXUAL");
+    expect(mapTypologyToRiskType("V.S").riskType).toBe("VIOLENCIA_SEXUAL");
+    expect(mapTypologyToRiskType("AS - TRASTORNO DE ANSIEDAD").riskType).toBe("VIOLENCIA_SEXUAL");
+    expect(mapTypologyToRiskType("AUTOLESIONES/ IDEACIÓN SUICIDA").riskType).toBe("SALUD_MENTAL");
+    expect(mapTypologyToRiskType("CUTTING E INESTABILIDAD EMOCIONAL").riskType).toBe("SALUD_MENTAL");
+    expect(mapTypologyToRiskType("MADRE PRIVADA DE LA LIBERTAD").riskType).toBe("VULNERACION_DERECHOS");
+    expect(mapTypologyToRiskType("HIJOS PPL").riskType).toBe("VULNERACION_DERECHOS");
+    expect(mapTypologyToRiskType("EXTORSION - AMENAZA").riskType).toBe("VULNERACION_DERECHOS");
+    expect(mapTypologyToRiskType("MADRE ADOLESCENTE").riskType).toBe("EMBARAZO_ADOLESCENTE");
+    expect(mapTypologyToRiskType("APRESTAMIENTO ESCOLAR").riskType).toBe("DIFICULTAD_APRENDIZAJE");
+    expect(mapTypologyToRiskType("VIOLENCIA INSTITUCIONAL").riskType).toBe("VIOLENCIA_ESCOLAR_BULLYING");
+  });
 });
 
-describe("caseImport - Resolución Flexible de Columnas de Matriz", () => {
-  it("detecta columnas mediante sinónimos independientemente de su posición", () => {
+describe("caseImport - Detección Inteligente de Fila de Encabezados", () => {
+  it("detecta la cabecera real ignorando títulos y membretes en las primeras filas", () => {
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Test");
+    const ws = wb.addWorksheet("Matriz Real");
 
-    // Cabecera con nombres alternativos y orden variado
-    const row = ws.addRow([
-      "Cédula de Identidad",
-      "Nombres y Apellidos del Estudiante",
-      "Grado / Nivel",
-      "Sección",
-      "Problemática / Vulnerabilidad Detectada",
-      "Detalle de Observaciones",
-      "Tutor o Representante",
-      "Celular de contacto",
+    // Fila 1 y 2: Membrete o vacías
+    ws.addRow([]);
+    ws.addRow([]);
+    // Fila 3: Banner de título combinado
+    ws.addRow([
+      "MATRIZ DE VULNERABILIDAD 2026-2027",
+      "MATRIZ DE VULNERABILIDAD 2026-2027",
+      "MATRIZ DE VULNERABILIDAD 2026-2027",
+      "MATRIZ DE VULNERABILIDAD 2026-2027",
+      "MATRIZ DE VULNERABILIDAD 2026-2027",
+      "MATRIZ DE VULNERABILIDAD 2026-2027",
+      "MATRIZ DE VULNERABILIDAD 2026-2027",
+      "MATRIZ DE VULNERABILIDAD 2026-2027",
+    ]);
+    // Fila 4: Encabezados verdaderos
+    ws.addRow([
+      "N°",
+      "AÑO",
+      "PARALELO",
+      "JORNADA",
+      "IDENTIFICACIÓN",
+      "CÓDIGO REDEVI",
+      "ESTUDIANTE",
+      "VULNERABILIDAD",
+      "AJUSTES RAZONABLES",
+      "TUTOR/A",
+      "OBSERVACIONES",
     ]);
 
-    const colMap = resolveColumnIndices(row);
+    const det = detectHeaderRow(ws);
 
-    expect(colMap.docCol).toBe(1);
-    expect(colMap.nameCol).toBe(2);
-    expect(colMap.courseCol).toBe(3);
-    expect(colMap.parallelCol).toBe(4);
-    expect(colMap.typologyCol).toBe(5);
-    expect(colMap.descriptionCol).toBe(6);
-    expect(colMap.representativeCol).toBe(7);
-    expect(colMap.phoneCol).toBe(8);
+    expect(det.headerRowIndex).toBe(4);
+    expect(det.colMap.courseCol).toBe(2);
+    expect(det.colMap.parallelCol).toBe(3);
+    expect(det.colMap.docCol).toBe(5);
+    expect(det.colMap.nameCol).toBe(7);
+    expect(det.colMap.typologyCol).toBe(8);
+    expect(det.colMap.descriptionCol).toBe(11);
   });
 });
 
@@ -108,41 +140,72 @@ describe("caseImport - Procesamiento e Inserción de Casos en Matriz", () => {
     db.prepare(`DELETE FROM institutions WHERE id = 'inst-test-01'`).run();
   });
 
-  it("procesa un libro de Excel y crea los casos en seguimiento y estudiantes", async () => {
+  it("procesa un libro de Excel con formato ministerial, ignora separadores y crea casos", async () => {
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Matriz");
+    const ws = wb.addWorksheet("Matriz_Vulnerabilidad");
 
+    // Fila 1: Banner institucional
     ws.addRow([
-      "Estudiante",
-      "Cédula",
-      "Curso",
-      "Paralelo",
-      "Tipología",
-      "Observaciones",
+      "UNIDAD EDUCATIVA FISCAL - MATRIZ DE VULNERABILIDAD 2026-2027",
+      "UNIDAD EDUCATIVA FISCAL - MATRIZ DE VULNERABILIDAD 2026-2027",
+      "UNIDAD EDUCATIVA FISCAL - MATRIZ DE VULNERABILIDAD 2026-2027",
     ]);
 
+    // Fila 2: Cabeceras reales
     ws.addRow([
-      "Estudiante Importado Test 1",
-      "0950123456",
-      "10mo",
+      "N°",
+      "AÑO",
+      "PARALELO",
+      "IDENTIFICACIÓN",
+      "ESTUDIANTE",
+      "VULNERABILIDAD",
+      "OBSERVACIONES",
+    ]);
+
+    // Fila 3: Separador de sección (NO debe crear estudiante ni caso)
+    ws.addRow([
+      "VIOLENCIA SEXUAL",
+      "VIOLENCIA SEXUAL",
+      "VIOLENCIA SEXUAL",
+      "VIOLENCIA SEXUAL",
+      "VIOLENCIA SEXUAL",
+      "VIOLENCIA SEXUAL",
+      "VIOLENCIA SEXUAL",
+    ]);
+
+    // Fila 4: Estudiante 1 bajo sección Violencia Sexual
+    ws.addRow([
+      "1",
+      "8VO EGB",
+      "D",
+      "1850992445",
+      "CHISAG OÑATE ESTEFANI VICTORIA",
+      "AS",
+      "Caso ingresado con código Z3-18D02-32814",
+    ]);
+
+    // Fila 5: Separador de sección Salud Mental
+    ws.addRow([
+      "SALUD MENTAL",
+      "SALUD MENTAL",
+      "SALUD MENTAL",
+      "SALUD MENTAL",
+      "SALUD MENTAL",
+      "SALUD MENTAL",
+      "SALUD MENTAL",
+    ]);
+
+    // Fila 6: Estudiante 2 bajo sección Salud Mental
+    ws.addRow([
+      "2",
+      "9NO EGB",
       "A",
-      "Salud mental / Ideación suicida",
-      "Caso en seguimiento desde el período anterior",
+      "1851080703",
+      "PAUCAR MORENO NESTOR JOEL",
+      "CUTTING Y CRISIS EMOCIONAL",
+      "Requiere seguimiento socioemocional",
     ]);
 
-    ws.addRow([
-      "Estudiante Importado Test 2",
-      "",
-      "8vo",
-      "B",
-      "Violencia intrafamiliar",
-      "Negligencia reportada por docente tutor",
-    ]);
-
-    // Fila sin nombre debe omitirse
-    ws.addRow(["", "123", "9no", "A", "NEE", "Sin nombre"]);
-
-    // Usar la base de datos real o de test
     const summary = await processCaseMatrixWorkbook(wb, {
       institutionId: "inst-test-01",
       userId: "user-test-01",
@@ -150,10 +213,22 @@ describe("caseImport - Procesamiento e Inserción de Casos en Matriz", () => {
     });
 
     expect(summary.createdCases).toBe(2);
-    expect(summary.createdStudents).toBeGreaterThanOrEqual(1);
-    expect(summary.skipped.length).toBe(1);
-    expect(summary.rows[0].status).toBe("EN_SEGUIMIENTO");
-    expect(summary.rows[0].riskTypeLabel).toBe("SALUD_MENTAL");
-    expect(summary.rows[0].caseCode).toBeDefined();
+    expect(summary.createdStudents).toBe(2);
+
+    // Verificar Estudiante 1
+    const case1 = summary.rows.find((r) => r.studentName.includes("CHISAG OÑATE"));
+    expect(case1).toBeDefined();
+    expect(case1?.riskTypeLabel).toBe("VIOLENCIA_SEXUAL");
+    expect(case1?.course).toBe("8VO EGB");
+    expect(case1?.parallel).toBe("D");
+    expect(case1?.documentId).toBe("1850992445");
+
+    // Verificar Estudiante 2
+    const case2 = summary.rows.find((r) => r.studentName.includes("PAUCAR MORENO"));
+    expect(case2).toBeDefined();
+    expect(case2?.riskTypeLabel).toBe("SALUD_MENTAL");
+    expect(case2?.course).toBe("9NO EGB");
+    expect(case2?.parallel).toBe("A");
+    expect(case2?.documentId).toBe("1851080703");
   });
 });

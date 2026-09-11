@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRef } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { useToastOnChange } from "@/components/Toast";
-import { importCaseMatrixAction, type CaseImportActionState } from "./actions";
+import {
+  importCaseMatrixAction,
+  deleteImportedCasesAction,
+  type CaseImportActionState,
+} from "./actions";
 
 const initialState: CaseImportActionState = { error: null, result: null };
 
@@ -19,7 +23,7 @@ function SubmitButton() {
       {pending ? (
         <>
           <span className="animate-spin">⏳</span>
-          <span>Procesando matriz y abriendo casos...</span>
+          <span>Procesando matriz e importando casos...</span>
         </>
       ) : (
         <>
@@ -35,6 +39,24 @@ export default function ImportCasesForm() {
   const [state, formAction] = useFormState(importCaseMatrixAction, initialState);
   useToastOnChange(state.error, "error");
   const formRef = useRef<HTMLFormElement>(null);
+
+  const [isDeleting, startDeleteTransition] = useTransition();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteFeedback, setDeleteFeedback] = useState<string | null>(null);
+
+  const handleDeleteImported = () => {
+    startDeleteTransition(async () => {
+      const res = await deleteImportedCasesAction();
+      setShowDeleteModal(false);
+      if (res.error) {
+        setDeleteFeedback(`⚠️ ${res.error}`);
+      } else {
+        setDeleteFeedback(
+          `✓ Se eliminaron exitosamente ${res.deletedCount} casos importados y se limpiaron los registros erróneos.`
+        );
+      }
+    });
+  };
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -72,9 +94,10 @@ export default function ImportCasesForm() {
           Configuración y Carga de la Matriz
         </h2>
         <p className="text-xs text-slate-600 mb-5 leading-relaxed">
-          Puedes subir la matriz depurada de tu institución. El sistema reconoce automáticamente nombres de columnas
-          flexibles (<em>Nombres, Cédula, Curso, Paralelo, Tipología, Observaciones</em>). Si el estudiante ya existe en la
-          base, el caso se asocia a su ficha; si es nuevo, se crea automáticamente.
+          El sistema cuenta con un <strong>motor inteligente de detección</strong>: localiza automáticamente la fila
+          de encabezados ignorando títulos institucionales o celdas combinadas, reconoce acrónimos oficiales (ej.{" "}
+          <em>AS, VS</em> para Violencia Sexual, <em>PPL</em> para Vulneración de Derechos, <em>Cutting</em> para Salud
+          Mental), filtra separadores de sección y conserva la información en la ficha del estudiante.
         </p>
 
         <form
@@ -106,7 +129,7 @@ export default function ImportCasesForm() {
                 <option value="ABIERTO">Abierto (Nuevos expedientes activos)</option>
               </select>
               <span className="text-[11px] text-slate-500 block mt-1">
-                Recomendado: "En seguimiento" para continuidad.
+                Recomendado: &quot;En seguimiento&quot; para continuidad.
               </span>
             </div>
 
@@ -160,7 +183,7 @@ export default function ImportCasesForm() {
               className="file-input file-input-bordered file-input-sm w-full max-w-lg text-xs"
             />
             <span className="text-[11px] text-slate-500 block mt-1">
-              Formatos admitidos: Libros de Excel (.xlsx) de hasta 10 MB.
+              Admite libros de Excel institucionales (.xlsx) de hasta 15 MB.
             </span>
           </div>
 
@@ -178,7 +201,7 @@ export default function ImportCasesForm() {
               <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-600 text-white text-xs">
                 ✓
               </span>
-              Resumen de la Importación Masiva
+              Resumen de la Importación Masiva ({state.result.sheetName})
             </h2>
             <Link href="/casos" className="btn-secondary btn-sm text-xs">
               Ver lista de casos ➔
@@ -281,9 +304,9 @@ export default function ImportCasesForm() {
                 <table className="w-full text-xs text-left">
                   <thead className="bg-amber-100/60 text-amber-900 border-b border-amber-200 sticky top-0">
                     <tr>
-                      <th className="py-2 px-3">Fila</th>
-                      <th className="py-2 px-3">Identificación</th>
-                      <th className="py-2 px-3">Motivo de omisión</th>
+                      <th className="py-2.5 px-3">Fila</th>
+                      <th className="py-2.5 px-3">Identificación</th>
+                      <th className="py-2.5 px-3">Motivo de omisión</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-amber-100">
@@ -300,6 +323,93 @@ export default function ImportCasesForm() {
             </div>
           )}
         </section>
+      )}
+
+      {/* Herramienta de Limpieza y Reversión */}
+      <section className="card p-6 border border-slate-200 bg-slate-50/60 rounded-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <span>🧹</span>
+              <span>Herramienta de Reversión y Limpieza</span>
+            </h3>
+            <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
+              ¿Deseas corregir o eliminar los casos aperturados desde la matriz? Esta opción elimina exclusivamente
+              los expedientes y estudiantes huérfanos creados mediante importación de matrices, protegiendo todos
+              los casos creados manualmente por el equipo DECE.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowDeleteModal(true)}
+            disabled={isDeleting}
+            className="btn-danger text-xs flex items-center gap-1.5 whitespace-nowrap self-start sm:self-auto shadow-xs"
+          >
+            <span>🗑️</span>
+            <span>Eliminar casos importados</span>
+          </button>
+        </div>
+
+        {deleteFeedback && (
+          <div className="mt-4 p-3 rounded-xl text-xs bg-white border border-slate-200 shadow-xs font-medium text-slate-800">
+            {deleteFeedback}
+          </div>
+        )}
+      </section>
+
+      {/* Modal de Confirmación de Eliminación */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center justify-center w-10 h-10 rounded-full bg-red-100 text-red-600 text-lg">
+                ⚠️
+              </span>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  ¿Confirmar eliminación de casos importados?
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Esta acción eliminará todos los casos aperturados desde matrices de importación.
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200">
+              Se revertirán las aperturas de caso y se eliminarán los estudiantes nuevos creados que no tengan otras
+              atenciones ni citas en el sistema.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+                className="btn-secondary text-xs"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteImported}
+                disabled={isDeleting}
+                className="btn-danger text-xs flex items-center gap-1.5"
+              >
+                {isDeleting ? (
+                  <>
+                    <span className="animate-spin">⏳</span>
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🗑️</span>
+                    <span>Sí, eliminar casos importados</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
