@@ -40,20 +40,17 @@ export default function AmbientBackground() {
 
       {/* Orbe 1: Azul Cielo Institucional (Superior Izquierdo) */}
       <div
-        className="ambient-orb-1 absolute -top-24 -left-20 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-sky-400/20 via-blue-500/15 to-transparent blur-3xl"
-        style={{ willChange: "transform" }}
+        className="absolute -top-24 -left-20 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-sky-400/15 via-blue-500/10 to-transparent blur-3xl opacity-75"
       />
 
       {/* Orbe 2: Índigo / Violeta Moderno (Superior Derecho) */}
       <div
-        className="ambient-orb-2 absolute top-12 -right-28 h-[550px] w-[550px] rounded-full bg-gradient-to-bl from-indigo-400/18 via-purple-400/12 to-transparent blur-3xl"
-        style={{ willChange: "transform" }}
+        className="absolute top-12 -right-28 h-[550px] w-[550px] rounded-full bg-gradient-to-bl from-indigo-400/12 via-purple-400/10 to-transparent blur-3xl opacity-75"
       />
 
       {/* Orbe 3: Esmeralda / Acompañamiento (Inferior Centro) */}
       <div
-        className="ambient-orb-3 absolute -bottom-32 left-1/3 h-[600px] w-[600px] rounded-full bg-gradient-to-tr from-emerald-400/15 via-teal-300/10 to-transparent blur-3xl"
-        style={{ willChange: "transform" }}
+        className="absolute -bottom-32 left-1/3 h-[600px] w-[600px] rounded-full bg-gradient-to-tr from-emerald-400/10 via-teal-300/8 to-transparent blur-3xl opacity-75"
       />
     </div>
   );

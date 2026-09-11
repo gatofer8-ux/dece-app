@@ -37,10 +37,10 @@
     @apply btn bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100;
   }
   .card {
-    @apply bg-white/90 dark:bg-slate-900/85 backdrop-blur-md rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-[0_1px_3px_0_rgba(0,0,0,0.03),0_1px_2px_-1px_rgba(0,0,0,0.03)] transition-all duration-200 hover:border-slate-300/90 dark:hover:border-slate-700 hover:shadow-xs;
+    @apply bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-[0_1px_3px_0_rgba(0,0,0,0.03),0_1px_2px_-1px_rgba(0,0,0,0.03)] transition-colors duration-200;
   }
   .glass-panel {
-    @apply bg-white/75 dark:bg-slate-900/75 backdrop-blur-xl border border-slate-200/70 dark:border-slate-800 shadow-xs;
+    @apply bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 shadow-xs;
   }
   .label {
     @apply block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1;
@@ -88,38 +88,173 @@
     animation: fadeInUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
-  /* Movimiento suave de orbes ambientales (GPU acelerado) */
-  @keyframes floatOrb1 {
-    0%, 100% { transform: translate(0px, 0px) scale(1); }
-    50% { transform: translate(35px, 25px) scale(1.05); }
-  }
-  @keyframes floatOrb2 {
-    0%, 100% { transform: translate(0px, 0px) scale(1); }
-    50% { transform: translate(-30px, 35px) scale(0.96); }
-  }
-  @keyframes floatOrb3 {
-    0%, 100% { transform: translate(0px, 0px) scale(1); }
-    50% { transform: translate(25px, -30px) scale(1.04); }
-  }
+}
 
-  .ambient-orb-1 {
-    animation: floatOrb1 24s ease-in-out infinite;
-  }
-  .ambient-orb-2 {
-    animation: floatOrb2 28s ease-in-out infinite;
-  }
-  .ambient-orb-3 {
-    animation: floatOrb3 22s ease-in-out infinite;
-  }
+/* ==========================================================================
+   MODO OSCURO - LEGIBILIDAD, CONTRASTE Y ARMONÍA TOTAL
+   Garantiza que todos los encabezados, textos, etiquetas, bordes y tablas
+   tengan contraste nítido y óptimo cuando se activa el modo oscuro (.dark).
+   ========================================================================== */
 
-  @media (prefers-reduced-motion: reduce) {
-    .ambient-orb-1,
-    .ambient-orb-2,
-    .ambient-orb-3,
-    .animate-fade-in-up {
-      animation: none !important;
-    }
-  }
+.dark {
+  color-scheme: dark;
+}
+
+/* Encabezados y títulos principales en blanco limpio */
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6 {
+  color: #f8fafc;
+}
+
+/* Textos oscuros remapeados a texto claro en dark mode */
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-gray-900,
+.dark .text-gray-800 {
+  color: #f1f5f9;
+}
+
+.dark .text-slate-700,
+.dark .text-gray-700 {
+  color: #e2e8f0;
+}
+
+.dark .text-slate-600,
+.dark .text-gray-600 {
+  color: #cbd5e1;
+}
+
+.dark .text-slate-500,
+.dark .text-gray-500 {
+  color: #94a3b8;
+}
+
+/* Tonos de alerta y estados con alto contraste en fondo oscuro */
+.dark .text-brand-900,
+.dark .text-brand-800,
+.dark .text-blue-900,
+.dark .text-blue-800 {
+  color: #93c5fd;
+}
+
+.dark .text-amber-950,
+.dark .text-amber-900,
+.dark .text-amber-800 {
+  color: #fde68a;
+}
+
+.dark .text-rose-950,
+.dark .text-rose-900,
+.dark .text-rose-800,
+.dark .text-red-950,
+.dark .text-red-900,
+.dark .text-red-800 {
+  color: #fecdd3;
+}
+
+.dark .text-purple-950,
+.dark .text-purple-900,
+.dark .text-purple-800 {
+  color: #e9d5ff;
+}
+
+.dark .text-indigo-950,
+.dark .text-indigo-900,
+.dark .text-indigo-800 {
+  color: #c7d2fe;
+}
+
+.dark .text-emerald-950,
+.dark .text-emerald-900,
+.dark .text-emerald-800,
+.dark .text-green-950,
+.dark .text-green-900,
+.dark .text-green-800 {
+  color: #a7f3d0;
+}
+
+/* Banners y contenedores de notificación adaptados a fondo oscuro */
+.dark .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.6);
+  color: #fef3c7;
+}
+
+.dark .bg-brand-50,
+.dark .bg-blue-50 {
+  background-color: rgba(59, 130, 246, 0.14);
+  border-color: rgba(59, 130, 246, 0.5);
+  color: #dbeafe;
+}
+
+.dark .bg-rose-50,
+.dark .bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fee2e2;
+}
+
+.dark .bg-emerald-50,
+.dark .bg-green-50 {
+  background-color: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #d1fae5;
+}
+
+.dark .bg-purple-50 {
+  background-color: rgba(168, 85, 247, 0.14);
+  border-color: rgba(168, 85, 247, 0.5);
+  color: #f3e8ff;
+}
+
+.dark .bg-indigo-50 {
+  background-color: rgba(99, 102, 241, 0.14);
+  border-color: rgba(99, 102, 241, 0.5);
+  color: #e0e7ff;
+}
+
+/* Superficies secundarias y barras de filtros en dark mode */
+.dark .bg-slate-100,
+.dark .bg-gray-100 {
+  background-color: #1e293b;
+}
+
+.dark .bg-slate-50 {
+  background-color: #0f172a;
+}
+
+/* Bordes y separadores tenues en modo oscuro */
+.dark .border-slate-100,
+.dark .border-slate-200 {
+  border-color: #1e293b;
+}
+
+.dark .border-slate-300 {
+  border-color: #334155;
+}
+
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1e293b;
+}
+
+/* Tablas con cabecera y filas legibles en modo oscuro */
+.dark table thead th {
+  background-color: #1e293b;
+  color: #cbd5e1;
+  border-color: #334155;
+}
+
+.dark table tbody tr {
+  border-color: #1e293b;
+}
+
+.dark table tbody tr:hover {
+  background-color: rgba(30, 41, 59, 0.6);
 }
 
 @media print {
