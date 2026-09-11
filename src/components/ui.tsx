@@ -117,11 +117,43 @@ export function StatCard({
   );
 }
 
+export function parseUtcDate(value?: string | null): Date | null {
+  if (!value) return null;
+  const s = String(value).trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, m, d] = s.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  }
+  const iso = s.endsWith("Z") || s.includes("+") || /-\d{2}:\d{2}$/.test(s)
+    ? s
+    : `${s.replace(" ", "T")}Z`;
+  const dt = new Date(iso);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
 export function formatDate(value?: string | null) {
   if (!value) return "—";
   try {
-    const d = new Date(value.replace(" ", "T"));
-    return d.toLocaleDateString("es-EC", { year: "numeric", month: "short", day: "2-digit" });
+    const s = String(value).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      const [y, m, d] = s.split("-").map(Number);
+      const dt = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+      return dt.toLocaleDateString("es-EC", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        timeZone: "America/Guayaquil",
+      });
+    }
+    const dt = parseUtcDate(s);
+    if (!dt) return value;
+    return dt.toLocaleDateString("es-EC", {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      timeZone: "America/Guayaquil",
+    });
   } catch {
     return value;
   }
@@ -130,9 +162,47 @@ export function formatDate(value?: string | null) {
 export function formatDateTime(value?: string | null) {
   if (!value) return "—";
   try {
-    const d = new Date(value.replace(" ", "T"));
-    return d.toLocaleString("es-EC", { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    const s = String(value).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      return formatDate(s);
+    }
+    const dt = parseUtcDate(s);
+    if (!dt) return value;
+    return dt.toLocaleString("es-EC", {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "America/Guayaquil",
+    });
   } catch {
     return value;
   }
+}
+
+export function formatTime(value?: string | null) {
+  if (!value) return "—";
+  try {
+    const dt = parseUtcDate(value);
+    if (!dt) return value;
+    return dt.toLocaleTimeString("es-EC", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "America/Guayaquil",
+    });
+  } catch {
+    return value;
+  }
+}
+
+export function getTodayEcuador(date: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Guayaquil",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
 }

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, getTodayEcuador } from "@/components/ui";
 import { createAppointment } from "../actions";
 import type { StudentRow, UserRow, CaseFileRow } from "@/lib/types";
 
@@ -55,7 +55,7 @@ export default async function NuevaCitaPage({
           </div>
           <div>
             <label className="label">Fecha *</label>
-            <input type="date" name="date" required defaultValue={new Date().toISOString().slice(0, 10)} className="input" />
+            <input type="date" name="date" required defaultValue={getTodayEcuador()} className="input" />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>

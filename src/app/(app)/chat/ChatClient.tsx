@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { ChatChannelSummary, Role } from "@/lib/types";
 import type { ChatMessageDetail } from "@/lib/chat";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
+import { formatTime } from "@/components/ui";
 
 interface ChatClientProps {
   currentUserId: string;
@@ -570,10 +571,7 @@ export default function ChatClient({
                               isMine ? "text-blue-200" : "text-gray-400"
                             }`}
                           >
-                            {new Date(msg.created_at).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
+                            {formatTime(msg.created_at)}
                           </div>
                         </div>
                       </div>
@@ -901,10 +899,7 @@ function ChannelItem({
                 isActive ? "text-blue-200" : "text-gray-400"
               }`}
             >
-              {new Date(channel.last_message.created_at).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              {formatTime(channel.last_message.created_at)}
             </div>
           )}
         </div>

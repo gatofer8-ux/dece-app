@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/session";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, getTodayEcuador } from "@/components/ui";
 import { createActivity } from "../actions";
 import { ACTIVITY_AXIS_LABELS, PREVENTION_THEME_OPTIONS } from "@/lib/types";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
@@ -26,7 +26,7 @@ export default async function NuevaActividadPage() {
           </div>
           <div>
             <label className="label">Fecha *</label>
-            <input type="date" name="date" required defaultValue={new Date().toISOString().slice(0, 10)} className="input" />
+            <input type="date" name="date" required defaultValue={getTodayEcuador()} className="input" />
           </div>
           <div>
             <label className="label">Temática de prevención (si el eje es Prevención)</label>

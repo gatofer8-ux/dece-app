@@ -25,6 +25,7 @@ import {
   isAllowedAttachmentType,
   MAX_ATTACHMENT_SIZE,
 } from "@/lib/uploads";
+import { getTodayEcuador } from "@/components/ui";
 
 // Valores de catálogo aceptados. Un valor fuera de rango (formulario manipulado)
 // se coacciona al valor por defecto en vez de propagarse a la base.
@@ -159,7 +160,9 @@ export async function addCaseAction(caseId: string, formData: FormData) {
     id,
     caseId,
     session.user.id,
-    str(formData, "date") || new Date().toISOString(),
+    !str(formData, "date") || str(formData, "date") === getTodayEcuador()
+      ? new Date().toISOString()
+      : str(formData, "date"),
     str(formData, "type") || "Otro",
     str(formData, "description") || "",
     str(formData, "intervention_type"),

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
-import { PageHeader, EmptyState, formatDate } from "@/components/ui";
+import { PageHeader, EmptyState, formatDate, getTodayEcuador } from "@/components/ui";
 import type { DailyAttentionRow } from "@/lib/types";
 import {
   ATTENDEE_TYPE_OPTIONS,
@@ -68,7 +68,7 @@ export default async function AtencionDiariaPage({
         <form action={createDailyAttention} className="space-y-3 mt-4">
           <input type="hidden" name="attendee_type" value={tipo} />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <input type="date" name="attention_date" defaultValue={new Date().toISOString().slice(0, 10)} className="input" />
+            <input type="date" name="attention_date" defaultValue={getTodayEcuador()} className="input" />
             {tipo === "DOCENTE_AUTORIDAD" && (
               <input name="duration" placeholder="Duración (ej. 30 min)" className="input" />
             )}

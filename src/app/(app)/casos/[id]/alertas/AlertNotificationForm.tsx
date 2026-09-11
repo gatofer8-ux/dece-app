@@ -8,6 +8,7 @@ import { createAlertNotification, updateAlertNotification, type ActionState } fr
 import { generateAlertInterventionAi } from "../ai-actions";
 import type { CaseAlertNotificationRow } from "@/lib/types";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
+import { getTodayEcuador } from "@/components/ui";
 
 const initialState: ActionState = { error: null };
 
@@ -654,7 +655,7 @@ export default function AlertNotificationForm({
             <input
               type="date"
               name="fecha_entrega_dece"
-              defaultValue={initialData?.fecha_entrega_dece || new Date().toISOString().slice(0, 10)}
+              defaultValue={initialData?.fecha_entrega_dece || getTodayEcuador()}
               required
               className="input text-xs w-full font-mono font-bold"
             />

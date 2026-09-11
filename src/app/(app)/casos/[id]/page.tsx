@@ -3,7 +3,7 @@ import { studentGradeLabel } from "@/lib/studentCourse";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
-import { PageHeader, Badge, formatDate, formatDateTime } from "@/components/ui";
+import { PageHeader, Badge, formatDate, formatDateTime, getTodayEcuador } from "@/components/ui";
 import {
   CASE_STATUS_LABELS,
   CASE_PRIORITY_LABELS,
@@ -475,7 +475,7 @@ export default async function CasoDetallePage({
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha</label>
-                  <input type="date" name="date" defaultValue={new Date().toISOString().slice(0, 10)} className="input" />
+                  <input type="date" name="date" defaultValue={getTodayEcuador()} className="input" />
                 </div>
               </div>
 

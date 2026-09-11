@@ -7,6 +7,7 @@ import { createSocializationAct, type ActionState } from "../../../actions";
 import { NORMATIVE_TEXT, CONFIDENTIALITY_TEXT, DEFAULT_AGREEMENTS, CURRICULAR_ADAPTATION_OPTIONS } from "@/lib/socializationAct";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
 import AIAssistButton from "@/components/AIAssistButton";
+import { getTodayEcuador } from "@/components/ui";
 
 const initialState: ActionState = { error: null };
 
@@ -87,7 +88,7 @@ export default function SocializationActForm({
           <input value={studentName} disabled className="input bg-slate-50" />
           <div>
             <label className="label text-xs">Fecha del acta</label>
-            <input type="date" name="act_date" defaultValue={new Date().toISOString().slice(0, 10)} className="input" />
+            <input type="date" name="act_date" defaultValue={getTodayEcuador()} className="input" />
           </div>
           <input name="act_place" placeholder="Lugar" className="input" />
         </div>
