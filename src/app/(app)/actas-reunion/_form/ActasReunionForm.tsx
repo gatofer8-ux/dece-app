@@ -10,15 +10,18 @@ import {
   parseSignatories,
   type MeetingAttendee,
   type MeetingSignatory,
+  type AI_FIELD_LABELS,
 } from "@/lib/meetingMinutes";
 import type { MeetingMinutesRow } from "@/lib/types";
 
 type Prefill = Record<string, string>;
 
 function AiButton({
+  fieldKey,
   targetId,
   getTopic,
 }: {
+  fieldKey: keyof typeof AI_FIELD_LABELS;
   targetId: string;
   getTopic: () => string;
 }) {
@@ -30,7 +33,7 @@ function AiButton({
     setLoading(true);
     setErr(null);
     try {
-      const res = await draftMeetingField("thematic_background", el.value, { topic: getTopic() });
+      const res = await draftMeetingField(fieldKey, el.value, { topic: getTopic() });
       if (res.error) setErr(res.error);
       else if (res.text) {
         el.value = res.text;
@@ -147,6 +150,7 @@ export default function ActasReunionForm({
             <div className="flex items-center gap-2">
               <VoiceDictationButton targetId="f-thematic_background" />
               <AiButton
+                fieldKey="thematic_background"
                 targetId="f-thematic_background"
                 getTopic={() =>
                   (document.getElementById("f-meeting_topic") as HTMLInputElement | null)?.value || v("meeting_topic")
@@ -208,7 +212,16 @@ export default function ActasReunionForm({
       <section>
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-xs font-semibold text-slate-500 uppercase">Desarrollo de la reunión</h3>
-          <VoiceDictationButton targetId="f-desarrollo_narrativo" />
+          <div className="flex items-center gap-2">
+            <VoiceDictationButton targetId="f-desarrollo_narrativo" />
+            <AiButton
+              fieldKey="desarrollo_narrativo"
+              targetId="f-desarrollo_narrativo"
+              getTopic={() =>
+                (document.getElementById("f-meeting_topic") as HTMLInputElement | null)?.value || v("meeting_topic")
+              }
+            />
+          </div>
         </div>
         {legacyAgenda.length > 0 && (
           <p className="text-[11px] text-amber-600 mb-1">
