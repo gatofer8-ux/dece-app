@@ -29,11 +29,19 @@ export default async function EneisPage() {
         title="ENEIS — Fichas de Aplicación"
         description='Estrategia Nacional de Educación Integral en Sexualidad. Los docentes entregan su ficha por un enlace, sin cuenta, y la recepción se arma sola.'
         action={
-          canManage ? (
-            <Link href="/eneis/nueva" className="btn-primary flex items-center gap-1.5">
-              <span>➕</span> Nueva convocatoria
+          <div className="flex items-center gap-2">
+            <Link
+              href="/eneis/encuestas"
+              className="px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-semibold flex items-center gap-1.5"
+            >
+              <span>📊</span> Encuestas de percepción
             </Link>
-          ) : undefined
+            {canManage ? (
+              <Link href="/eneis/nueva" className="btn-primary flex items-center gap-1.5">
+                <span>➕</span> Nueva convocatoria
+              </Link>
+            ) : undefined}
+          </div>
         }
       />
 
