@@ -19,15 +19,14 @@ describe("draftAutonomousActionPlan (Acuerdo MINEDUC-044-A)", () => {
       targetScope: "PREVENCION",
       currentItems: initialItems,
     });
+    if ("error" in res) throw new Error(res.error);
 
     expect(res.appliedCount).toBeGreaterThan(0);
     expect(res.updatedItems.length).toBe(initialItems.length);
 
     // Filtrar actividades actualizadas con etiquetas SADEX
-    const sadexTagged = res.updatedItems.filter((it) =>
-      it.meansOfVerification?.includes("[SADEX:") ||
-      it.activities?.includes("[SADEX:") ||
-      it.observations?.includes("SADEX")
+    const sadexTagged = res.updatedItems.filter(
+      (it) => it.activities?.includes("[SADEX:") || it.observations?.includes("SADEX")
     );
     expect(sadexTagged.length).toBeGreaterThan(0);
 
@@ -52,6 +51,7 @@ describe("draftAutonomousActionPlan (Acuerdo MINEDUC-044-A)", () => {
       targetScope: "TODO",
       currentItems: initialItems,
     });
+    if ("error" in res) throw new Error(res.error);
 
     expect(res.appliedCount).toBe(initialItems.length);
     // Cada item debe tener responsable asignado
