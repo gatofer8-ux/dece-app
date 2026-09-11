@@ -789,6 +789,23 @@ export interface MeetingMinutesRow {
   updated_at: string;
 }
 
+export interface EneisActaRow {
+  id: string;
+  institution_id: string;
+  created_by_id: string | null;
+  ciudad: string | null;
+  meeting_date: string | null;
+  tema: string | null;
+  hora_inicio: string | null;
+  hora_fin: string | null;
+  lugar: string | null;
+  desarrollo: string | null;
+  participants_json: string;
+  compromisos_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface TapasSessionRow {
   id: string;
   institution_id: string;
