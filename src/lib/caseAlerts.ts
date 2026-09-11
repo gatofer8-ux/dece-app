@@ -2,6 +2,16 @@ import type Database from "better-sqlite3";
 import { db as defaultDb } from "./db";
 import type { CaseFileRow, StudentRow } from "./types";
 
+function parseLocalDate(dateStr: string): Date {
+  const parts = dateStr.slice(0, 10).split("-").map(Number);
+  if (parts.length === 3 && !parts.some(isNaN)) {
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+  const d = new Date(dateStr);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
 function getDb(dbInstance?: Database.Database): Database.Database {
   return dbInstance || defaultDb;
 }
@@ -148,16 +158,16 @@ export function getInactiveCases(
       lastContactType = "Apertura del caso (sin conversaciones posteriores)";
     }
 
-    const lastContactDate = new Date(lastContactDateStr);
+    const lastContactDate = parseLocalDate(lastContactDateStr);
     const diffTime = today.getTime() - (isNaN(lastContactDate.getTime()) ? today.getTime() : lastContactDate.getTime());
-    const daysWithoutContact = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+    const daysWithoutContact = Math.max(0, Math.round(diffTime / (1000 * 60 * 60 * 24)));
 
     // Última acción general (cualquiera)
     const anyAction = stmtLastAnyAction.get(cf.id) as { date: string } | undefined;
     const lastAnyDateStr = (anyAction?.date || cf.detection_date || cf.created_at || "").slice(0, 10);
-    const lastAnyDate = new Date(lastAnyDateStr);
+    const lastAnyDate = parseLocalDate(lastAnyDateStr);
     const diffAny = today.getTime() - (isNaN(lastAnyDate.getTime()) ? today.getTime() : lastAnyDate.getTime());
-    const daysWithoutAnyAction = Math.max(0, Math.floor(diffAny / (1000 * 60 * 60 * 24)));
+    const daysWithoutAnyAction = Math.max(0, Math.round(diffAny / (1000 * 60 * 60 * 24)));
 
     if (daysWithoutContact >= thresholdDays) {
       parsedItems.push({
@@ -278,9 +288,9 @@ export function getCaseInactivityInfo(
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const targetDate = new Date(lastDateStr);
+  const targetDate = parseLocalDate(lastDateStr);
   const diffTime = today.getTime() - (isNaN(targetDate.getTime()) ? today.getTime() : targetDate.getTime());
-  const daysWithoutConversation = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+  const daysWithoutConversation = Math.max(0, Math.round(diffTime / (1000 * 60 * 60 * 24)));
 
   return {
     daysWithoutConversation,

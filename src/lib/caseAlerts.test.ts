@@ -62,10 +62,18 @@ describe("Sistema de Alertas de Casos sin Seguimiento ni Conversación", () => {
     `);
   });
 
+  function getPastYmd(daysAgo: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
   it("detecta casos abiertos con más de 30 días sin conversación con el estudiante o representante", () => {
-    const today = new Date();
-    const d5DaysAgo = new Date(today.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const d40DaysAgo = new Date(today.getTime() - 40 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const d5DaysAgo = getPastYmd(5);
+    const d40DaysAgo = getPastYmd(40);
 
     // Caso 1: abierto hace 40 días pero con entrevista hace 5 días -> NO debe alertar
     db.exec(`
@@ -96,9 +104,8 @@ describe("Sistema de Alertas de Casos sin Seguimiento ni Conversación", () => {
   });
 
   it("diferencia entre acciones puramente administrativas y conversaciones directas", () => {
-    const today = new Date();
-    const d5DaysAgo = new Date(today.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const d45DaysAgo = new Date(today.getTime() - 45 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const d5DaysAgo = getPastYmd(5);
+    const d45DaysAgo = getPastYmd(45);
 
     // Caso con acción administrativa reciente ('Cambio de estado') pero SIN conversación directa
     db.exec(`
@@ -116,9 +123,8 @@ describe("Sistema de Alertas de Casos sin Seguimiento ni Conversación", () => {
   });
 
   it("resetea la alerta cuando se emite una esquela de citación", () => {
-    const today = new Date();
-    const d35DaysAgo = new Date(today.getTime() - 35 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const d2DaysAgo = new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const d35DaysAgo = getPastYmd(35);
+    const d2DaysAgo = getPastYmd(2);
 
     db.exec(`
       INSERT INTO case_files (id, institution_id, student_id, code, status, detection_date)
