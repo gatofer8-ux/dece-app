@@ -319,6 +319,15 @@ function createConnection(): Database.Database {
   safeAddColumn("strategic_plans_bianual", "physical_file_ref TEXT");
   safeAddColumn("strategic_plans_bianual", "physical_evidence_url TEXT");
 
+  safeAddColumn("course_board_reports", "signatures_json TEXT");
+  safeAddColumn("course_board_reports", "signature_type TEXT DEFAULT 'MANUSCRITA'");
+  safeAddColumn("course_board_reports", "physical_file_ref TEXT");
+  safeAddColumn("course_board_reports", "physical_evidence_url TEXT");
+
+  safeAddColumn("meeting_minutes", "signature_type TEXT DEFAULT 'MANUSCRITA'");
+  safeAddColumn("meeting_minutes", "physical_file_ref TEXT");
+  safeAddColumn("meeting_minutes", "physical_evidence_url TEXT");
+
   safeAddColumn("institutions", "seal_image TEXT");
   safeAddColumn("institutions", "zona TEXT");
 

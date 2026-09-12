@@ -215,13 +215,53 @@ export default async function ImprimirActaReunionPage({ params }: { params: { id
           </tbody>
         </table>
 
+        {/* RECUADRO DE CUSTODIA FÍSICA INSTITUCIONAL */}
+        {m.physical_file_ref && (
+          <div className="mt-4 p-3 bg-amber-50/80 border border-amber-300 rounded text-[9pt] text-amber-950">
+            <span className="font-bold">📁 Custodia en Archivo Físico Institucional: </span>
+            <span>{m.physical_file_ref}</span>
+            {m.physical_evidence_url && (
+              <span className="ml-2 text-emerald-800 font-semibold">✓ Acta escaneada/sellada adjunta en expediente digital</span>
+            )}
+          </div>
+        )}
+
         {/* ANEXO: RESPALDOS FÍSICOS DIGITALIZADOS (SI EXISTEN) */}
-        {sigRows.some((s) => s.respaldo_archivo_url) && (
+        {(sigRows.some((s) => s.respaldo_archivo_url) || m.physical_evidence_url) && (
           <div className="mt-4 pt-3 border-t-2 border-dashed border-slate-300">
             <div className="bg-[#1F3864] text-white px-2 py-1 text-[8pt] font-bold uppercase mb-2">
               ANEXO DE AUDITORÍA: RESPALDOS FÍSICOS DIGITALIZADOS (CONSTANCIA DE FIRMA EN PAPEL)
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {m.physical_evidence_url && (
+                <div className="border border-slate-300 p-2 rounded text-center bg-slate-50/50">
+                  <p className="text-[8pt] font-bold text-slate-800 mb-1">
+                    Acta Firmada y Sellada en Físico
+                  </p>
+                  {m.physical_file_ref && (
+                    <p className="text-[7pt] text-slate-500 mb-1">
+                      Ubicación: {m.physical_file_ref}
+                    </p>
+                  )}
+                  {m.physical_evidence_url.startsWith("data:image") ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={m.physical_evidence_url}
+                      alt="Acta firmada escaneada"
+                      className="max-h-56 mx-auto object-contain border border-slate-200 bg-white"
+                    />
+                  ) : (
+                    <a
+                      href={m.physical_evidence_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[8pt] text-blue-700 underline block p-3 bg-white border border-slate-200 rounded"
+                    >
+                      📄 Ver acta completa escaneada (PDF)
+                    </a>
+                  )}
+                </div>
+              )}
               {sigRows
                 .filter((s) => s.respaldo_archivo_url)
                 .map((s, idx) => (

@@ -86,13 +86,18 @@ describe("physicalCustodyAudit", () => {
   });
 
   describe("getInstitutionCustodyAudit", () => {
-    it("incluye el módulo juntas_curso en el informe institucional", () => {
+    it("incluye los módulos juntas_curso y actas_reunion en el informe institucional", () => {
       const audit = getInstitutionCustodyAudit("institucion-demo");
       expect(audit).toBeDefined();
       expect(Array.isArray(audit.modules)).toBe(true);
+
       const juntasModule = audit.modules.find((m) => m.moduleKey === "juntas_curso");
       expect(juntasModule).toBeDefined();
       expect(juntasModule?.moduleName).toContain("Juntas de Curso");
+
+      const actasModule = audit.modules.find((m) => m.moduleKey === "actas_reunion");
+      expect(actasModule).toBeDefined();
+      expect(actasModule?.moduleName).toContain("Actas de Reunión");
     });
   });
 });

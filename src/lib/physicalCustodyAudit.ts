@@ -186,6 +186,9 @@ export function getInstitutionCustodyAudit(institutionId: string): InstitutionCu
   // 7. Informes Técnicos de Juntas de Curso (course_board_reports)
   const juntasStats = queryCustodyStats(buildDirectInstSql("course_board_reports"), [institutionId]);
 
+  // 8. Actas de Reunión del DECE (meeting_minutes)
+  const actasReunionStats = queryCustodyStats(buildDirectInstSql("meeting_minutes"), [institutionId]);
+
   function calcRate(num: number, denom: number): number {
     return denom > 0 ? Math.round((num / denom) * 100) : 100;
   }
@@ -198,6 +201,7 @@ export function getInstitutionCustodyAudit(institutionId: string): InstitutionCu
     { key: "eneis", name: "Comisión y Rendición ENEIS (Actas e Informes)", stats: eneisCombinedStats },
     { key: "actividades", name: "Informes de Actividades y Talleres", stats: activityStats },
     { key: "juntas_curso", name: "Informes Técnicos de Juntas de Curso (Trimestrales)", stats: juntasStats },
+    { key: "actas_reunion", name: "Actas de Reunión Institucional y de Equipo DECE", stats: actasReunionStats },
   ];
 
   const modules: InstitutionModuleCustodySummary[] = moduleItems.map((m) => {

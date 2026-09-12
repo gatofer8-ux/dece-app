@@ -49,6 +49,7 @@ export default async function ActasReunionPage() {
                   <th>Tema</th>
                   <th>Responsable</th>
                   <th>Asistentes</th>
+                  <th>Custodia y Archivo</th>
                   <th className="text-right">Acciones</th>
                 </tr>
               </thead>
@@ -69,6 +70,26 @@ export default async function ActasReunionPage() {
                     </td>
                     <td className="text-xs text-slate-700">{a.responsible_name || "—"}</td>
                     <td className="text-xs text-slate-500">{parseAttendees(a.attendees_json).length}</td>
+                    <td>
+                      {a.physical_file_ref ? (
+                        <div className="space-y-1">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            a.physical_evidence_url || a.signature_type === "DIGITAL"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                              : "bg-amber-50 text-amber-800 border-amber-300"
+                          }`}>
+                            {a.physical_evidence_url || a.signature_type === "DIGITAL" ? "🟢 Conforme" : "🟡 En carpeta"}
+                          </span>
+                          <div className="text-[11px] text-slate-600 truncate max-w-[140px]" title={a.physical_file_ref}>
+                            📁 {a.physical_file_ref}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                          🔴 Pendiente
+                        </span>
+                      )}
+                    </td>
                     <td className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Link

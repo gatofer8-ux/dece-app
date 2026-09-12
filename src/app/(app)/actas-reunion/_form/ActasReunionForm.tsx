@@ -86,6 +86,27 @@ export default function ActasReunionForm({
   );
   const [activeSigningIndex, setActiveSigningIndex] = useState<number | null>(null);
 
+  const [physicalFileRef, setPhysicalFileRef] = useState(
+    (initialData?.physical_file_ref || prefill?.physical_file_ref || "") as string
+  );
+  const [physicalEvidenceUrl, setPhysicalEvidenceUrl] = useState(
+    (initialData?.physical_evidence_url || prefill?.physical_evidence_url || "") as string
+  );
+  const [physicalEvidenceName, setPhysicalEvidenceName] = useState("");
+
+  const handleEvidenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhysicalEvidenceName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setPhysicalEvidenceUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const legacyAgenda = initialData && !((initialData.desarrollo_narrativo || "").trim())
     ? parseAgenda(initialData.agenda_json)
     : [];
@@ -387,6 +408,62 @@ export default function ActasReunionForm({
           className="textarea text-sm"
         />
       </section>
+
+      {/* Respaldo Físico DECE y Archivo Institucional de Actas de Reunión */}
+      <div className="p-4 bg-amber-50/60 rounded-xl border border-amber-200 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+            <span>📁</span> Respaldo Físico DECE y Archivo Institucional de Actas (Auditoría Ministerial)
+          </span>
+          <span className="text-[11px] text-amber-700 bg-amber-100/70 border border-amber-300 px-2 py-0.5 rounded-full font-medium">
+            Custodia DECE
+          </span>
+        </div>
+        <p className="text-xs text-amber-800/90 leading-relaxed">
+          Para garantizar la constancia legal y auditoría distrital según la LOEI, registra la ubicación física en archivador/carpeta institucional y opcionalmente adjunta copia escaneada o foto (PDF o Imagen) del acta firmada y sellada.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div>
+            <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+              Ubicación en Archivo Físico Institucional
+            </label>
+            <input
+              type="text"
+              name="physical_file_ref"
+              value={physicalFileRef}
+              onChange={(e) => setPhysicalFileRef(e.target.value)}
+              placeholder="Ej. Archivador Actas de Reunión DECE 2025-2026 / Tomo 1"
+              className="w-full text-xs rounded-lg border border-amber-300 bg-white px-3 py-2 text-slate-800 placeholder-slate-400 focus:ring-1 focus:ring-amber-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+              Adjuntar Acta Firmada / Sellada (PDF o Imagen)
+            </label>
+            <input type="hidden" name="physical_evidence_url" value={physicalEvidenceUrl} />
+            {physicalEvidenceUrl ? (
+              <div className="flex items-center justify-between p-2 bg-white rounded-lg border border-amber-300">
+                <span className="text-xs text-emerald-800 font-medium flex items-center gap-1.5 truncate max-w-[200px]">
+                  <span>📎</span> {physicalEvidenceName || "Acta_Reunion_Firmada"}
+                </span>
+                <div className="flex items-center gap-2">
+                  <a href={physicalEvidenceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">Ver</a>
+                  <button type="button" onClick={() => { setPhysicalEvidenceUrl(""); setPhysicalEvidenceName(""); }} className="text-xs text-rose-600 hover:underline font-medium">Quitar</button>
+                </div>
+              </div>
+            ) : (
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={handleEvidenceUpload}
+                className="w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 cursor-pointer"
+              />
+            )}
+          </div>
+        </div>
+      </div>
 
       <div className="flex justify-end">
         <button type="submit" className="btn-primary">

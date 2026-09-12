@@ -16,6 +16,7 @@ const TEXT_COLS = [
   "responsible_name", "responsible_email", "responsible_phone_ext", "responsible_role",
   "meeting_topic", "location", "thematic_background", "additional_comments",
   "title_suffix", "desarrollo_narrativo",
+  "signature_type", "physical_file_ref", "physical_evidence_url",
 ] as const;
 
 function collectAttendees(fd: FormData) {
@@ -59,9 +60,23 @@ function collectSignatories(fd: FormData) {
 
 function payload(fd: FormData) {
   const o: Record<string, string | null> = {};
-  for (const c of TEXT_COLS) o[c] = str(fd, c);
+  for (const c of TEXT_COLS) o[c] = str(fd, c) || null;
   o.attendees_json = collectAttendees(fd);
   o.signatories_json = collectSignatories(fd);
+
+  if (!o.signature_type) {
+    try {
+      const sigs = JSON.parse(o.signatories_json || "[]");
+      const hasDigital = sigs.some((s: any) => s.tipo === "digital" || s.firma_data_url);
+      const hasFisica = sigs.some((s: any) => s.tipo === "fisica");
+      if (hasDigital && hasFisica) o.signature_type = "MIXTA";
+      else if (hasDigital) o.signature_type = "DIGITAL";
+      else o.signature_type = "MANUSCRITA";
+    } catch {
+      o.signature_type = "MANUSCRITA";
+    }
+  }
+
   return o;
 }
 

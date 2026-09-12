@@ -25,6 +25,7 @@ import {
   ACCEPTANCE_NOTE,
   DEPENDENCIA_LABEL,
 } from "./meetingMinutes";
+import { createDocxCustodyCalloutTable } from "./docxCustodyHelper";
 
 const FONT = "Calibri";
 const NAVY = "1F3864";
@@ -115,6 +116,8 @@ export interface MeetingMinutesRowLike {
   additional_comments: string | null;
   title_suffix: string | null;
   desarrollo_narrativo: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
 }
 
 export async function generateMeetingMinutesDocx(m: MeetingMinutesRowLike, institutionName: string): Promise<Buffer> {
@@ -203,6 +206,19 @@ export async function generateMeetingMinutesDocx(m: MeetingMinutesRowLike, insti
     rows,
   });
 
+  const custodyTable = createDocxCustodyCalloutTable({
+    physicalFileRef: m.physical_file_ref,
+    physicalEvidenceUrl: m.physical_evidence_url,
+    widthDxa: W,
+    font: FONT,
+  });
+
+  const docChildren: (Table | Paragraph)[] = [table];
+  if (custodyTable) {
+    docChildren.push(new Paragraph({ spacing: { before: 240, after: 100 }, children: [] }));
+    docChildren.push(custodyTable);
+  }
+
   const doc = new Document({
     creator: "DECE App",
     title: `Acta de Reunión ${m.meeting_code || ""}`,
@@ -238,7 +254,7 @@ export async function generateMeetingMinutesDocx(m: MeetingMinutesRowLike, insti
             ],
           }),
         },
-        children: [table],
+        children: docChildren,
       },
     ],
   });
