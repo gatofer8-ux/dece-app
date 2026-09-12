@@ -30,6 +30,10 @@ export default async function JuntaCursoDetailPage({
         editUrl={`/juntas-curso/${report.id}/editar`}
         initialTotalPages={4}
         updatedAt={report.updated_at || report.created_at}
+        physicalFileRef={report.physical_file_ref}
+        physicalEvidenceUrl={report.physical_evidence_url}
+        signaturesJson={report.signatures_json}
+        signatureType={report.signature_type}
       />
     </div>
   );

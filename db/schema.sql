@@ -1150,6 +1150,10 @@ CREATE TABLE IF NOT EXISTS course_board_reports (
   general_actions      TEXT,
   conclusiones         TEXT NOT NULL,
   recomendaciones      TEXT NOT NULL,
+  signatures_json      TEXT,
+  signature_type       TEXT DEFAULT 'MANUSCRITA',
+  physical_file_ref    TEXT,
+  physical_evidence_url TEXT,
   created_at           TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at           TEXT NOT NULL DEFAULT (datetime('now'))
 );

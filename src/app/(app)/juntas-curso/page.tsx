@@ -142,6 +142,7 @@ export default async function JuntasCursoPage({
                   <th className="py-3 px-4">Profesional DECE</th>
                   <th className="py-3 px-4">Fecha</th>
                   <th className="py-3 px-4 text-center">Casos</th>
+                  <th className="py-3 px-4">Custodia y Archivo</th>
                   <th className="py-3 px-4 text-right">Acciones</th>
                 </tr>
               </thead>
@@ -198,6 +199,26 @@ export default async function JuntasCursoPage({
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold text-[11px]">
                             ✓ Sin casos
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        {r.physical_file_ref ? (
+                          <div className="space-y-1">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              r.physical_evidence_url || r.signature_type === "DIGITAL"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                                : "bg-amber-50 text-amber-800 border-amber-300"
+                            }`}>
+                              {r.physical_evidence_url || r.signature_type === "DIGITAL" ? "🟢 Conforme" : "🟡 En carpeta"}
+                            </span>
+                            <div className="text-[11px] text-slate-600 truncate max-w-[140px]" title={r.physical_file_ref}>
+                              📁 {r.physical_file_ref}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                            🔴 Pendiente
                           </span>
                         )}
                       </td>

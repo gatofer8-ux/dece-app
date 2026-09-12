@@ -1661,6 +1661,10 @@ export interface CourseBoardReportRow {
   general_actions?: string | null;
   conclusiones: string;
   recomendaciones: string;
+  signatures_json?: string | null;
+  signature_type?: "DIGITAL" | "MANUSCRITA" | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_at: string;
   updated_at: string;
 }

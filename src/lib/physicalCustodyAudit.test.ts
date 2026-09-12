@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveCustodyStatus, getCasesCustodyMap } from "./physicalCustodyAudit";
+import { resolveCustodyStatus, getCasesCustodyMap, getInstitutionCustodyAudit } from "./physicalCustodyAudit";
 
 describe("physicalCustodyAudit", () => {
   describe("resolveCustodyStatus", () => {
@@ -82,6 +82,17 @@ describe("physicalCustodyAudit", () => {
       expect(item.complianceRate).toBe(100);
       expect(item.pending).toBe(0);
       expect(item.primaryFileRef).toBeNull();
+    });
+  });
+
+  describe("getInstitutionCustodyAudit", () => {
+    it("incluye el módulo juntas_curso en el informe institucional", () => {
+      const audit = getInstitutionCustodyAudit("institucion-demo");
+      expect(audit).toBeDefined();
+      expect(Array.isArray(audit.modules)).toBe(true);
+      const juntasModule = audit.modules.find((m) => m.moduleKey === "juntas_curso");
+      expect(juntasModule).toBeDefined();
+      expect(juntasModule?.moduleName).toContain("Juntas de Curso");
     });
   });
 });

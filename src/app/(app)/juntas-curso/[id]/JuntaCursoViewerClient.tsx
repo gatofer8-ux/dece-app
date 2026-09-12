@@ -13,6 +13,10 @@ interface JuntaCursoViewerClientProps {
   editUrl: string;
   initialTotalPages?: number;
   updatedAt?: string;
+  physicalFileRef?: string | null;
+  physicalEvidenceUrl?: string | null;
+  signaturesJson?: string | null;
+  signatureType?: string | null;
 }
 
 export default function JuntaCursoViewerClient({
@@ -25,6 +29,10 @@ export default function JuntaCursoViewerClient({
   editUrl,
   initialTotalPages = 4,
   updatedAt = "init",
+  physicalFileRef,
+  physicalEvidenceUrl,
+  signaturesJson,
+  signatureType = "MANUSCRITA",
 }: JuntaCursoViewerClientProps) {
   const [viewMode, setViewMode] = useState<"image" | "pdf">("image");
   const [activePage, setActivePage] = useState<number | "all">(1);
@@ -80,6 +88,54 @@ export default function JuntaCursoViewerClient({
 
   return (
     <div className="space-y-4 max-w-5xl mx-auto pb-12">
+      {/* Tarjeta Informativa de Custodia y Auditoría Ministerial */}
+      <div className={`p-4 rounded-2xl border shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+        physicalFileRef
+          ? "bg-amber-50/80 border-amber-300 text-amber-950"
+          : "bg-rose-50/80 border-rose-200 text-rose-950"
+      }`}>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-base">📁</span>
+            <span className="font-bold text-xs uppercase tracking-wide">
+              Custodia Institucional & Auditoría Distrital
+            </span>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+              signatureType === "DIGITAL"
+                ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                : signatureType === "MANUSCRITA"
+                ? "bg-amber-100 text-amber-800 border-amber-300"
+                : "bg-blue-100 text-blue-800 border-blue-300"
+            }`}>
+              Modalidad: {signatureType === "DIGITAL" ? "Digital" : signatureType === "MANUSCRITA" ? "Física en Papel" : "Mixta"}
+            </span>
+          </div>
+          <p className="text-xs">
+            {physicalFileRef ? (
+              <>
+                Ubicación en archivo físico: <span className="font-semibold text-amber-900">{physicalFileRef}</span>
+              </>
+            ) : (
+              <span className="text-rose-700 font-medium">
+                ⚠️ Pendiente de registrar en archivador físico institucional. Haz clic en "Editar" para registrar la carpeta.
+              </span>
+            )}
+          </p>
+        </div>
+
+        {physicalEvidenceUrl && (
+          <a
+            href={physicalEvidenceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-amber-100 border border-amber-300 text-amber-900 rounded-xl text-xs font-bold transition-all shadow-2xs shrink-0"
+          >
+            <span>📎</span>
+            <span>Ver Acta / Informe Sellado</span>
+          </a>
+        )}
+      </div>
+
       {/* Barra de Acciones Principal */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">

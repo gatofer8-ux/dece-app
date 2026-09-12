@@ -127,20 +127,55 @@ function buildJuntaCursoTemplate() {
   // R2: Elaborado por (DECE)
   const r2Cells = t2Rows[2].getElementsByTagName('w:tc');
   setCellText(r2Cells[0], '{dece_nombre}\n{dece_cargo}');
-  setCellText(r2Cells[1], '');
+  setCellText(r2Cells[1], '{firma_elaborado}');
   setCellText(r2Cells[2], '{fecha_informe}');
 
   // R5: Revisado por (Coordinador / DECE)
   const r5Cells = t2Rows[5].getElementsByTagName('w:tc');
   setCellText(r5Cells[0], '{revisado_nombre}\n{revisado_cargo}');
-  setCellText(r5Cells[1], '');
+  setCellText(r5Cells[1], '{firma_revisado}');
   setCellText(r5Cells[2], '{fecha_informe}');
 
   // R8: Aprobado por (Rector / Autoridad)
   const r8Cells2 = t2Rows[8].getElementsByTagName('w:tc');
   setCellText(r8Cells2[0], '{autoridad_nombre}\n{autoridad_cargo}');
-  setCellText(r8Cells2[1], '');
+  setCellText(r8Cells2[1], '{firma_aprobado}');
   setCellText(r8Cells2[2], '{fecha_informe}');
+
+  // Párrafo de custodia institucional posterior a la tabla de firmas
+  const pCallout = doc.createElement('w:p');
+  const pPr = doc.createElement('w:pPr');
+  const jc = doc.createElement('w:jc');
+  jc.setAttribute('w:val', 'both');
+  pPr.appendChild(jc);
+  const spacing = doc.createElement('w:spacing');
+  spacing.setAttribute('w:before', '200');
+  spacing.setAttribute('w:after', '100');
+  pPr.appendChild(spacing);
+  pCallout.appendChild(pPr);
+
+  const rCallout = doc.createElement('w:r');
+  const rPrCallout = doc.createElement('w:rPr');
+  const rFontsCallout = doc.createElement('w:rFonts');
+  rFontsCallout.setAttribute('w:ascii', 'Times New Roman');
+  rFontsCallout.setAttribute('w:hAnsi', 'Times New Roman');
+  rPrCallout.appendChild(rFontsCallout);
+  const szCallout = doc.createElement('w:sz');
+  szCallout.setAttribute('w:val', '19');
+  rPrCallout.appendChild(szCallout);
+  rCallout.appendChild(rPrCallout);
+
+  const tCallout = doc.createElement('w:t');
+  tCallout.setAttribute('xml:space', 'preserve');
+  tCallout.textContent = '{custodia_callout}';
+  rCallout.appendChild(tCallout);
+  pCallout.appendChild(rCallout);
+
+  if (tbl2.nextSibling) {
+    tbl2.parentNode.insertBefore(pCallout, tbl2.nextSibling);
+  } else {
+    tbl2.parentNode.appendChild(pCallout);
+  }
 
   // Eliminar párrafos vacíos finales en el body antes del sectPr para evitar páginas en blanco
   const body = doc.getElementsByTagName('w:body')[0];

@@ -44,6 +44,10 @@ export interface JuntasCursoDocxData {
   recomendaciones: string;
   revisado_nombre: string;
   revisado_cargo: string;
+  firma_elaborado?: string;
+  firma_revisado?: string;
+  firma_aprobado?: string;
+  custodia_callout?: string;
 }
 
 export function formatCourseBoardReportTemplateData(
@@ -171,6 +175,45 @@ export function formatCourseBoardReportTemplateData(
     ? report.user_role_label
     : "COORDINADORA DECE INSTITUCIONAL";
 
+  let rawSignatures: any[] = [];
+  try {
+    rawSignatures = JSON.parse(report.signatures_json || "[]");
+  } catch {}
+
+  const elaboratedSig = rawSignatures.find(
+    (s) => s.signer_id === "elaborated" || s.role?.toLowerCase().includes("dece") || s.role?.toLowerCase().includes("elabora")
+  );
+  const tutorSig = rawSignatures.find(
+    (s) => s.signer_id === "tutor" || s.role?.toLowerCase().includes("tutor")
+  );
+  const approvedSig = rawSignatures.find(
+    (s) => s.signer_id === "approved" || s.role?.toLowerCase().includes("autoridad") || s.role?.toLowerCase().includes("rector")
+  );
+
+  const getSigIndicator = (sigItem?: any) => {
+    if (sigItem?.tipo === "digital" || report.signature_type === "DIGITAL") {
+      const datePart = sigItem?.fecha ? `\nFecha: ${sigItem.fecha}` : "";
+      return `[FIRMADO DIGITALMENTE — REGISTRO ELECTRÓNICO]${datePart}`;
+    }
+    if (sigItem?.tipo === "fisica" || report.signature_type === "MANUSCRITA") {
+      return `___________________________\n[DOCUMENTO CON FIRMA MANUSCRITA Y SELLO FÍSICO]`;
+    }
+    return "___________________________";
+  };
+
+  const firmaElaborado = getSigIndicator(elaboratedSig);
+  const firmaRevisado = getSigIndicator(tutorSig);
+  const firmaAprobado = getSigIndicator(approvedSig);
+
+  let custodiaCallout = "";
+  if (report.physical_file_ref) {
+    custodiaCallout = `📁 CUSTODIA DE ARCHIVO INSTITUCIONAL (AUDITORÍA DISTRITAL)\nUbicación en Archivo Físico: ${report.physical_file_ref}\n${
+      report.physical_evidence_url
+        ? "Constancia: Cuenta con copia digitalizada y sellada en la plataforma institucional."
+        : "Constancia: Reposa bajo custodia física del DECE conforme a normativa ministerial."
+    }`;
+  }
+
   return {
     nombre_institucion: institutionName,
     fecha_informe: formattedDate,
@@ -194,6 +237,10 @@ export function formatCourseBoardReportTemplateData(
     recomendaciones: report.recomendaciones || DEFAULT_RECOMENDACIONES,
     revisado_nombre: report.user_name || "Profesional DECE",
     revisado_cargo: coordRole,
+    firma_elaborado: firmaElaborado,
+    firma_revisado: firmaRevisado,
+    firma_aprobado: firmaAprobado,
+    custodia_callout: custodiaCallout,
   };
 }
 

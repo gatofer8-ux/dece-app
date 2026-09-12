@@ -40,6 +40,10 @@ export async function saveCourseBoardReportAction(data: {
   generalActions?: string;
   conclusiones: string;
   recomendaciones: string;
+  signaturesJson?: string;
+  signatureType?: string;
+  physicalFileRef?: string;
+  physicalEvidenceUrl?: string;
 }): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
     const session = await requireRole(["ADMIN", "DECE"]);
@@ -78,14 +82,18 @@ export async function saveCourseBoardReportAction(data: {
           tutor_name, tutor_role_label, tutor_contact, tutor_email, tutor_extension,
           report_code, trimester, course, parallel, jornada, report_date,
           antecedentes, alcance, objetivo, cases_json, general_actions,
-          conclusiones, recomendaciones, created_at, updated_at
+          conclusiones, recomendaciones,
+          signatures_json, signature_type, physical_file_ref, physical_evidence_url,
+          created_at, updated_at
         ) VALUES (
           ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?,
-          ?, ?, datetime('now'), datetime('now')
+          ?, ?,
+          ?, ?, ?, ?,
+          datetime('now'), datetime('now')
         )`
       ).run(
         id,
@@ -115,7 +123,11 @@ export async function saveCourseBoardReportAction(data: {
         casesJson,
         data.generalActions || null,
         data.conclusiones,
-        data.recomendaciones
+        data.recomendaciones,
+        data.signaturesJson || null,
+        data.signatureType || "MANUSCRITA",
+        data.physicalFileRef?.trim() || null,
+        data.physicalEvidenceUrl || null
       );
     } else {
       db.prepare(
@@ -144,6 +156,10 @@ export async function saveCourseBoardReportAction(data: {
           general_actions = ?,
           conclusiones = ?,
           recomendaciones = ?,
+          signatures_json = ?,
+          signature_type = ?,
+          physical_file_ref = ?,
+          physical_evidence_url = ?,
           updated_at = datetime('now')
         WHERE id = ? AND institution_id = ?`
       ).run(
@@ -171,6 +187,10 @@ export async function saveCourseBoardReportAction(data: {
         data.generalActions || null,
         data.conclusiones,
         data.recomendaciones,
+        data.signaturesJson || null,
+        data.signatureType || "MANUSCRITA",
+        data.physicalFileRef?.trim() || null,
+        data.physicalEvidenceUrl || null,
         id,
         institutionId
       );
