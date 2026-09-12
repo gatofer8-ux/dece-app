@@ -10,7 +10,7 @@ import VoiceDictationButton from "@/components/VoiceDictationButton";
 export default async function NuevoCasoPage({
   searchParams,
 }: {
-  searchParams?: { estudiante?: string; alerta?: string };
+  searchParams?: { estudiante?: string; alerta?: string; estudiante_nombre?: string; motivo?: string };
 }) {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
@@ -29,7 +29,13 @@ export default async function NuevoCasoPage({
       .get(searchParams.alerta, institutionId) as TeacherAlertRow | undefined;
   }
 
-  const preselectedStudent = alert?.student_id || searchParams?.estudiante || "";
+  let preselectedStudent = alert?.student_id || searchParams?.estudiante || "";
+  if (!preselectedStudent && searchParams?.estudiante_nombre) {
+    const match = students.find((s) =>
+      s.full_name.toLowerCase().includes(searchParams.estudiante_nombre!.toLowerCase())
+    );
+    if (match) preselectedStudent = match.id;
+  }
 
   return (
     <div>
@@ -85,7 +91,12 @@ export default async function NuevoCasoPage({
           </div>
           <div>
             <label className="label">Fuente de detección</label>
-            <input name="detection_source" placeholder="Ej. Docente tutor, autorreporte, representante..." className="input" />
+            <input
+              name="detection_source"
+              defaultValue={searchParams?.motivo ? "Atención Diaria DECE" : ""}
+              placeholder="Ej. Docente tutor, autorreporte, representante..."
+              className="input"
+            />
           </div>
           <div className="md:col-span-2">
             <label className="label">Profesional responsable</label>
@@ -107,7 +118,7 @@ export default async function NuevoCasoPage({
             name="description"
             required
             rows={5}
-            defaultValue={alert?.description || ""}
+            defaultValue={alert?.description || searchParams?.motivo || ""}
             placeholder="Relato de la situación detectada. Esta información es confidencial."
             className="textarea"
           />

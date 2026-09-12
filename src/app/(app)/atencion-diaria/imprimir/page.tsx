@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { formatDate, formatDateTime } from "@/components/ui";
-import type { DailyAttentionRow, InstitutionRow } from "@/lib/types";
+import type { DailyAttentionRow, InstitutionRow, UserRow } from "@/lib/types";
 import {
   ATTENDEE_TYPE_OPTIONS,
   actionAxisOptionsFor,
@@ -25,6 +26,7 @@ export default async function ImprimirAtencionDiariaPage({
     : "ESTUDIANTE") as AttendeeType;
 
   const institution = db.prepare("SELECT * FROM institutions WHERE id = ?").get(institutionId) as InstitutionRow;
+  const user = db.prepare("SELECT * FROM users WHERE id = ?").get(session.user.id) as UserRow | undefined;
 
   let where = "WHERE institution_id = ? AND attendee_type = ?";
   const params: (string | number)[] = [institutionId, tipo];
@@ -44,6 +46,11 @@ export default async function ImprimirAtencionDiariaPage({
     DOCENTE_AUTORIDAD: "Registro de atención virtual/presencial a PERSONAL DOCENTE Y AUTORIDADES",
   };
 
+  const queryParams = new URLSearchParams();
+  queryParams.set("tipo", tipo);
+  if (searchParams.mes) queryParams.set("mes", searchParams.mes);
+  const filterQueryStr = queryParams.toString();
+
   return (
     <div className="max-w-[1300px] mx-auto bg-white">
       <style>{`
@@ -51,11 +58,30 @@ export default async function ImprimirAtencionDiariaPage({
           @page { size: landscape; margin: 8mm; }
         }
       `}</style>
-      <PrintButton />
+      <div className="no-print p-3 bg-slate-100 border-b flex items-center justify-between mb-4 rounded-lg">
+        <Link href={`/atencion-diaria?${filterQueryStr}`} className="text-xs text-slate-600 font-semibold hover:underline">
+          ← Volver a Atenciones
+        </Link>
+        <div className="flex items-center gap-2">
+          <a
+            href={`/api/atencion-diaria/export-word?${filterQueryStr}`}
+            className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded font-semibold hover:bg-blue-700"
+          >
+            📥 Descargar Word (.docx)
+          </a>
+          <a
+            href={`/api/atencion-diaria/export-excel?${filterQueryStr}`}
+            className="text-xs bg-emerald-700 text-white px-3 py-1.5 rounded font-semibold hover:bg-emerald-800"
+          >
+            📊 Descargar Excel (.xlsx)
+          </a>
+          <PrintButton hideWordButton />
+        </div>
+      </div>
       <div id="printable-content" className="p-6 print:p-0 text-[9px] leading-tight">
         <DocumentHeader
           title={titleByType[tipo]}
-          subtitle="Departamento de Consejería Estudiantil"
+          subtitle={`Departamento de Consejería Estudiantil${searchParams.mes ? ` · Período: ${searchParams.mes}` : ""}`}
           institutionName={institution.name}
           sealImage={institution.seal_image}
           compact
@@ -117,6 +143,22 @@ export default async function ImprimirAtencionDiariaPage({
             )}
           </tbody>
         </table>
+
+        {/* Bloque de Firmas Institucionales */}
+        <div className="mt-8 pt-4 grid grid-cols-2 gap-12 text-center text-[10px] text-slate-800 break-inside-avoid">
+          <div>
+            <div className="border-t border-slate-700 w-64 mx-auto pt-1 font-bold text-[#2F5496]">
+              {user?.name || "PROFESIONAL DEL DECE"}
+            </div>
+            <div className="text-[9px] text-slate-600">Responsable de Registro y Atención DECE</div>
+          </div>
+          <div>
+            <div className="border-t border-slate-700 w-64 mx-auto pt-1 font-bold text-[#2F5496]">
+              AUTORIDAD INSTITUCIONAL / RECTORADO
+            </div>
+            <div className="text-[9px] text-slate-600">Supervisión y Control de Gestión</div>
+          </div>
+        </div>
 
         <DocumentFooter institution={institution} />
       </div>
