@@ -76,9 +76,9 @@ export default async function EstudiantesCarnetsPage({
                 ← Volver a Estudiantes
               </Link>
               <button
-                onClick={() => {}}
                 className="btn-primary text-xs flex items-center gap-1.5 shadow-sm bg-brand-700 hover:bg-brand-800"
-                // @ts-ignore
+                // @ts-ignore — atributo HTML nativo (no el evento sintético de React):
+                // esta página es un Server Component y no puede recibir props onClick de función.
                 onclick="window.print()"
               >
                 <span>🖨️</span> Imprimir Credenciales
@@ -192,7 +192,7 @@ export default async function EstudiantesCarnetsPage({
                     <div>
                       <span className="text-slate-400 font-medium">Cédula: </span>
                       <span className="font-mono font-semibold text-slate-800">
-                        {formatDocumentId(s.document_id, s.document_type) || "S/N"}
+                        {formatDocumentId(s.document_type, s.document_id) || "S/N"}
                       </span>
                     </div>
 
