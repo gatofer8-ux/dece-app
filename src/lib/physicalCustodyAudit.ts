@@ -228,3 +228,94 @@ export function getInstitutionCustodyAudit(institutionId: string): InstitutionCu
     modules,
   };
 }
+
+export interface CaseCustodySummaryItem {
+  caseId: string;
+  total: number;
+  digital: number;
+  physicalOnly: number;
+  pending: number;
+  complianceRate: number;
+}
+
+/**
+ * Consulta de alto rendimiento para obtener el estado de custodia física
+ * de una lista de casos para tablas y vistas consolidadas.
+ */
+export function getCasesCustodyMap(caseIds: string[]): Map<string, CaseCustodySummaryItem> {
+  const map = new Map<string, CaseCustodySummaryItem>();
+  if (!caseIds || caseIds.length === 0) return map;
+
+  for (const id of caseIds) {
+    map.set(id, { caseId: id, total: 0, digital: 0, physicalOnly: 0, pending: 0, complianceRate: 100 });
+  }
+
+  const placeholders = caseIds.map(() => "?").join(",");
+  const caseTables = [
+    "case_interviews",
+    "case_observation_sheets",
+    "case_care_plans",
+    "case_restitution_plans",
+    "violence_reports",
+    "socialization_acts",
+    "authority_advisory_acts",
+    "situational_reports",
+    "bimonthly_reports",
+    "case_closure_reports",
+    "case_corresponsibility_acts",
+    "referrals",
+    "restorative_circle_consents",
+    "case_accompaniment_reports",
+    "dece_esquelas",
+  ];
+
+  for (const tbl of caseTables) {
+    try {
+      const rows = db
+        .prepare(
+          `SELECT
+            case_file_id,
+            COUNT(*) as total,
+            SUM(CASE 
+              WHEN (physical_evidence_url IS NOT NULL AND TRIM(physical_evidence_url) != '') 
+                   OR ((physical_file_ref IS NOT NULL AND TRIM(physical_file_ref) != '') AND signature_type = 'DIGITAL') 
+              THEN 1 ELSE 0 
+            END) as digital,
+            SUM(CASE 
+              WHEN (physical_file_ref IS NOT NULL AND TRIM(physical_file_ref) != '') 
+                   AND (physical_evidence_url IS NULL OR TRIM(physical_evidence_url) = '')
+                   AND (signature_type IS NULL OR signature_type != 'DIGITAL')
+              THEN 1 ELSE 0 
+            END) as physical_only,
+            SUM(CASE 
+              WHEN (physical_file_ref IS NULL OR TRIM(physical_file_ref) = '') 
+                   AND (physical_evidence_url IS NULL OR TRIM(physical_evidence_url) = '')
+              THEN 1 ELSE 0 
+            END) as pending
+          FROM ${tbl}
+          WHERE case_file_id IN (${placeholders})
+          GROUP BY case_file_id`
+        )
+        .all(...caseIds) as any[];
+
+      for (const r of rows) {
+        const item = map.get(r.case_file_id);
+        if (item) {
+          item.total += Number(r.total || 0);
+          item.digital += Number(r.digital || 0);
+          item.physicalOnly += Number(r.physical_only || 0);
+          item.pending += Number(r.pending || 0);
+        }
+      }
+    } catch {
+      // Ignorar si alguna tabla opcional no está presente
+    }
+  }
+
+  for (const item of map.values()) {
+    const archived = item.digital + item.physicalOnly;
+    item.complianceRate = item.total > 0 ? Math.round((archived / item.total) * 100) : 100;
+  }
+
+  return map;
+}

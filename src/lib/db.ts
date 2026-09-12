@@ -204,6 +204,7 @@ function createConnection(): Database.Database {
   
   safeAddColumn("case_actions", "observations TEXT");
 
+  safeAddColumn("case_corresponsibility_acts", "agreements_and_commitments TEXT");
   safeAddColumn("case_corresponsibility_acts", "signatures_json TEXT DEFAULT '[]'");
   safeAddColumn("case_corresponsibility_acts", "signature_type TEXT DEFAULT 'PENDIENTE'");
   safeAddColumn("case_corresponsibility_acts", "physical_file_ref TEXT");

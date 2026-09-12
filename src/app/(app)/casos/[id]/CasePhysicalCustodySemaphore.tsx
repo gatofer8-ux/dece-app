@@ -2,22 +2,37 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { type CaseCustodyDocumentItem } from "@/lib/physicalCustodyAudit";
+import { bulkAssignCasePhysicalFileRef } from "../actions";
+import { useToast } from "@/components/Toast";
 
 interface Props {
+  caseId: string;
   caseCode: string;
   studentName: string;
   documents: CaseCustodyDocumentItem[];
 }
 
 export default function CasePhysicalCustodySemaphore({
+  caseId,
   caseCode,
   studentName,
   documents,
 }: Props) {
+  const router = useRouter();
+  const toast = useToast();
   const [isExpanded, setIsExpanded] = useState(false);
   const [filter, setFilter] = useState<"ALL" | "DIGITAL" | "FISICO" | "PENDIENTE">("ALL");
   const [search, setSearch] = useState("");
+
+  const [isAssignOpen, setIsAssignOpen] = useState(false);
+  const [bulkRef, setBulkRef] = useState(() => {
+    const existing = documents.find((d) => d.physicalFileRef)?.physicalFileRef;
+    return existing || "";
+  });
+  const [overwriteAll, setOverwriteAll] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const stats = useMemo(() => {
     const total = documents.length;
@@ -115,16 +130,81 @@ export default function CasePhysicalCustodySemaphore({
             </div>
           </div>
 
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5 transition-colors shadow-sm self-start sm:self-auto"
-          >
-            <span>{isExpanded ? "▲ Ocultar Auditoría" : "▼ Auditar Documentos"}</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-700 font-mono">
-              {stats.total}
-            </span>
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={() => setIsAssignOpen(!isAssignOpen)}
+              className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 hover:bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200 flex items-center gap-1 transition-colors shadow-xs"
+              title="Asignar referencia de archivador o carpeta física a los documentos del estudiante"
+            >
+              <span>📂</span> Asignar Carpeta
+            </button>
+
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+            >
+              <span>{isExpanded ? "▲ Ocultar Auditoría" : "▼ Auditar Documentos"}</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-700 font-mono">
+                {stats.total}
+              </span>
+            </button>
+          </div>
         </div>
+
+        {/* Quick Bulk Folder Assign Box */}
+        {isAssignOpen && (
+          <div className="mt-3 p-3 bg-amber-50/90 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-lg text-xs space-y-2">
+            <div className="font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+              <span>📂</span> Asignación Rápida de Archivador / Carpeta Física al Expediente
+            </div>
+            <p className="text-amber-800/80 dark:text-amber-300/80 text-[11px]">
+              Ingresa el código o nombre de la carpeta física donde reposan los documentos de este estudiante (ej. <em>Carpeta Azul #04 - Archivador DECE</em>). Se asignará automáticamente a los documentos que aún no tienen ubicación registrada.
+            </p>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+              <input
+                type="text"
+                value={bulkRef}
+                onChange={(e) => setBulkRef(e.target.value)}
+                placeholder="Ej. Carpeta Azul #04 - Estante 2..."
+                className="input text-xs !py-1 flex-1 bg-white dark:bg-slate-900"
+              />
+              <label className="flex items-center gap-1.5 text-[11px] text-amber-950 dark:text-amber-200 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={overwriteAll}
+                  onChange={(e) => setOverwriteAll(e.target.checked)}
+                  className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                />
+                <span>Sobrescribir existentes</span>
+              </label>
+              <button
+                type="button"
+                disabled={isSaving || !bulkRef.trim()}
+                onClick={async () => {
+                  if (!bulkRef.trim()) return;
+                  setIsSaving(true);
+                  try {
+                    const res = await bulkAssignCasePhysicalFileRef(caseId, bulkRef.trim(), overwriteAll);
+                    if (res.success) {
+                      toast.success(`Se asignó la carpeta física a ${res.updatedCount} documento(s)`);
+                      setIsAssignOpen(false);
+                      router.refresh();
+                    } else {
+                      toast.error(res.error || "Error al asignar carpeta");
+                    }
+                  } catch {
+                    toast.error("Error al procesar la solicitud");
+                  } finally {
+                    setIsSaving(false);
+                  }
+                }}
+                className="btn-primary text-xs !py-1 px-3 bg-amber-700 hover:bg-amber-800 text-white font-semibold disabled:opacity-50"
+              >
+                {isSaving ? "Guardando..." : "Aplicar al Expediente"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Progress Bar & Semáforo Counters */}
         <div className="mt-4 space-y-2">

@@ -3427,3 +3427,77 @@ export async function updateAuthorityAdvisoryAct(
 
   redirect(`/casos/${caseId}/asesoramiento-autoridad/${actId}/imprimir`);
 }
+
+/**
+ * Asigna de forma masiva la referencia de archivo/carpeta física a todos los
+ * documentos del expediente del caso que no tengan ubicación asignada, o
+ * actualiza todos si se indica overwriteAll.
+ */
+export async function bulkAssignCasePhysicalFileRef(
+  caseId: string,
+  physicalFileRef: string,
+  overwriteAll: boolean = false
+): Promise<{ success: boolean; updatedCount: number; error?: string }> {
+  const session = await requireRole(["ADMIN", "DECE"]);
+  const institutionId = requireInstitutionId(session);
+
+  const cleanRef = physicalFileRef.trim();
+  if (!cleanRef) {
+    return { success: false, updatedCount: 0, error: "Debe ingresar una referencia de carpeta física válida." };
+  }
+
+  try {
+    requireOwnedCase(caseId, institutionId);
+
+    const tables = [
+      "case_interviews",
+      "case_observation_sheets",
+      "case_care_plans",
+      "case_restitution_plans",
+      "violence_reports",
+      "socialization_acts",
+      "authority_advisory_acts",
+      "situational_reports",
+      "bimonthly_reports",
+      "case_closure_reports",
+      "case_corresponsibility_acts",
+      "referrals",
+      "restorative_circle_consents",
+      "case_accompaniment_reports",
+      "dece_esquelas",
+    ];
+
+    let totalUpdated = 0;
+    const cond = overwriteAll ? "" : " AND (physical_file_ref IS NULL OR TRIM(physical_file_ref) = '')";
+
+    for (const tbl of tables) {
+      try {
+        const info = db
+          .prepare(`UPDATE ${tbl} SET physical_file_ref = ?, updated_at = datetime('now') WHERE case_file_id = ?${cond}`)
+          .run(cleanRef, caseId);
+        totalUpdated += info.changes;
+      } catch {
+        // Ignorar si alguna tabla opcional no existe
+      }
+    }
+
+    logAudit({
+      userId: session.user.id,
+      action: "EDITAR",
+      entityType: "CaseFilePhysicalCustody",
+      entityId: caseId,
+      details: `Asignada carpeta '${cleanRef}' a ${totalUpdated} documentos`,
+      institutionId,
+    });
+
+    revalidatePath(`/casos/${caseId}`);
+    return { success: true, updatedCount: totalUpdated };
+  } catch (err) {
+    return {
+      success: false,
+      updatedCount: 0,
+      error: err instanceof Error ? err.message : "Error al asignar carpeta física al expediente.",
+    };
+  }
+}
+

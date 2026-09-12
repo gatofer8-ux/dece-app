@@ -11,17 +11,18 @@ import {
 import { priorityStyle, caseStatusStyle, riskTypeStyle } from "@/lib/statusColors";
 import { getUserCoverage, buildCoverageSqlFilter } from "@/lib/distributivo";
 import { getInactiveCases } from "@/lib/caseAlerts";
+import { getCasesCustodyMap } from "@/lib/physicalCustodyAudit";
 
 export default async function CasosPage({
   searchParams,
 }: {
-  searchParams?: { estado?: string; prioridad?: string; riesgo?: string; q?: string; alerta?: string };
+  searchParams?: { estado?: string; prioridad?: string; riesgo?: string; q?: string; alerta?: string; custodia?: string };
 }) {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
   const coverage = await getUserCoverage(session.user.id, institutionId, session.user.role);
 
-  const { estado, prioridad, riesgo, q, alerta } = searchParams || {};
+  const { estado, prioridad, riesgo, q, alerta, custodia } = searchParams || {};
   let where = "WHERE cf.institution_id = ?";
   const params: any[] = [institutionId];
 
@@ -79,6 +80,30 @@ export default async function CasosPage({
 
   if (alerta === "sin_contacto") {
     cases = cases.filter((c) => inactiveMap.has(c.id));
+  }
+
+  const custodyMap = getCasesCustodyMap(cases.map((c) => c.id));
+
+  if (custodia === "conforme") {
+    cases = cases.filter((c) => {
+      const it = custodyMap.get(c.id);
+      return it && it.total > 0 && it.complianceRate === 100;
+    });
+  } else if (custodia === "proceso") {
+    cases = cases.filter((c) => {
+      const it = custodyMap.get(c.id);
+      return it && it.total > 0 && it.complianceRate < 100 && it.physicalOnly > 0;
+    });
+  } else if (custodia === "pendiente") {
+    cases = cases.filter((c) => {
+      const it = custodyMap.get(c.id);
+      return it && it.total > 0 && it.pending > 0;
+    });
+  } else if (custodia === "sin_docs") {
+    cases = cases.filter((c) => {
+      const it = custodyMap.get(c.id);
+      return !it || it.total === 0;
+    });
   }
 
   return (
@@ -177,6 +202,13 @@ export default async function CasosPage({
             <option key={k} value={k}>{v}</option>
           ))}
         </select>
+        <select name="custodia" defaultValue={custodia || ""} className="select max-w-[200px] text-xs font-medium">
+          <option value="">Toda custodia física</option>
+          <option value="conforme">🟢 Custodia 100% Conforme</option>
+          <option value="proceso">🟡 En proceso de archivo</option>
+          <option value="pendiente">🔴 Con documentos pendientes</option>
+          <option value="sin_docs">⚪ Sin documentos</option>
+        </select>
         <button type="submit" className="btn-secondary text-xs">Filtrar</button>
         <Link href="/casos" className="btn-secondary text-xs">Limpiar</Link>
       </form>
@@ -197,6 +229,7 @@ export default async function CasosPage({
                 <th className="text-left px-4 py-3">Tipo de riesgo</th>
                 <th className="text-left px-4 py-3">Prioridad</th>
                 <th className="text-left px-4 py-3">Estado</th>
+                <th className="text-center px-4 py-3">Custodia</th>
                 <th className="text-left px-4 py-3">Detección</th>
               </tr>
             </thead>
@@ -235,6 +268,49 @@ export default async function CasosPage({
                     <span className={`badge ${caseStatusStyle(c.status).badge}`}>
                       {CASE_STATUS_LABELS[c.status] || c.status}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {(() => {
+                      const cust = custodyMap.get(c.id);
+                      if (!cust || cust.total === 0) {
+                        return (
+                          <span
+                            className="inline-block text-[10px] text-slate-400 font-medium px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800"
+                            title="Sin documentos emitidos en este caso"
+                          >
+                            — Sin docs
+                          </span>
+                        );
+                      }
+                      if (cust.complianceRate === 100) {
+                        return (
+                          <span
+                            className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300"
+                            title={`${cust.total} doc(s): ${cust.digital} digitalizados, ${cust.physicalOnly} en carpeta física`}
+                          >
+                            <span>🟢</span> 100%
+                          </span>
+                        );
+                      }
+                      if (cust.complianceRate >= 60) {
+                        return (
+                          <span
+                            className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300"
+                            title={`${cust.total} doc(s): ${cust.complianceRate}% custodiado (${cust.pending} pendiente)`}
+                          >
+                            <span>🟡</span> {cust.complianceRate}%
+                          </span>
+                        );
+                      }
+                      return (
+                        <span
+                          className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-300"
+                          title={`${cust.pending} de ${cust.total} documento(s) sin archivar en carpeta física`}
+                        >
+                          <span>🔴</span> {cust.pending} pend.
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{formatDate(c.detection_date)}</td>
                 </tr>

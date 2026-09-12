@@ -323,7 +323,7 @@ export default async function ReporteEjecutivoDistritoPage({
         </div>
 
         {/* Auditoría de Custodia Física y Archivo Institucional (Semáforo Distrital) */}
-        <div className="mb-8">
+        <div id="auditoria-custodia" className="mb-8 scroll-mt-6">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-3 border-l-4 border-amber-600 pl-2">
             5. Auditoría de Custodia Física y Archivo Documental Institucional (Semáforo Distrital)
           </h3>

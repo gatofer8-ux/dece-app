@@ -631,6 +631,7 @@ export default async function CasoDetallePage({
 
       <div className="mb-6">
         <CasePhysicalCustodySemaphore
+          caseId={caseFile.id}
           caseCode={caseFile.code}
           studentName={student.full_name}
           documents={caseCustodyDocs}

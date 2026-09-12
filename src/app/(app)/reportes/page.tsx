@@ -4,6 +4,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { canViewCaseDetail } from "@/lib/permissions";
 import { PageHeader, StatCard, Badge, formatDate } from "@/components/ui";
 import { RISK_TYPE_LABELS, CASE_STATUS_LABELS, CASE_PRIORITY_LABELS, ACTIVITY_AXIS_LABELS, type CaseFileRow } from "@/lib/types";
+import { getInstitutionCustodyAudit } from "@/lib/physicalCustodyAudit";
 
 function monthRange(offset = 0) {
   const now = new Date();
@@ -28,6 +29,7 @@ export default async function ReportesPage({
   const session = await requireRole(["ADMIN", "DECE", "AUTORIDAD"]);
   const institutionId = requireInstitutionId(session);
   const canSeeNarrative = canViewCaseDetail(session.user.role);
+  const custodyAudit = getInstitutionCustodyAudit(institutionId);
 
   const defaultRange = monthRange();
   const start = searchParams.start || defaultRange.start;
@@ -98,6 +100,43 @@ export default async function ReportesPage({
           </div>
         }
       />
+
+      {/* Tarjeta de Auditoría de Custodia Institucional */}
+      <div className="card p-4 mb-6 bg-gradient-to-r from-amber-50/70 to-slate-50 border border-amber-200 dark:from-slate-900 dark:to-slate-800 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2.5 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 text-xl shrink-0">
+            📁
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                Auditoría de Custodia Física y Archivo Institucional
+              </h3>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                custodyAudit.globalComplianceRate === 100
+                  ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                  : custodyAudit.globalComplianceRate >= 70
+                  ? "bg-amber-100 text-amber-800 border-amber-300"
+                  : "bg-rose-100 text-rose-800 border-rose-300"
+              }`}>
+                {custodyAudit.globalComplianceRate}% Cumplimiento
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+              {custodyAudit.archivedDocs} de {custodyAudit.totalDocs} documentos cuentan con ubicación física en archivador o respaldo digitalizado ({custodyAudit.pendingDocs} pendientes).
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0 self-start md:self-auto">
+          <Link
+            href="/reportes/ejecutivo#auditoria-custodia"
+            className="btn-primary text-xs !py-1.5 px-3 bg-amber-700 hover:bg-amber-800 text-white font-semibold flex items-center gap-1.5 shadow-sm"
+          >
+            <span>🏛️</span> Ver Auditoría Distrital →
+          </Link>
+        </div>
+      </div>
 
       <form className="card p-4 mb-6 flex flex-wrap items-end gap-3" method="get">
         <div>
