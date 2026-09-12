@@ -46,6 +46,13 @@ export function listEntriesForSession(sessionId: string): AlertIdentificationEnt
     .all(sessionId) as AlertIdentificationEntryRow[];
 }
 
+export function getEntry(entryId: string, institutionId: string): AlertIdentificationEntryRow | null {
+  const row = db
+    .prepare("SELECT * FROM alert_identification_entries WHERE id = ? AND institution_id = ?")
+    .get(entryId, institutionId) as AlertIdentificationEntryRow | undefined;
+  return row || null;
+}
+
 export function createEntry(input: {
   sessionId: string;
   institutionId: string;
