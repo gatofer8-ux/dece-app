@@ -1422,6 +1422,10 @@ export interface CaseCorresponsibilityActRow {
   commitments_student: string | null;
   observations: string | null;
   agreements_and_commitments?: string | null;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   updated_by?: string | null;
   preview_image_path?: string | null;
   created_by: string | null;
@@ -1738,6 +1742,10 @@ export interface RestorativeCircleConsentRow {
   dece_name: string;
   dece_role: string;
   created_by?: string | null;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_at: string;
   updated_at: string;
 }

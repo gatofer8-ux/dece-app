@@ -92,7 +92,7 @@ export default async function ImprimirActaCorresponsabilidadPage({
       </div>
 
       {/* Vista de Impresión Idéntica al Documento Oficial */}
-      <div className="p-4 sm:p-6 print:p-0 flex justify-center bg-slate-100 print:bg-white min-h-screen">
+      <div className="p-4 sm:p-6 print:p-0 flex justify-center bg-slate-100 print:bg-white min-h-screen flex-col items-center">
         <div className="bg-white shadow-xl print:shadow-none border border-slate-200 print:border-none w-full max-w-[210mm]">
           <img
             src={previewUrl}
@@ -100,6 +100,53 @@ export default async function ImprimirActaCorresponsabilidadPage({
             className="w-full h-auto block select-none"
           />
         </div>
+
+        {/* Anexo de Auditoría Distrital si existe respaldo físico escaneado o referencia */}
+        {(act.physical_evidence_url || act.physical_file_ref) && (
+          <div className="print:break-before-page p-6 sm:p-8 bg-white border-t-2 border-dashed border-slate-300 print:border-slate-400 mt-6 max-w-[210mm] w-full shadow-xl print:shadow-none">
+            <div className="text-center pb-3 border-b border-slate-300">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+                ANEXO DE AUDITORÍA DISTRITAL: RESPALDO DE ACTA FÍSICA
+              </h3>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Constancia oficial de respaldo documental físico según normativa de archivo y gestión DECE
+              </p>
+            </div>
+
+            <div className="my-4 p-3 bg-slate-50 border border-slate-200 rounded text-xs space-y-1">
+              <p><span className="font-semibold text-slate-700">Ubicación en Archivo Físico:</span> {act.physical_file_ref || "Carpeta DECE Institucional"}</p>
+              <p><span className="font-semibold text-slate-700">Modalidad de Suscripción:</span> {act.signature_type || "FÍSICA"}</p>
+              <p><span className="font-semibold text-slate-700">Estudiante:</span> {student?.full_name || act.student_name} &bull; <span className="font-semibold text-slate-700">Representante:</span> {act.representative_name}</p>
+            </div>
+
+            {act.physical_evidence_url && (
+              <div className="mt-4 flex flex-col items-center">
+                <p className="text-xs text-slate-500 mb-2 font-medium">Documento Físico Firmado y Digitalizado:</p>
+                {act.physical_evidence_url.startsWith("data:image/") || act.physical_evidence_url.match(/\.(png|jpg|jpeg|webp)$/i) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={act.physical_evidence_url}
+                    alt="Acta Física Digitalizada"
+                    className="max-w-full max-h-[820px] object-contain border border-slate-300 rounded shadow-xs"
+                  />
+                ) : (
+                  <div className="p-6 border-2 border-dashed border-slate-300 rounded text-center w-full">
+                    <span className="text-3xl block mb-2">📄</span>
+                    <p className="text-xs font-semibold text-slate-700">Archivo digital adjunto (PDF / Documento)</p>
+                    <a
+                      href={act.physical_evidence_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-brand-600 underline font-medium mt-1 inline-block"
+                    >
+                      Ver archivo original adjunto
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

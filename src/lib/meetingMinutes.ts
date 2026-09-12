@@ -17,7 +17,13 @@ export interface MeetingAgendaItem {
 }
 export interface MeetingSignatory {
   nombre: string;
+  tipo?: "digital" | "fisica";
   firma_data_url?: string;
+  referencia_fisica?: string;
+  fecha_firma?: string;
+  respaldo_archivo_url?: string;
+  respaldo_nombre?: string;
+  observacion_firma?: string;
 }
 
 export const ACCEPTANCE_TEXT =

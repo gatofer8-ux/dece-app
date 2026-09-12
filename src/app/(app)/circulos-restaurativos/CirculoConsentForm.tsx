@@ -4,6 +4,38 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { createCircleConsentAction, updateCircleConsentAction } from "@/lib/restorativeCircleConsent";
 import type { RestorativeCircleConsentRow, StudentRow } from "@/lib/types";
+import DualSignatureModal from "@/components/DualSignatureModal";
+
+interface SignerData {
+  tipo?: "digital" | "fisica";
+  firma_data_url?: string;
+  referencia_fisica?: string;
+  fecha_firma?: string;
+  respaldo_archivo_url?: string;
+  respaldo_nombre?: string;
+  observacion_firma?: string;
+}
+
+function parseSignaturesJson(json?: string | null): {
+  rep?: SignerData;
+  dece?: SignerData;
+} {
+  if (!json) return {};
+  try {
+    const parsed = JSON.parse(json);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed;
+    }
+    if (Array.isArray(parsed)) {
+      const res: Record<string, SignerData> = {};
+      for (const item of parsed) {
+        if (item && item.roleKey) res[item.roleKey] = item;
+      }
+      return res;
+    }
+  } catch {}
+  return {};
+}
 
 export function computeStudentDefaults(st?: StudentRow | null) {
   if (!st) {
@@ -133,6 +165,49 @@ export default function CirculoConsentForm({
   const [deceName, setDeceName] = useState(initialData?.dece_name || currentUserName || "");
   const [deceRole, setDeceRole] = useState(initialData?.dece_role || "Profesional DECE");
 
+  // Firmas y Respaldo Físico Dual
+  const initialSignatures = parseSignaturesJson(initialData?.signatures_json);
+  const [repSig, setRepSig] = useState<SignerData | null>(initialSignatures.rep || null);
+  const [deceSig, setDeceSig] = useState<SignerData | null>(initialSignatures.dece || null);
+
+  const [physicalFileRef, setPhysicalFileRef] = useState(initialData?.physical_file_ref || "");
+  const [physicalEvidenceUrl, setPhysicalEvidenceUrl] = useState(initialData?.physical_evidence_url || "");
+  const [physicalEvidenceName, setPhysicalEvidenceName] = useState("");
+
+  const [activeSignerModal, setActiveSignerModal] = useState<"rep" | "dece" | null>(null);
+
+  const signaturesPayload = JSON.stringify({
+    rep: repSig ? { ...repSig, roleKey: "rep", nombre: representativeName, cargo: "Representante Legal / Estudiante", ci: representativeCi } : null,
+    dece: deceSig ? { ...deceSig, roleKey: "dece", nombre: deceName, cargo: deceRole } : null,
+  });
+
+  let overallSignatureType = "PENDIENTE";
+  const activeSigs = [repSig, deceSig].filter(Boolean);
+  if (activeSigs.length > 0) {
+    const hasDig = activeSigs.some((s) => s?.tipo === "digital");
+    const hasFis = activeSigs.some((s) => s?.tipo === "fisica") || Boolean(physicalFileRef || physicalEvidenceUrl);
+    if (hasDig && hasFis) overallSignatureType = "MIXTA";
+    else if (hasDig) overallSignatureType = "DIGITAL";
+    else if (hasFis) overallSignatureType = "FISICA";
+  } else if (physicalFileRef || physicalEvidenceUrl) {
+    overallSignatureType = "FISICA";
+  }
+
+  function handleGeneralEvidenceUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 15 * 1024 * 1024) {
+      alert("El archivo no debe exceder los 15 MB.");
+      return;
+    }
+    setPhysicalEvidenceName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setPhysicalEvidenceUrl((ev.target?.result as string) || "");
+    };
+    reader.readAsDataURL(file);
+  }
+
   const filteredStudents = students
     .filter((s) => {
       if (!studentSearch.trim()) return true;
@@ -204,6 +279,10 @@ export default function CirculoConsentForm({
       <input type="hidden" name="case_file_id" value={initialData?.case_file_id || prefilledCaseId || ""} />
       <input type="hidden" name="student_id" value={studentId} />
       <input type="hidden" name="student_name" value={studentName} />
+      <input type="hidden" name="signatures_json" value={signaturesPayload} />
+      <input type="hidden" name="signature_type" value={overallSignatureType} />
+      <input type="hidden" name="physical_file_ref" value={physicalFileRef} />
+      <input type="hidden" name="physical_evidence_url" value={physicalEvidenceUrl} />
 
       {error && (
         <div className="bg-rose-50 border-l-4 border-rose-500 p-4 rounded-r-md text-sm text-rose-800">
@@ -409,11 +488,53 @@ export default function CirculoConsentForm({
         </div>
       </div>
 
-      {/* Tarjeta 3: Datos del Representante Legal */}
+      {/* Tarjeta 3: Datos del Padre, Madre o Representante Legal y Firma */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
-        <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 pb-3 border-b border-slate-100">
-          <span>👨‍👩‍👦</span> Datos del Padre, Madre o Representante Legal
-        </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+          <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
+            <span>👨‍👩‍👦</span> Datos del Padre, Madre o Representante Legal
+          </h2>
+          {/* Badge / Botón de Firma Representante */}
+          <div>
+            {repSig?.tipo === "digital" || repSig?.firma_data_url ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 px-2.5 py-1 rounded-md flex items-center gap-1">
+                  <span>✓</span> Firma digital
+                </span>
+                {repSig.firma_data_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={repSig.firma_data_url} alt="Firma Representante" className="h-6 max-w-[70px] object-contain border border-slate-200 rounded px-1 bg-white" />
+                )}
+                <button type="button" onClick={() => setActiveSignerModal("rep")} className="text-xs text-brand-700 hover:underline">
+                  Cambiar
+                </button>
+                <button type="button" onClick={() => setRepSig(null)} className="text-xs text-rose-600 hover:underline">
+                  Borrar
+                </button>
+              </div>
+            ) : repSig?.tipo === "fisica" ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-2.5 py-1 rounded-md flex items-center gap-1">
+                  <span>📄</span> Firma física (Papel)
+                </span>
+                <button type="button" onClick={() => setActiveSignerModal("rep")} className="text-xs text-brand-700 hover:underline">
+                  Cambiar
+                </button>
+                <button type="button" onClick={() => setRepSig(null)} className="text-xs text-rose-600 hover:underline">
+                  Borrar
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setActiveSignerModal("rep")}
+                className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-md transition-colors"
+              >
+                <span>✍️</span> Registrar Firma (Digital o Física)
+              </button>
+            )}
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -454,11 +575,53 @@ export default function CirculoConsentForm({
         </div>
       </div>
 
-      {/* Tarjeta 4: Profesional DECE Responsable */}
+      {/* Tarjeta 4: Profesional DECE Responsable y Firma */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
-        <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 pb-3 border-b border-slate-100">
-          <span>✍️</span> Profesional DECE Firmante
-        </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+          <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
+            <span>✍️</span> Profesional DECE Firmante
+          </h2>
+          {/* Badge / Botón de Firma DECE */}
+          <div>
+            {deceSig?.tipo === "digital" || deceSig?.firma_data_url ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 px-2.5 py-1 rounded-md flex items-center gap-1">
+                  <span>✓</span> Firma digital
+                </span>
+                {deceSig.firma_data_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={deceSig.firma_data_url} alt="Firma DECE" className="h-6 max-w-[70px] object-contain border border-slate-200 rounded px-1 bg-white" />
+                )}
+                <button type="button" onClick={() => setActiveSignerModal("dece")} className="text-xs text-brand-700 hover:underline">
+                  Cambiar
+                </button>
+                <button type="button" onClick={() => setDeceSig(null)} className="text-xs text-rose-600 hover:underline">
+                  Borrar
+                </button>
+              </div>
+            ) : deceSig?.tipo === "fisica" ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-2.5 py-1 rounded-md flex items-center gap-1">
+                  <span>📄</span> Firma física (Papel)
+                </span>
+                <button type="button" onClick={() => setActiveSignerModal("dece")} className="text-xs text-brand-700 hover:underline">
+                  Cambiar
+                </button>
+                <button type="button" onClick={() => setDeceSig(null)} className="text-xs text-rose-600 hover:underline">
+                  Borrar
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setActiveSignerModal("dece")}
+                className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-md transition-colors"
+              >
+                <span>✍️</span> Registrar Firma (Digital o Física)
+              </button>
+            )}
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -486,6 +649,112 @@ export default function CirculoConsentForm({
           </div>
         </div>
       </div>
+
+      {/* Tarjeta 5: Respaldo Físico DECE y Auditoría */}
+      <div className="bg-amber-50/70 p-5 rounded-xl border border-amber-200 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+            <span>📁</span> Respaldo Físico DECE y Evidencia de Auditoría Distrital
+          </span>
+          <span className="text-[11px] text-amber-700 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full font-medium">
+            Normativa Ministerial
+          </span>
+        </div>
+        <p className="text-xs text-amber-800/90 leading-relaxed">
+          Permite registrar la ubicación en archivador físico institucional del consentimiento firmado en papel, y adjuntar el escaneo o foto para auditoría distrital.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div>
+            <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+              Ubicación en Archivo Físico Institucional
+            </label>
+            <input
+              type="text"
+              value={physicalFileRef}
+              onChange={(e) => setPhysicalFileRef(e.target.value)}
+              placeholder="Ej. Carpeta DECE 2026 / Círculos Restaurativos / Exp #12"
+              className="w-full text-xs rounded-lg border border-amber-300 bg-white px-3 py-2 text-slate-800 placeholder-slate-400 focus:ring-1 focus:ring-amber-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+              Adjuntar Escaneo o Foto del Consentimiento Firmado (PDF o Imagen)
+            </label>
+            {physicalEvidenceUrl ? (
+              <div className="flex items-center justify-between p-2 bg-white rounded-lg border border-amber-300">
+                <span className="text-xs text-emerald-800 font-medium flex items-center gap-1.5 truncate max-w-[200px]">
+                  <span>📎</span> {physicalEvidenceName || "Consentimiento_Fisico_Escaneado"}
+                </span>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={physicalEvidenceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    Ver
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhysicalEvidenceUrl("");
+                      setPhysicalEvidenceName("");
+                    }}
+                    className="text-xs text-rose-600 hover:underline"
+                  >
+                    Quitar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <input
+                type="file"
+                accept="application/pdf,image/png,image/jpeg,image/webp"
+                onChange={handleGeneralEvidenceUpload}
+                className="w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 cursor-pointer"
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Modal de Firma Dual para Círculo */}
+      <DualSignatureModal
+        isOpen={activeSignerModal !== null}
+        title={
+          activeSignerModal === "rep"
+            ? "Firma de Consentimiento del Representante Legal"
+            : "Firma de Responsabilidad del Profesional DECE"
+        }
+        signatoryName={
+          activeSignerModal === "rep"
+            ? representativeName || "Padre / Madre / Representante"
+            : deceName || "Profesional DECE"
+        }
+        signatoryRole={
+          activeSignerModal === "rep"
+            ? "Representante Legal"
+            : deceRole || "Profesional DECE"
+        }
+        initialData={
+          (activeSignerModal === "rep" ? repSig : deceSig) || undefined
+        }
+        onSave={(data) => {
+          if (activeSignerModal === "rep") setRepSig(data);
+          else if (activeSignerModal === "dece") setDeceSig(data);
+          if (data.referencia_fisica && !physicalFileRef) {
+            setPhysicalFileRef(data.referencia_fisica);
+          }
+          if (data.respaldo_archivo_url && !physicalEvidenceUrl) {
+            setPhysicalEvidenceUrl(data.respaldo_archivo_url);
+            if (data.respaldo_nombre) setPhysicalEvidenceName(data.respaldo_nombre);
+          }
+          setActiveSignerModal(null);
+        }}
+        onClose={() => setActiveSignerModal(null)}
+      />
 
       {/* Barra de Acciones */}
       <div className="flex items-center justify-between pt-4">

@@ -1843,6 +1843,10 @@ export async function createCorresponsibilityAct(
     const commitmentsDece = str(formData, "commitments_dece") || "";
     const commitmentsStudent = str(formData, "commitments_student");
     const observations = str(formData, "observations");
+    const signaturesJson = str(formData, "signatures_json") || "[]";
+    const signatureType = str(formData, "signature_type") || "PENDIENTE";
+    const physicalFileRef = str(formData, "physical_file_ref");
+    const physicalEvidenceUrl = str(formData, "physical_evidence_url");
 
     if (!representativeName) return { error: "El nombre del representante legal es obligatorio." };
     if (!detectedDifficulty) return { error: "La dificultad detectada es obligatoria." };
@@ -1857,14 +1861,16 @@ export async function createCorresponsibilityAct(
          student_name, student_grade, student_parallel, jornada,
          dece_professional_name, dece_professional_id_num, tutor_authority_name, tutor_authority_role,
          conflict_type, detected_difficulty, legal_framework,
-         commitments_representative, agreements_and_commitments, commitments_dece, commitments_student, observations, created_by)
+         commitments_representative, agreements_and_commitments, commitments_dece, commitments_student, observations,
+         signatures_json, signature_type, physical_file_ref, physical_evidence_url, created_by)
        VALUES
         (@id, @case_file_id, @institution_id, @city, @act_date, @act_time,
          @representative_name, @representative_id_num, @representative_relationship, @representative_phone, @representative_address,
          @student_name, @student_grade, @student_parallel, @jornada,
          @dece_professional_name, @dece_professional_id_num, @tutor_authority_name, @tutor_authority_role,
          @conflict_type, @detected_difficulty, @legal_framework,
-         @commitments_representative, @agreements_and_commitments, @commitments_dece, @commitments_student, @observations, @created_by)`
+         @commitments_representative, @agreements_and_commitments, @commitments_dece, @commitments_student, @observations,
+         @signatures_json, @signature_type, @physical_file_ref, @physical_evidence_url, @created_by)`
     ).run({
       id,
       case_file_id: caseId,
@@ -1893,6 +1899,10 @@ export async function createCorresponsibilityAct(
       commitments_dece: commitmentsDece,
       commitments_student: commitmentsStudent,
       observations,
+      signatures_json: signaturesJson,
+      signature_type: signatureType,
+      physical_file_ref: physicalFileRef,
+      physical_evidence_url: physicalEvidenceUrl,
       created_by: session.user.id,
     });
 
@@ -1963,6 +1973,10 @@ export async function updateCorresponsibilityAct(
     const commitmentsDece = str(formData, "commitments_dece") || "";
     const commitmentsStudent = str(formData, "commitments_student");
     const observations = str(formData, "observations");
+    const signaturesJson = str(formData, "signatures_json") || "[]";
+    const signatureType = str(formData, "signature_type") || "PENDIENTE";
+    const physicalFileRef = str(formData, "physical_file_ref");
+    const physicalEvidenceUrl = str(formData, "physical_evidence_url");
 
     if (!representativeName) return { error: "El nombre del representante legal es obligatorio." };
     if (!detectedDifficulty) return { error: "La dificultad detectada es obligatoria." };
@@ -1994,6 +2008,10 @@ export async function updateCorresponsibilityAct(
            commitments_dece = @commitments_dece,
            commitments_student = @commitments_student,
            observations = @observations,
+           signatures_json = @signatures_json,
+           signature_type = @signature_type,
+           physical_file_ref = @physical_file_ref,
+           physical_evidence_url = @physical_evidence_url,
            updated_by = @updated_by,
            updated_at = datetime('now')
        WHERE id = @id AND case_file_id = @case_file_id AND institution_id = @institution_id`
@@ -2025,6 +2043,10 @@ export async function updateCorresponsibilityAct(
       commitments_dece: commitmentsDece,
       commitments_student: commitmentsStudent,
       observations,
+      signatures_json: signaturesJson,
+      signature_type: signatureType,
+      physical_file_ref: physicalFileRef,
+      physical_evidence_url: physicalEvidenceUrl,
       updated_by: session.user.id,
     });
 
