@@ -236,6 +236,7 @@ export interface CaseCustodySummaryItem {
   physicalOnly: number;
   pending: number;
   complianceRate: number;
+  primaryFileRef?: string | null;
 }
 
 /**
@@ -247,7 +248,15 @@ export function getCasesCustodyMap(caseIds: string[]): Map<string, CaseCustodySu
   if (!caseIds || caseIds.length === 0) return map;
 
   for (const id of caseIds) {
-    map.set(id, { caseId: id, total: 0, digital: 0, physicalOnly: 0, pending: 0, complianceRate: 100 });
+    map.set(id, {
+      caseId: id,
+      total: 0,
+      digital: 0,
+      physicalOnly: 0,
+      pending: 0,
+      complianceRate: 100,
+      primaryFileRef: null,
+    });
   }
 
   const placeholders = caseIds.map(() => "?").join(",");
@@ -276,6 +285,7 @@ export function getCasesCustodyMap(caseIds: string[]): Map<string, CaseCustodySu
           `SELECT
             case_file_id,
             COUNT(*) as total,
+            MAX(CASE WHEN physical_file_ref IS NOT NULL AND TRIM(physical_file_ref) != '' THEN physical_file_ref ELSE NULL END) as sample_ref,
             SUM(CASE 
               WHEN (physical_evidence_url IS NOT NULL AND TRIM(physical_evidence_url) != '') 
                    OR ((physical_file_ref IS NOT NULL AND TRIM(physical_file_ref) != '') AND signature_type = 'DIGITAL') 
@@ -305,6 +315,9 @@ export function getCasesCustodyMap(caseIds: string[]): Map<string, CaseCustodySu
           item.digital += Number(r.digital || 0);
           item.physicalOnly += Number(r.physical_only || 0);
           item.pending += Number(r.pending || 0);
+          if (!item.primaryFileRef && r.sample_ref) {
+            item.primaryFileRef = r.sample_ref;
+          }
         }
       }
     } catch {

@@ -81,6 +81,7 @@ describe("physicalCustodyAudit", () => {
       expect(item.total).toBe(0);
       expect(item.complianceRate).toBe(100);
       expect(item.pending).toBe(0);
+      expect(item.primaryFileRef).toBeNull();
     });
   });
 });

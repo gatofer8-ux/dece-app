@@ -20,6 +20,7 @@ import { NEE_TYPE_LABELS, LIVES_WITH_LABELS, LEGAL_GUARDIAN_LABELS, EDUCATION_LE
 import { listSchoolYears, getStudentEnrollmentHistory } from "@/lib/schoolYear";
 import DeleteButton from "@/components/DeleteButton";
 import { formatDocumentId, getDocumentTypeLabel } from "@/lib/documentId";
+import { getCasesCustodyMap } from "@/lib/physicalCustodyAudit";
 
 const STATUS_COLOR: Record<string, string> = {
   ABIERTO: "amber",
@@ -47,6 +48,7 @@ export default async function EstudianteDetallePage({ params }: { params: { id: 
   const cases = db
     .prepare("SELECT * FROM case_files WHERE student_id = ? AND institution_id = ? ORDER BY created_at DESC")
     .all(params.id, institutionId) as CaseFileRow[];
+  const custodyMap = getCasesCustodyMap(cases.map((c) => c.id));
 
   // 2. Citas del estudiante
   const appointments = db
@@ -383,31 +385,78 @@ export default async function EstudianteDetallePage({ params }: { params: { id: 
                   <th className="text-left px-4 py-3">Tipo de riesgo</th>
                   <th className="text-left px-4 py-3">Prioridad</th>
                   <th className="text-left px-4 py-3">Estado</th>
+                  <th className="text-left px-4 py-3">Custodia y Archivo</th>
                   <th className="text-left px-4 py-3">Detección</th>
                   <th className="text-right px-4 py-3">Acción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {cases.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3">
-                      <Link href={`/casos/${c.id}`} className="font-semibold text-brand-700 hover:underline">
-                        {c.code}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 font-medium">{RISK_TYPE_LABELS[c.risk_type]}</td>
-                    <td className="px-4 py-3 text-slate-600">{CASE_PRIORITY_LABELS[c.priority]}</td>
-                    <td className="px-4 py-3">
-                      <Badge color={STATUS_COLOR[c.status]}>{CASE_STATUS_LABELS[c.status]}</Badge>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{formatDate(c.detection_date)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <Link href={`/casos/${c.id}`} className="btn-secondary text-xs py-1 px-2">
-                        Ver expediente →
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+                {cases.map((c) => {
+                  const cust = custodyMap.get(c.id);
+                  return (
+                    <tr key={c.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3">
+                        <Link href={`/casos/${c.id}`} className="font-semibold text-brand-700 hover:underline">
+                          {c.code}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 font-medium">{RISK_TYPE_LABELS[c.risk_type]}</td>
+                      <td className="px-4 py-3 text-slate-600">{CASE_PRIORITY_LABELS[c.priority]}</td>
+                      <td className="px-4 py-3">
+                        <Badge color={STATUS_COLOR[c.status]}>{CASE_STATUS_LABELS[c.status]}</Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        {!cust || cust.total === 0 ? (
+                          <span
+                            className="inline-block text-[10px] text-slate-400 font-medium px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800"
+                            title="Sin documentos emitidos en este caso"
+                          >
+                            — Sin docs
+                          </span>
+                        ) : (
+                          <div className="flex flex-col gap-1 items-start">
+                            {cust.complianceRate === 100 ? (
+                              <span
+                                className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300"
+                                title={`${cust.total} doc(s): ${cust.digital} digitalizados, ${cust.physicalOnly} en carpeta física`}
+                              >
+                                <span>🟢</span> 100%
+                              </span>
+                            ) : cust.complianceRate >= 60 ? (
+                              <span
+                                className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300"
+                                title={`${cust.total} doc(s): ${cust.complianceRate}% custodiado (${cust.pending} pendiente)`}
+                              >
+                                <span>🟡</span> {cust.complianceRate}%
+                              </span>
+                            ) : (
+                              <span
+                                className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-300"
+                                title={`${cust.pending} de ${cust.total} documento(s) sin archivar en carpeta física`}
+                              >
+                                <span>🔴</span> {cust.pending} pend.
+                              </span>
+                            )}
+                            {cust.primaryFileRef && (
+                              <span
+                                className="text-[11px] font-medium text-amber-800 dark:text-amber-300 max-w-[150px] truncate"
+                                title={`Carpeta física: ${cust.primaryFileRef}`}
+                              >
+                                📁 {cust.primaryFileRef}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">{formatDate(c.detection_date)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <Link href={`/casos/${c.id}`} className="btn-secondary text-xs py-1 px-2">
+                          Ver expediente →
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

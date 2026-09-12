@@ -282,33 +282,39 @@ export default async function CasosPage({
                           </span>
                         );
                       }
-                      if (cust.complianceRate === 100) {
-                        return (
-                          <span
-                            className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300"
-                            title={`${cust.total} doc(s): ${cust.digital} digitalizados, ${cust.physicalOnly} en carpeta física`}
-                          >
-                            <span>🟢</span> 100%
-                          </span>
-                        );
-                      }
-                      if (cust.complianceRate >= 60) {
-                        return (
-                          <span
-                            className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300"
-                            title={`${cust.total} doc(s): ${cust.complianceRate}% custodiado (${cust.pending} pendiente)`}
-                          >
-                            <span>🟡</span> {cust.complianceRate}%
-                          </span>
-                        );
-                      }
                       return (
-                        <span
-                          className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-300"
-                          title={`${cust.pending} de ${cust.total} documento(s) sin archivar en carpeta física`}
-                        >
-                          <span>🔴</span> {cust.pending} pend.
-                        </span>
+                        <div className="flex flex-col items-center gap-1">
+                          {cust.complianceRate === 100 ? (
+                            <span
+                              className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300"
+                              title={`${cust.total} doc(s): ${cust.digital} digitalizados, ${cust.physicalOnly} en carpeta física`}
+                            >
+                              <span>🟢</span> 100%
+                            </span>
+                          ) : cust.complianceRate >= 60 ? (
+                            <span
+                              className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300"
+                              title={`${cust.total} doc(s): ${cust.complianceRate}% custodiado (${cust.pending} pendiente)`}
+                            >
+                              <span>🟡</span> {cust.complianceRate}%
+                            </span>
+                          ) : (
+                            <span
+                              className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-300"
+                              title={`${cust.pending} de ${cust.total} documento(s) sin archivar en carpeta física`}
+                            >
+                              <span>🔴</span> {cust.pending} pend.
+                            </span>
+                          )}
+                          {cust.primaryFileRef && (
+                            <span
+                              className="text-[10px] font-medium text-amber-800 dark:text-amber-300 max-w-[130px] truncate"
+                              title={`Carpeta física: ${cust.primaryFileRef}`}
+                            >
+                              📁 {cust.primaryFileRef}
+                            </span>
+                          )}
+                        </div>
                       );
                     })()}
                   </td>

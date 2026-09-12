@@ -13,6 +13,7 @@ import {
   ACTIVITY_AXIS_LABELS,
   APPOINTMENT_STATUS_LABELS,
 } from "@/lib/types";
+import { getInstitutionCustodyAudit, getCasesCustodyMap } from "@/lib/physicalCustodyAudit";
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -30,9 +31,12 @@ export async function GET(req: NextRequest) {
   workbook.creator = "Sistema de Gestión DECE";
   workbook.created = new Date();
 
+  // Auditoría institucional de custodia física y digital
+  const custodyAudit = getInstitutionCustodyAudit(institutionId);
+
   // ---- Hoja resumen ----
   const summary = workbook.addWorksheet("Resumen");
-  summary.columns = [{ header: "Indicador", key: "k", width: 40 }, { header: "Valor", key: "v", width: 20 }];
+  summary.columns = [{ header: "Indicador", key: "k", width: 44 }, { header: "Valor", key: "v", width: 28 }];
   summary.getRow(1).font = { bold: true };
 
   const caseCount = (db.prepare(`SELECT COUNT(*) n FROM case_files WHERE institution_id = ? AND date(detection_date) BETWEEN date(?) AND date(?)`).get(institutionId, start, end) as any).n;
@@ -47,13 +51,19 @@ export async function GET(req: NextRequest) {
   const apptCount = (db.prepare(`SELECT COUNT(*) n FROM appointments WHERE institution_id = ? AND date(date) BETWEEN date(?) AND date(?)`).get(institutionId, start, end) as any).n;
 
   summary.addRows([
-    { k: "Período", v: `${start} a ${end}` },
+    { k: "Período consultado", v: `${start} a ${end}` },
     { k: "Generado por", v: `${session.user.name} (${session.user.role})` },
     { k: "Fecha de generación", v: new Date().toLocaleString("es-EC") },
-    { k: "Total de casos", v: caseCount },
-    { k: "Total de derivaciones", v: referralCount },
-    { k: "Total de actividades", v: activityCount },
-    { k: "Total de citas", v: apptCount },
+    { k: "Total de casos en período", v: caseCount },
+    { k: "Total de derivaciones en período", v: referralCount },
+    { k: "Total de actividades en período", v: activityCount },
+    { k: "Total de citas en período", v: apptCount },
+    { k: "--- AUDITORÍA DE CUSTODIA INSTITUCIONAL ---", v: "---" },
+    { k: "Total de documentos institucionales DECE", v: custodyAudit.totalDocs },
+    { k: "Documentos custodiados (Físico + Digital)", v: `${custodyAudit.archivedDocs} (${custodyAudit.globalComplianceRate}%)` },
+    { k: "Documentos con respaldo digitalizado trazable", v: `${custodyAudit.digitalDocs} (${custodyAudit.globalDigitalRate}%)` },
+    { k: "Documentos en carpeta física única", v: custodyAudit.physicalOnlyDocs },
+    { k: "Documentos pendientes de archivo / custodia", v: custodyAudit.pendingDocs },
   ]);
 
   // ---- Hoja casos ----
@@ -68,6 +78,11 @@ export async function GET(req: NextRequest) {
     { header: "Estado", key: "status", width: 16 },
     { header: "Fecha detección", key: "detection_date", width: 16 },
     { header: "Fuente detección", key: "detection_source", width: 22 },
+    { header: "Carpeta Física / Archivador", key: "physical_file_ref", width: 26 },
+    { header: "Total Docs", key: "total_docs", width: 14 },
+    { header: "Docs Custodiados", key: "archived_docs", width: 16 },
+    { header: "Docs Pendientes", key: "pending_docs", width: 16 },
+    { header: "Estado Custodia", key: "custody_status", width: 22 },
   ];
   if (includeNarrative) {
     caseColumns.push({ header: "Descripción (confidencial)", key: "description", width: 60 });
@@ -84,7 +99,26 @@ export async function GET(req: NextRequest) {
     )
     .all(institutionId, start, end) as any[];
 
+  const custodyMap = getCasesCustodyMap(cases.map((c) => c.id));
+
   for (const c of cases) {
+    const cust = custodyMap.get(c.id);
+    const totalDocs = cust?.total ?? 0;
+    const archivedDocs = (cust?.digital ?? 0) + (cust?.physicalOnly ?? 0);
+    const pendingDocs = cust?.pending ?? 0;
+    const folderRef = cust?.primaryFileRef || (totalDocs > 0 ? "Sin asignar" : "—");
+
+    let custodyStatus = "— Sin docs";
+    if (totalDocs > 0) {
+      if (cust!.complianceRate === 100) {
+        custodyStatus = "🟢 Conforme (100%)";
+      } else if (cust!.complianceRate >= 60) {
+        custodyStatus = `🟡 En proceso (${cust!.complianceRate}%)`;
+      } else {
+        custodyStatus = `🔴 Pendiente (${cust!.complianceRate}%)`;
+      }
+    }
+
     casesSheet.addRow({
       code: c.code,
       student_name: c.student_name,
@@ -95,6 +129,11 @@ export async function GET(req: NextRequest) {
       status: CASE_STATUS_LABELS[c.status as keyof typeof CASE_STATUS_LABELS],
       detection_date: c.detection_date?.slice(0, 10),
       detection_source: c.detection_source || "",
+      physical_file_ref: folderRef,
+      total_docs: totalDocs,
+      archived_docs: archivedDocs,
+      pending_docs: pendingDocs,
+      custody_status: custodyStatus,
       ...(includeNarrative ? { description: c.description } : {}),
     });
   }
@@ -184,6 +223,42 @@ export async function GET(req: NextRequest) {
       status: APPOINTMENT_STATUS_LABELS[a.status as keyof typeof APPOINTMENT_STATUS_LABELS],
     });
   }
+
+  // ---- Hoja Auditoría de Custodia Física y Archivo ----
+  const custodySheet = workbook.addWorksheet("Custodia y Auditoría");
+  custodySheet.columns = [
+    { header: "Módulo / Instrumento DECE", key: "module", width: 44 },
+    { header: "Total Documentos", key: "total", width: 18 },
+    { header: "Respaldo Digital", key: "digital", width: 18 },
+    { header: "Custodia Física Única", key: "physical_only", width: 22 },
+    { header: "Pendientes de Archivo", key: "pending", width: 22 },
+    { header: "% Cumplimiento Custodia", key: "compliance_rate", width: 26 },
+    { header: "% Digitalización", key: "digital_rate", width: 20 },
+  ];
+  custodySheet.getRow(1).font = { bold: true };
+
+  for (const m of custodyAudit.modules) {
+    custodySheet.addRow({
+      module: m.moduleName,
+      total: m.totalDocs,
+      digital: m.digitalCount,
+      physical_only: m.physicalOnlyCount,
+      pending: m.pendingCount,
+      compliance_rate: `${m.complianceRate}%`,
+      digital_rate: `${m.digitalRate}%`,
+    });
+  }
+
+  const custodyTotalRow = custodySheet.addRow({
+    module: "TOTAL CONSOLIDADO INSTITUCIONAL",
+    total: custodyAudit.totalDocs,
+    digital: custodyAudit.digitalDocs,
+    physical_only: custodyAudit.physicalOnlyDocs,
+    pending: custodyAudit.pendingDocs,
+    compliance_rate: `${custodyAudit.globalComplianceRate}%`,
+    digital_rate: `${custodyAudit.globalDigitalRate}%`,
+  });
+  custodyTotalRow.font = { bold: true };
 
   const buffer = await workbook.xlsx.writeBuffer();
 
