@@ -421,6 +421,12 @@ export function updateTalonStatus(
   if (!existing) throw new Error("Esquela no encontrada");
 
   const runUpdate = resolvedDb.transaction(() => {
+    const derivedSignatureType = (data.physicalEvidenceUrl && data.physicalEvidenceUrl.trim())
+      ? "DIGITAL"
+      : ((data.physicalFileRef && data.physicalFileRef.trim()) || data.talonReturned)
+      ? "FISICA"
+      : "PENDIENTE";
+
     resolvedDb
       .prepare(
         `UPDATE dece_esquelas SET
@@ -433,6 +439,7 @@ export function updateTalonStatus(
            talon_notes = ?,
            physical_file_ref = COALESCE(?, physical_file_ref),
            physical_evidence_url = COALESCE(?, physical_evidence_url),
+           signature_type = ?,
            updated_at = datetime('now')
          WHERE id = ? AND institution_id = ?`
       )
@@ -446,6 +453,7 @@ export function updateTalonStatus(
         data.talonNotes?.trim() || null,
         data.physicalFileRef?.trim() || null,
         data.physicalEvidenceUrl || null,
+        derivedSignatureType,
         id,
         institutionId
       );

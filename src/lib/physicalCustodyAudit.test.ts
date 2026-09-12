@@ -98,6 +98,10 @@ describe("physicalCustodyAudit", () => {
       const actasModule = audit.modules.find((m) => m.moduleKey === "actas_reunion");
       expect(actasModule).toBeDefined();
       expect(actasModule?.moduleName).toContain("Actas de Reunión");
+
+      const esquelasModule = audit.modules.find((m) => m.moduleKey === "esquelas");
+      expect(esquelasModule).toBeDefined();
+      expect(esquelasModule?.moduleName).toContain("Esquelas de Citación");
     });
   });
 });

@@ -189,6 +189,9 @@ export function getInstitutionCustodyAudit(institutionId: string): InstitutionCu
   // 8. Actas de Reunión del DECE (meeting_minutes)
   const actasReunionStats = queryCustodyStats(buildDirectInstSql("meeting_minutes"), [institutionId]);
 
+  // 9. Esquelas de Citación y Convocatorias DECE (dece_esquelas)
+  const esquelasStats = queryCustodyStats(buildDirectInstSql("dece_esquelas"), [institutionId]);
+
   function calcRate(num: number, denom: number): number {
     return denom > 0 ? Math.round((num / denom) * 100) : 100;
   }
@@ -202,6 +205,7 @@ export function getInstitutionCustodyAudit(institutionId: string): InstitutionCu
     { key: "actividades", name: "Informes de Actividades y Talleres", stats: activityStats },
     { key: "juntas_curso", name: "Informes Técnicos de Juntas de Curso (Trimestrales)", stats: juntasStats },
     { key: "actas_reunion", name: "Actas de Reunión Institucional y de Equipo DECE", stats: actasReunionStats },
+    { key: "esquelas", name: "Esquelas de Citación y Convocatorias a Representantes", stats: esquelasStats },
   ];
 
   const modules: InstitutionModuleCustodySummary[] = moduleItems.map((m) => {

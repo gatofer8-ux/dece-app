@@ -227,6 +227,8 @@ function createConnection(): Database.Database {
 
   safeAddColumn("dece_esquelas", "physical_file_ref TEXT");
   safeAddColumn("dece_esquelas", "physical_evidence_url TEXT");
+  safeAddColumn("dece_esquelas", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("dece_esquelas", "signatures_json TEXT DEFAULT '[]'");
 
   safeAddColumn("referrals", "destination_detail TEXT");
   safeAddColumn("referrals", "background_summary TEXT");

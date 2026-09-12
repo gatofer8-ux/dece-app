@@ -193,7 +193,14 @@ export default async function EsquelasPage({
 
                     <td>
                       {e.talon_returned ? (
-                        <Badge color="green">✂️ Devuelto</Badge>
+                        <div className="space-y-0.5">
+                          <Badge color="green">✂️ Devuelto</Badge>
+                          {e.physical_file_ref && (
+                            <div className="text-[10px] text-slate-600 truncate max-w-[120px]" title={e.physical_file_ref}>
+                              📁 {e.physical_file_ref}
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <Badge color="amber">Pendiente</Badge>
                       )}

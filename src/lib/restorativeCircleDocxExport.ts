@@ -18,6 +18,7 @@ import { smartAlign } from "./wordJustify";
 import path from "path";
 import fs from "fs";
 import type { RestorativeCircleConsentRow } from "./types";
+import { createDocxCustodyCalloutTable } from "./docxCustodyHelper";
 
 const FONT_FAMILY = "Times New Roman";
 const FONT_SIZE = 20; // 10 pt in half-points
@@ -763,6 +764,17 @@ export async function generateRestorativeCircleDocx(
               }),
             ],
           }),
+          ...(consent.physical_file_ref || consent.physical_evidence_url
+            ? [
+                new Paragraph({ spacing: { before: 240, after: 100 }, children: [] }),
+                createDocxCustodyCalloutTable({
+                  physicalFileRef: consent.physical_file_ref,
+                  physicalEvidenceUrl: consent.physical_evidence_url,
+                  widthDxa: 9782,
+                  font: FONT_FAMILY,
+                })!,
+              ]
+            : []),
         ],
       },
     ],

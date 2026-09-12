@@ -84,6 +84,8 @@ describe("Sistema de Esquelas de Citación", () => {
         talon_notes TEXT,
         physical_file_ref TEXT,
         physical_evidence_url TEXT,
+        signature_type TEXT DEFAULT 'PENDIENTE',
+        signatures_json TEXT DEFAULT '[]',
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
