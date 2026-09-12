@@ -2,7 +2,9 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { updateAppointmentStatus, rescheduleAppointment } from "./actions";
+import { updateAppointmentStatus, rescheduleAppointment, convertAppointmentToDailyAttentionAction } from "./actions";
+import { useRouter } from "next/navigation";
+import WhatsAppAppointmentReminderButton from "@/components/WhatsAppAppointmentReminderButton";
 import { setSlotAvailability, blockSlotWithActivity } from "./disponibilidad/actions";
 import { HOUR_SLOTS } from "@/lib/schedule";
 import type { AppointmentRow, ScheduleSlotRow, UserRow } from "@/lib/types";
@@ -27,6 +29,14 @@ function formatLongDate(dateStr: string): string {
   return d.toLocaleDateString("es-EC", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 }
 
+export type DailyScheduleAppointment = AppointmentRow & {
+  student_name: string | null;
+  student_course?: string | null;
+  representative_name?: string | null;
+  phone_number?: string | null;
+  requester_name?: string | null;
+};
+
 export default function DailyScheduleView({
   date,
   professional,
@@ -34,15 +44,23 @@ export default function DailyScheduleView({
   canPickOther,
   appointments,
   slots,
+  institutionName,
 }: {
   date: string;
   professional: UserRow;
   professionals: UserRow[];
   canPickOther: boolean;
-  appointments: (AppointmentRow & { student_name: string | null; student_course?: string | null })[];
+  appointments: DailyScheduleAppointment[];
   slots: ScheduleSlotRow[];
+  institutionName?: string | null;
 }) {
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
+  // Modal para Cita Atendida -> Bitácora Diaria / Entrevista
+  const [attendedModalAppt, setAttendedModalAppt] = useState<DailyScheduleAppointment | null>(null);
+  const [attendedObservations, setAttendedObservations] = useState("");
+  const [attendedSuccessInfo, setAttendedSuccessInfo] = useState<{ id: string } | null>(null);
 
   // Modal para Bloqueo de Actividad
   const [quickBlockHour, setQuickBlockHour] = useState<string | null>(null);
@@ -68,6 +86,49 @@ export default function DailyScheduleView({
   const handleUpdateStatus = (id: string, status: "PROGRAMADA" | "ATENDIDA" | "NO_ASISTIO" | "CANCELADA") => {
     startTransition(async () => {
       await updateAppointmentStatus(id, status);
+    });
+  };
+
+  const handleOpenAttendedModal = (appt: DailyScheduleAppointment) => {
+    setAttendedModalAppt(appt);
+    setAttendedObservations("");
+    setAttendedSuccessInfo(null);
+  };
+
+  const handleConvertToDailyAttention = () => {
+    if (!attendedModalAppt) return;
+    const targetAppt = attendedModalAppt;
+    startTransition(async () => {
+      const res = await convertAppointmentToDailyAttentionAction(targetAppt.id, attendedObservations.trim() || null);
+      if (res.success) {
+        setAttendedSuccessInfo({ id: res.dailyAttentionId });
+      }
+    });
+  };
+
+  const handleOpenInterview = () => {
+    if (!attendedModalAppt) return;
+    const targetAppt = attendedModalAppt;
+    startTransition(async () => {
+      await updateAppointmentStatus(targetAppt.id, "ATENDIDA");
+      setAttendedModalAppt(null);
+      if (targetAppt.case_file_id) {
+        router.push(`/casos/${targetAppt.case_file_id}/entrevistas/nueva?cita=${targetAppt.id}`);
+      } else {
+        const studentParam = targetAppt.student_id ? `&estudiante=${targetAppt.student_id}` : "";
+        const studentNameParam = targetAppt.student_name ? `&estudiante_nombre=${encodeURIComponent(targetAppt.student_name)}` : "";
+        const reasonParam = targetAppt.title ? `&motivo=${encodeURIComponent(targetAppt.title)}` : "";
+        router.push(`/casos/nuevo?fuente=Cita+DECE${studentParam}${studentNameParam}${reasonParam}`);
+      }
+    });
+  };
+
+  const handleJustMarkAttended = () => {
+    if (!attendedModalAppt) return;
+    const targetAppt = attendedModalAppt;
+    startTransition(async () => {
+      await updateAppointmentStatus(targetAppt.id, "ATENDIDA");
+      setAttendedModalAppt(null);
     });
   };
 
@@ -287,15 +348,33 @@ export default function DailyScheduleView({
 
               {/* Columna Acciones */}
               <div className="flex items-center gap-2 shrink-0 self-end sm:self-center flex-wrap">
+                {/* Botón WhatsApp de Recordatorio Oficial */}
+                {appt && (
+                  <WhatsAppAppointmentReminderButton
+                    recipientPhone={appt.phone_number}
+                    recipientName={appt.representative_name || appt.requester_name}
+                    studentName={appt.student_name}
+                    studentCourse={appt.student_course}
+                    professionalName={professional.name}
+                    institutionName={institutionName}
+                    date={appt.date}
+                    startTime={appt.start_time}
+                    endTime={appt.end_time}
+                    location={appt.location}
+                    title={appt.title}
+                    compact={true}
+                  />
+                )}
+
                 {appt && appt.status === "PROGRAMADA" && (
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <button
                       disabled={isPending}
-                      onClick={() => handleUpdateStatus(appt.id, "ATENDIDA")}
-                      className="px-2.5 py-1 text-xs font-bold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition shadow-xs"
-                      title="Registrar cita como atendida"
+                      onClick={() => handleOpenAttendedModal(appt)}
+                      className="px-2.5 py-1 text-xs font-bold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition shadow-xs flex items-center gap-1"
+                      title="Registrar cita como atendida (opciones de bitácora y entrevista)"
                     >
-                      ✓ Atendida
+                      <span>✓</span> Atendida
                     </button>
                     <button
                       disabled={isPending}
@@ -320,6 +399,47 @@ export default function DailyScheduleView({
                     >
                       Cancelar
                     </button>
+                  </div>
+                )}
+
+                {appt && appt.status === "ATENDIDA" && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {appt.daily_attention_id ? (
+                      <Link
+                        href="/atencion-diaria"
+                        className="text-xs font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-2 py-1 rounded-lg flex items-center gap-1 border border-emerald-200"
+                        title="Ver registro en Bitácora de Atención Diaria"
+                      >
+                        <span>✓</span> En Bitácora
+                      </Link>
+                    ) : (
+                      <button
+                        disabled={isPending}
+                        onClick={() => handleOpenAttendedModal(appt)}
+                        className="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-1 rounded-lg flex items-center gap-1"
+                        title="Registrar esta cita atendida en la Bitácora Diaria"
+                      >
+                        <span>📝</span> A Bitácora
+                      </button>
+                    )}
+
+                    {appt.case_file_id ? (
+                      <Link
+                        href={`/casos/${appt.case_file_id}/entrevistas/nueva?cita=${appt.id}`}
+                        className="text-xs text-brand-700 font-semibold bg-white border border-brand-200 px-2 py-1 rounded-lg hover:bg-brand-50"
+                        title="Abrir Entrevista Inicial en el caso"
+                      >
+                        + Entrevista
+                      </Link>
+                    ) : (
+                      <Link
+                        href={`/casos/nuevo?fuente=Cita+DECE${appt.student_id ? `&estudiante=${appt.student_id}` : ""}${appt.student_name ? `&estudiante_nombre=${encodeURIComponent(appt.student_name)}` : ""}&motivo=${encodeURIComponent(appt.title)}`}
+                        className="text-xs text-indigo-700 font-semibold bg-white border border-indigo-200 px-2 py-1 rounded-lg hover:bg-indigo-50"
+                        title="Crear caso a partir de esta cita"
+                      >
+                        + Caso
+                      </Link>
+                    )}
                   </div>
                 )}
 
@@ -484,6 +604,155 @@ export default function DailyScheduleView({
         </div>
       )}
 
+
+      {/* Modal para Cita Atendida: Flujo 1-Clic Bitácora Diaria o Entrevista */}
+      {attendedModalAppt && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <span className="text-emerald-600">✓</span> Cita Atendida: Registro y Seguimiento
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {attendedModalAppt.title} · {attendedModalAppt.date} a las {attendedModalAppt.start_time}
+                </p>
+              </div>
+              <button
+                onClick={() => { setAttendedModalAppt(null); setAttendedSuccessInfo(null); }}
+                className="text-slate-400 hover:text-slate-600 text-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {attendedSuccessInfo ? (
+              <div className="space-y-4 text-center py-4">
+                <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto text-2xl">
+                  ✓
+                </div>
+                <h4 className="text-sm font-bold text-slate-900">¡Registrado exitosamente en la Bitácora!</h4>
+                <p className="text-xs text-slate-600 max-w-sm mx-auto">
+                  La cita ha sido marcada como Atendida y se creó la entrada en la Bitácora de Atención Diaria con los datos prellenados.
+                </p>
+                <div className="flex items-center justify-center gap-2 pt-2">
+                  <Link
+                    href="/atencion-diaria"
+                    className="btn-primary text-xs flex items-center gap-1.5"
+                  >
+                    <span>📋</span> Ver en Bitácora Diaria →
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => { setAttendedModalAppt(null); setAttendedSuccessInfo(null); }}
+                    className="btn-secondary text-xs"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Resumen de la Cita */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Estudiante:</span>
+                    <span className="font-bold text-slate-800">
+                      {attendedModalAppt.student_name || "No registrado"} {attendedModalAppt.student_course ? `(${attendedModalAppt.student_course})` : ""}
+                    </span>
+                  </div>
+                  {(attendedModalAppt.representative_name || attendedModalAppt.requester_name) && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Representante / Solicitante:</span>
+                      <span className="font-semibold text-slate-700">
+                        {attendedModalAppt.representative_name || attendedModalAppt.requester_name}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Tipo de Convocado:</span>
+                    <span className="font-semibold text-slate-700">{attendedModalAppt.attendee_type}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="label text-xs font-semibold text-slate-700">
+                    Observaciones o Acuerdos del Encuentro (opcional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={attendedObservations}
+                    onChange={(e) => setAttendedObservations(e.target.value)}
+                    placeholder="Ej. Se brindó orientación socioemocional y se definieron compromisos familiares..."
+                    className="textarea text-xs"
+                  />
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  {/* Opción 1: Bitácora 1-Clic */}
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={handleConvertToDailyAttention}
+                    className="w-full text-left p-3 rounded-xl border border-emerald-300 bg-emerald-50/80 hover:bg-emerald-100/90 transition shadow-xs group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-emerald-900 font-bold text-xs sm:text-sm">
+                        <span>📝</span>
+                        <span>Registrar en Bitácora de Atención Diaria (1-Clic)</span>
+                      </div>
+                      <span className="text-emerald-700 text-xs font-bold group-hover:translate-x-0.5 transition">➔</span>
+                    </div>
+                    <p className="text-[11px] text-emerald-800 mt-1 pl-6">
+                      Crea la entrada oficial en la Bitácora Diaria (/atencion-diaria) vinculando automáticamente fecha, duración, estudiante y motivo.
+                    </p>
+                  </button>
+
+                  {/* Opción 2: Entrevista Inicial */}
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={handleOpenInterview}
+                    className="w-full text-left p-3 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100/80 transition group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-indigo-900 font-bold text-xs sm:text-sm">
+                        <span>📁</span>
+                        <span>Abrir Entrevista Inicial del Caso</span>
+                      </div>
+                      <span className="text-indigo-700 text-xs font-bold group-hover:translate-x-0.5 transition">➔</span>
+                    </div>
+                    <p className="text-[11px] text-indigo-800 mt-1 pl-6">
+                      {attendedModalAppt.case_file_id
+                        ? "Abre el formulario de entrevista semiestructurada en el caso vinculado prellenando los datos."
+                        : "Abre el formulario de nuevo caso y entrevista prellenando estudiante y motivo."}
+                    </p>
+                  </button>
+
+                  {/* Opción 3: Solo Atendida */}
+                  <div className="flex items-center justify-between pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setAttendedModalAppt(null)}
+                      className="btn-secondary text-xs"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      onClick={handleJustMarkAttended}
+                      className="text-xs text-slate-500 hover:text-slate-800 font-medium underline px-2 py-1"
+                    >
+                      Solo marcar como Atendida
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {/* Modal de Bloqueo Rápido */}
       {quickBlockHour && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">

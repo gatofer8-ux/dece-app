@@ -224,6 +224,8 @@ function createConnection(): Database.Database {
   safeAddColumn("alert_identification_sessions", "physical_file_ref TEXT");
   safeAddColumn("alert_identification_sessions", "physical_evidence_url TEXT");
 
+  safeAddColumn("appointments", "daily_attention_id TEXT");
+
   safeAddColumn("socialization_acts", "signatures_json TEXT DEFAULT '[]'");
   safeAddColumn("socialization_acts", "signature_type TEXT DEFAULT 'PENDIENTE'");
   safeAddColumn("socialization_acts", "physical_file_ref TEXT");

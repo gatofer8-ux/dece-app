@@ -9,7 +9,8 @@ import { requireOwned, requireOwnedCase } from "@/lib/scopedDb";
 import { logAudit } from "@/lib/audit";
 import { sendEmail, emailShell } from "@/lib/email";
 import { sendPushToUser } from "@/lib/push";
-import type { AppointmentRow, UserRow } from "@/lib/types";
+import type { AppointmentRow, UserRow, StudentRow } from "@/lib/types";
+import type { AttendeeType } from "@/lib/dailyAttention";
 
 function str(fd: FormData, key: string): string | null {
   const v = fd.get(key);
@@ -240,3 +241,156 @@ export async function rescheduleAppointment(
   revalidatePath("/citas/disponibilidad");
   if (appt.case_file_id) revalidatePath(`/casos/${appt.case_file_id}`);
 }
+
+export async function convertAppointmentToDailyAttentionAction(
+  appointmentId: string,
+  extraObservations?: string | null
+): Promise<{ success: boolean; dailyAttentionId: string; error?: string }> {
+  const session = await requireRole(["ADMIN", "DECE"]);
+  const institutionId = requireInstitutionId(session);
+
+  const appt = requireOwned<AppointmentRow>("appointments", appointmentId, institutionId, "Cita");
+
+  // Si ya tiene una atencion diaria vinculada, retornar esa
+  if (appt.daily_attention_id) {
+    const existing = db
+      .prepare("SELECT id FROM daily_attentions WHERE id = ? AND institution_id = ?")
+      .get(appt.daily_attention_id, institutionId) as { id: string } | undefined;
+    if (existing) {
+      return { success: true, dailyAttentionId: existing.id };
+    }
+  }
+
+  // Obtener datos del estudiante si está vinculado
+  let studentName: string | null = null;
+  let studentGrade: string | null = null;
+  let repName: string | null = null;
+
+  if (appt.student_id) {
+    const student = db
+      .prepare("SELECT * FROM students WHERE id = ? AND institution_id = ?")
+      .get(appt.student_id, institutionId) as StudentRow | undefined;
+    if (student) {
+      studentName = student.full_name;
+      studentGrade = student.course ? `${student.course}${student.parallel ? ` "${student.parallel}"` : ""}` : null;
+      repName = student.representative || student.mother_name || student.father_name || null;
+    }
+  }
+
+  // Si no tiene estudiante pero vino de solicitud pública
+  const req = db
+    .prepare("SELECT requester_name, student_name, student_course FROM appointment_requests WHERE appointment_id = ? AND institution_id = ?")
+    .get(appointmentId, institutionId) as { requester_name: string; student_name: string | null; student_course: string | null } | undefined;
+
+  if (req) {
+    if (!studentName && req.student_name) studentName = req.student_name;
+    if (!studentGrade && req.student_course) studentGrade = req.student_course;
+    if (!repName && req.requester_name) repName = req.requester_name;
+  }
+
+  // Mapear attendee_type a AttendeeType ("ESTUDIANTE" | "REPRESENTANTE" | "DOCENTE_AUTORIDAD")
+  let attendeeType: AttendeeType = "ESTUDIANTE";
+  if (appt.attendee_type === "REPRESENTANTE") {
+    attendeeType = "REPRESENTANTE";
+  } else if (appt.attendee_type === "DOCENTE" || appt.attendee_type === "DOCENTE_AUTORIDAD") {
+    attendeeType = "DOCENTE_AUTORIDAD";
+  } else {
+    attendeeType = "ESTUDIANTE";
+  }
+
+  const attendeeName = attendeeType === "REPRESENTANTE"
+    ? (repName || studentName || "Representante de familia")
+    : (studentName || repName || "Estudiante");
+
+  // Calcular duración si start_time y end_time existen
+  let duration = "40 min";
+  if (appt.start_time && appt.end_time) {
+    const [sh, sm] = appt.start_time.split(":").map(Number);
+    const [eh, em] = appt.end_time.split(":").map(Number);
+    if (!isNaN(sh) && !isNaN(sm) && !isNaN(eh) && !isNaN(em)) {
+      const diffMinutes = (eh * 60 + em) - (sh * 60 + sm);
+      if (diffMinutes > 0) {
+        duration = `${diffMinutes} min`;
+      }
+    }
+  }
+
+  const dailyAttentionId = randomUUID();
+  const obsParts = [
+    `Cita presencial atendida desde Agenda DECE (Horario: ${appt.start_time}${appt.end_time ? ` - ${appt.end_time}` : ""}).`,
+    appt.notes ? `Notas previas: ${appt.notes}.` : "",
+    extraObservations ? `Observaciones: ${extraObservations}.` : "",
+  ].filter(Boolean);
+  const observations = obsParts.join(" ");
+
+  const defaultAxis = attendeeType === "DOCENTE_AUTORIDAD" ? ["DETECCION"] : ["INTERVENCION_INDIVIDUAL"];
+
+  db.prepare(`
+    INSERT INTO daily_attentions (
+      id, institution_id, professional_id, case_file_id, attendee_type,
+      attention_date, duration, student_name, student_grade,
+      representative_name, attendee_name, reason, action_axis,
+      modality_signed, observations
+    ) VALUES (
+      @id, @institution_id, @professional_id, @case_file_id, @attendee_type,
+      @attention_date, @duration, @student_name, @student_grade,
+      @representative_name, @attendee_name, @reason, @action_axis,
+      1, @observations
+    )
+  `).run({
+    id: dailyAttentionId,
+    institution_id: institutionId,
+    professional_id: appt.professional_id || session.user.id,
+    case_file_id: appt.case_file_id || null,
+    attendee_type: attendeeType,
+    attention_date: appt.date,
+    duration,
+    student_name: studentName,
+    student_grade: studentGrade,
+    representative_name: repName,
+    attendee_name: attendeeName,
+    reason: appt.title || "Atención presencial programada",
+    action_axis: JSON.stringify(defaultAxis),
+    observations: observations || null,
+  });
+
+  // Marcar la cita como ATENDIDA y asociar daily_attention_id
+  db.prepare(`
+    UPDATE appointments 
+    SET status = 'ATENDIDA',
+        daily_attention_id = ?,
+        updated_at = datetime('now')
+    WHERE id = ? AND institution_id = ?
+  `).run(dailyAttentionId, appointmentId, institutionId);
+
+  // Si tiene caso vinculado, registrar accion en el caso
+  if (appt.case_file_id) {
+    db.prepare(`
+      INSERT INTO case_actions (id, case_file_id, author_id, type, description, observations)
+      VALUES (?, ?, ?, 'Cita realizada', ?, ?)
+    `).run(
+      randomUUID(),
+      appt.case_file_id,
+      session.user.id,
+      `Cita atendida: ${appt.title}. Registrada en Bitácora de Atención Diaria.`,
+      observations
+    );
+  }
+
+  logAudit({
+    userId: session.user.id,
+    action: "EDITAR",
+    entityType: "Appointment",
+    entityId: appointmentId,
+    details: `Marcada como ATENDIDA y vinculada a Bitácora de Atención Diaria (${dailyAttentionId})`,
+    institutionId,
+  });
+
+  revalidatePath("/citas");
+  revalidatePath("/citas/disponibilidad");
+  revalidatePath("/atencion-diaria");
+  if (appt.case_file_id) revalidatePath(`/casos/${appt.case_file_id}`);
+
+  return { success: true, dailyAttentionId };
+}
+

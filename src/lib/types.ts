@@ -734,6 +734,7 @@ export interface AppointmentRow {
   requester_email: string | null;
   reminder_24h_sent: number;
   reminder_1h_sent: number;
+  daily_attention_id?: string | null;
   created_at: string;
   updated_at: string;
 }
