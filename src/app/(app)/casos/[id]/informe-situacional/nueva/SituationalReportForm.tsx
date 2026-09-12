@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import DualSignatureModal, { type DualSignatureData } from "@/components/DualSignatureModal";
+
 import { useFormState, useFormStatus } from "react-dom";
 import { useToastOnChange } from "@/components/Toast";
 import { createSituationalReport, updateSituationalReport, type ActionState } from "../../../actions";
@@ -58,6 +61,61 @@ export default function SituationalReportForm({
   const actionFn = report ? updateSituationalReport.bind(null, report.id, caseId) : createSituationalReport.bind(null, caseId);
   const [state, formAction] = useFormState(actionFn, initialState);
   useToastOnChange(state.error, "error");
+
+  let initialSignatures: Record<string, DualSignatureData> = {};
+  if (report?.signatures_json) {
+    try {
+      initialSignatures = JSON.parse(report.signatures_json);
+    } catch {
+      initialSignatures = {};
+    }
+  }
+
+  const [preparerSig, setPreparerSig] = useState<DualSignatureData | null>(initialSignatures.preparer || null);
+  const [reviewerSig, setReviewerSig] = useState<DualSignatureData | null>(initialSignatures.reviewer || null);
+  const [approverSig, setApproverSig] = useState<DualSignatureData | null>(initialSignatures.approver || null);
+
+  const [activeSignerModal, setActiveSignerModal] = useState<"preparer" | "reviewer" | "approver" | null>(null);
+
+  const [preparerName, setPreparerName] = useState<string>((report as any)?.preparer_name || defaultResponsibleName || "");
+  const [reviewerName, setReviewerName] = useState<string>((report as any)?.reviewer_name || defaultCoordinatorName || "");
+  const [approverName, setApproverName] = useState<string>((report as any)?.approver_name || defaultAuthorityName || "");
+
+  const [physicalFileRef, setPhysicalFileRef] = useState<string>(report?.physical_file_ref || "");
+  const [physicalEvidenceUrl, setPhysicalEvidenceUrl] = useState<string>(report?.physical_evidence_url || "");
+  const [physicalEvidenceName, setPhysicalEvidenceName] = useState<string>("");
+
+  const handleEvidenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("El archivo excede el límite máximo de 5MB.");
+      return;
+    }
+    setPhysicalEvidenceName(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setPhysicalEvidenceUrl(event.target.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const signaturesPayload = JSON.stringify({
+    preparer: preparerSig,
+    reviewer: reviewerSig,
+    approver: approverSig,
+  });
+
+  const hasDigital = [preparerSig, reviewerSig, approverSig].some((s) => s?.tipo === "digital" || s?.firma_data_url);
+  const hasPhysical = [preparerSig, reviewerSig, approverSig].some((s) => s?.tipo === "fisica");
+  const overallSignatureType =
+    hasDigital && hasPhysical
+      ? "MIXTA"
+      : hasPhysical
+      ? "FISICA"
+      : "DIGITAL";
 
   return (
     <form action={formAction} className="card p-6 space-y-8 max-w-4xl">
@@ -245,27 +303,255 @@ export default function SituationalReportForm({
         <textarea id="sr-recommendations" name="recommendations" rows={4} className="textarea" defaultValue={(report as any)?.recommendations || ""} />
       </div>
 
-      {/* Firmas */}
-      <div>
-        <h3 className="text-xs font-semibold text-slate-500 uppercase mb-2">Firmas de responsabilidad del documento</h3>
+      {/* Firmas y Respaldo Dual */}
+      <div className="space-y-4 border-t border-slate-200 pt-5">
+        <input type="hidden" name="signatures_json" value={signaturesPayload} />
+        <input type="hidden" name="signature_type" value={overallSignatureType} />
+        <input type="hidden" name="physical_file_ref" value={physicalFileRef} />
+        <input type="hidden" name="physical_evidence_url" value={physicalEvidenceUrl} />
+
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-semibold text-slate-500 uppercase">
+            Firmas de Responsabilidad del Informe (Digital / Física)
+          </h3>
+          <span className="text-[11px] font-semibold text-brand-700 bg-brand-50 border border-brand-200 px-2.5 py-0.5 rounded-full">
+            Modalidad: {overallSignatureType}
+          </span>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="border border-slate-200 rounded-lg p-3">
-            <p className="text-xs font-medium mb-2">1. Elaborado por (Desarrollo)</p>
-            <input name="preparer_name" defaultValue={(report as any)?.preparer_name || defaultResponsibleName || ""} placeholder="Nombre" className="input mb-2" />
-            <input name="preparer_role" defaultValue={(report as any)?.preparer_role || defaultResponsibleRole || "ANALISTA DECE"} placeholder="Cargo" className="input" />
+          {/* 1. Elaborado por */}
+          <div className="border border-slate-200 rounded-lg p-3 bg-white space-y-2 shadow-2xs">
+            <p className="text-xs font-bold text-slate-700">1. Elaborado por (Desarrollo)</p>
+            <input
+              name="preparer_name"
+              value={preparerName}
+              onChange={(e) => setPreparerName(e.target.value)}
+              placeholder="Nombre del profesional DECE"
+              className="input text-xs mb-1"
+            />
+            <input
+              name="preparer_role"
+              defaultValue={(report as any)?.preparer_role || defaultResponsibleRole || "ANALISTA DECE"}
+              placeholder="Cargo"
+              className="input text-xs"
+            />
+            <div className="pt-2 flex flex-wrap items-center justify-between gap-1 border-t border-slate-100">
+              {preparerSig?.tipo === "digital" || preparerSig?.firma_data_url ? (
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 px-1.5 py-0.5 rounded">
+                    ✓ Digital
+                  </span>
+                  {preparerSig.firma_data_url && (
+                    <img src={preparerSig.firma_data_url} alt="Firma Elaborador" className="h-5 max-w-[55px] object-contain border border-slate-200 rounded px-1 bg-white" />
+                  )}
+                  <button type="button" onClick={() => setActiveSignerModal("preparer")} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                  <button type="button" onClick={() => setPreparerSig(null)} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                </div>
+              ) : preparerSig?.tipo === "fisica" ? (
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded">📄 Papel</span>
+                  <button type="button" onClick={() => setActiveSignerModal("preparer")} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                  <button type="button" onClick={() => setPreparerSig(null)} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setActiveSignerModal("preparer")} className="w-full text-center py-1 text-[10px] font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded">
+                  ✍️ Registrar Firma
+                </button>
+              )}
+            </div>
           </div>
-          <div className="border border-slate-200 rounded-lg p-3">
-            <p className="text-xs font-medium mb-2">2. Revisado por</p>
-            <input name="reviewer_name" defaultValue={(report as any)?.reviewer_name || defaultCoordinatorName || ""} placeholder="Nombre" className="input mb-2" />
-            <input name="reviewer_role" defaultValue={(report as any)?.reviewer_role || "COORDINADOR/A DECE"} placeholder="Cargo" className="input" />
+
+          {/* 2. Revisado por */}
+          <div className="border border-slate-200 rounded-lg p-3 bg-white space-y-2 shadow-2xs">
+            <p className="text-xs font-bold text-slate-700">2. Revisado por (Coordinación)</p>
+            <input
+              name="reviewer_name"
+              value={reviewerName}
+              onChange={(e) => setReviewerName(e.target.value)}
+              placeholder="Nombre de la Coordinación DECE"
+              className="input text-xs mb-1"
+            />
+            <input
+              name="reviewer_role"
+              defaultValue={(report as any)?.reviewer_role || "COORDINADOR/A DECE"}
+              placeholder="Cargo"
+              className="input text-xs"
+            />
+            <div className="pt-2 flex flex-wrap items-center justify-between gap-1 border-t border-slate-100">
+              {reviewerSig?.tipo === "digital" || reviewerSig?.firma_data_url ? (
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 px-1.5 py-0.5 rounded">
+                    ✓ Digital
+                  </span>
+                  {reviewerSig.firma_data_url && (
+                    <img src={reviewerSig.firma_data_url} alt="Firma Revisor" className="h-5 max-w-[55px] object-contain border border-slate-200 rounded px-1 bg-white" />
+                  )}
+                  <button type="button" onClick={() => setActiveSignerModal("reviewer")} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                  <button type="button" onClick={() => setReviewerSig(null)} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                </div>
+              ) : reviewerSig?.tipo === "fisica" ? (
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded">📄 Papel</span>
+                  <button type="button" onClick={() => setActiveSignerModal("reviewer")} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                  <button type="button" onClick={() => setReviewerSig(null)} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setActiveSignerModal("reviewer")} className="w-full text-center py-1 text-[10px] font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded">
+                  ✍️ Registrar Firma
+                </button>
+              )}
+            </div>
           </div>
-          <div className="border border-slate-200 rounded-lg p-3">
-            <p className="text-xs font-medium mb-2">3. Aprobado por</p>
-            <input name="approver_name" defaultValue={(report as any)?.approver_name || defaultAuthorityName || ""} placeholder="Nombre" className="input mb-2" />
-            <input name="approver_role" defaultValue={(report as any)?.approver_role || defaultAuthorityRole || "RECTOR/A"} placeholder="Cargo" className="input" />
+
+          {/* 3. Aprobado por */}
+          <div className="border border-slate-200 rounded-lg p-3 bg-white space-y-2 shadow-2xs">
+            <p className="text-xs font-bold text-slate-700">3. Aprobado por (Rectorado)</p>
+            <input
+              name="approver_name"
+              value={approverName}
+              onChange={(e) => setApproverName(e.target.value)}
+              placeholder="Nombre de la Autoridad Institucional"
+              className="input text-xs mb-1"
+            />
+            <input
+              name="approver_role"
+              defaultValue={(report as any)?.approver_role || defaultAuthorityRole || "RECTOR/A"}
+              placeholder="Cargo"
+              className="input text-xs"
+            />
+            <div className="pt-2 flex flex-wrap items-center justify-between gap-1 border-t border-slate-100">
+              {approverSig?.tipo === "digital" || approverSig?.firma_data_url ? (
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 px-1.5 py-0.5 rounded">
+                    ✓ Digital
+                  </span>
+                  {approverSig.firma_data_url && (
+                    <img src={approverSig.firma_data_url} alt="Firma Aprobador" className="h-5 max-w-[55px] object-contain border border-slate-200 rounded px-1 bg-white" />
+                  )}
+                  <button type="button" onClick={() => setActiveSignerModal("approver")} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                  <button type="button" onClick={() => setApproverSig(null)} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                </div>
+              ) : approverSig?.tipo === "fisica" ? (
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded">📄 Papel</span>
+                  <button type="button" onClick={() => setActiveSignerModal("approver")} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                  <button type="button" onClick={() => setApproverSig(null)} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setActiveSignerModal("approver")} className="w-full text-center py-1 text-[10px] font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded">
+                  ✍️ Registrar Firma
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Respaldo Físico DECE y Evidencia Escaneada */}
+      <div className="p-4 bg-amber-50/60 rounded-xl border border-amber-200 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+            <span>📁</span> Respaldo Físico DECE e Informe Firmado en Papel (Auditoría Ministerial)
+          </span>
+          <span className="text-[11px] text-amber-700 bg-amber-100/70 border border-amber-300 px-2 py-0.5 rounded-full font-medium">
+            Custodia Institucional
+          </span>
+        </div>
+        <p className="text-xs text-amber-800/90 leading-relaxed">
+          Para garantizar la constancia legal ante el Ministerio de Educación o auditorías distritales, indica el archivador institucional físico donde reposa el informe técnico original firmado a mano, y opcionalmente adjunta copia escaneada o foto (PDF o Imagen) con los sellos respectivos.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div>
+            <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+              Ubicación en Archivo Físico Institucional
+            </label>
+            <input
+              type="text"
+              value={physicalFileRef}
+              onChange={(e) => setPhysicalFileRef(e.target.value)}
+              placeholder="Ej. Archivador Informes Situacionales 2026 / Carpeta Caso"
+              className="w-full text-xs rounded-lg border border-amber-300 bg-white px-3 py-2 text-slate-800 placeholder-slate-400 focus:ring-1 focus:ring-amber-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+              Adjuntar Informe Físico Sellado / Firmado (PDF o Imagen)
+            </label>
+            {physicalEvidenceUrl ? (
+              <div className="flex items-center justify-between p-2 bg-white rounded-lg border border-amber-300">
+                <span className="text-xs text-emerald-800 font-medium flex items-center gap-1.5 truncate max-w-[200px]">
+                  <span>📎</span> {physicalEvidenceName || "Informe_Fisico_Sellado"}
+                </span>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={physicalEvidenceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    Ver
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhysicalEvidenceUrl("");
+                      setPhysicalEvidenceName("");
+                    }}
+                    className="text-xs text-rose-600 hover:underline font-medium"
+                  >
+                    Quitar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={handleEvidenceUpload}
+                className="w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 cursor-pointer"
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Modal DualSignatureModal */}
+      {activeSignerModal && (
+        <DualSignatureModal
+          isOpen={true}
+          onClose={() => setActiveSignerModal(null)}
+          signatoryName={
+            activeSignerModal === "preparer"
+              ? preparerName || "Profesional DECE Elaborador"
+              : activeSignerModal === "reviewer"
+              ? reviewerName || "Coordinador/a DECE"
+              : approverName || "Autoridad Institucional"
+          }
+          signatoryRole={
+            activeSignerModal === "preparer"
+              ? (report as any)?.preparer_role || defaultResponsibleRole || "ANALISTA DECE"
+              : activeSignerModal === "reviewer"
+              ? (report as any)?.reviewer_role || "COORDINADOR/A DECE"
+              : (report as any)?.approver_role || defaultAuthorityRole || "RECTOR/A"
+          }
+          initialData={
+            activeSignerModal === "preparer"
+              ? preparerSig
+              : activeSignerModal === "reviewer"
+              ? reviewerSig
+              : approverSig
+          }
+          onSave={(data) => {
+            if (activeSignerModal === "preparer") setPreparerSig(data);
+            else if (activeSignerModal === "reviewer") setReviewerSig(data);
+            else if (activeSignerModal === "approver") setApproverSig(data);
+            setActiveSignerModal(null);
+          }}
+        />
+      )}
 
       <div className="flex justify-end">
         <SubmitButton />

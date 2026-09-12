@@ -40,7 +40,16 @@ export default async function ImprimirFichaObservacionPage({
   } else if (session.user.role === "ADMIN") {
     analystRole = "COORDINADOR/A DECE";
   }
-  const studentCourse = formatStudentCourseFull(student);
+    const studentCourse = formatStudentCourseFull(student);
+
+  // Firmas duales y respaldo físico
+  let obsSignatures: any[] = [];
+  try {
+    if (sheet.signatures_json) {
+      obsSignatures = JSON.parse(sheet.signatures_json);
+    }
+  } catch {}
+  const deceSig = obsSignatures.find((s: any) => s.signer_id === "dece" || s.role?.toLowerCase().includes("dece") || s.tipo);
 
   return (
     <div className="max-w-4xl mx-auto bg-white my-4 print:my-0 font-['Arial',sans-serif]">
@@ -333,10 +342,21 @@ export default async function ImprimirFichaObservacionPage({
                   <span>{official.professional_name || professional?.name || "—"}</span>
                 </div>
 
-                <div className="flex items-center justify-between pt-6 pb-2">
+                <div className="flex items-end justify-between pt-4 pb-2">
                   <div>
                     <span className="font-bold">Firma de responsabilidad: </span>
-                    <span className="inline-block border-b border-black w-48 ml-2"></span>
+                    {deceSig?.tipo === "digital" && deceSig?.firma_data_url ? (
+                      <div className="inline-flex flex-col items-center align-middle ml-2">
+                        <img src={deceSig.firma_data_url} alt="Firma Profesional" className="h-10 max-w-[150px] object-contain" />
+                        <span className="text-[7.5px] text-slate-500 font-mono">Firma Digital Verificada</span>
+                      </div>
+                    ) : deceSig?.tipo === "fisica" ? (
+                      <span className="inline-block border-b border-black px-2 ml-2 text-[8px] font-semibold text-amber-900">
+                        [ FIRMA FÍSICA EN ARCHIVO INSTITUCIONAL ]
+                      </span>
+                    ) : (
+                      <span className="inline-block border-b border-black w-48 ml-2"></span>
+                    )}
                   </div>
                   <div>
                     <span className="font-bold">Fecha de aplicación: </span>
@@ -354,6 +374,44 @@ export default async function ImprimirFichaObservacionPage({
             </tr>
           </tbody>
         </table>
+
+        {/* Banner de Custodia de Respaldo Físico */}
+        {sheet.physical_file_ref && (
+          <div className="my-3 p-2 bg-amber-50 border border-amber-300 rounded text-[9.5px] text-amber-900 flex items-center justify-between">
+            <div>
+              <span className="font-bold">📁 UBICACIÓN DE RESPALDO FÍSICO EN ARCHIVO INSTITUCIONAL: </span>
+              <span>{sheet.physical_file_ref}</span>
+            </div>
+            <span className="text-[8.5px] bg-amber-200/70 border border-amber-400 px-1.5 py-0.5 rounded font-bold uppercase">
+              Custodia DECE
+            </span>
+          </div>
+        )}
+
+        {/* Anexo de Auditoría Distrital: Respaldo Físico Escaneado */}
+        {sheet.physical_evidence_url && (
+          <div className="mt-4 pt-3 border-t border-dashed border-slate-300 page-break-inside-avoid">
+            <div className="text-center font-bold text-[10px] text-slate-800 uppercase tracking-wide bg-slate-100 py-1 border border-slate-300 rounded mb-2">
+              ANEXO DE AUDITORÍA DISTRITAL: RESPALDO FÍSICO DIGITALIZADO
+            </div>
+            <div className="text-[9px] text-slate-600 mb-2 italic text-center">
+              Copia digitalizada de la ficha oficial de observación áulica con firma manuscrita y sellos institucionales archivados bajo custodia institucional.
+            </div>
+            <div className="flex justify-center border border-slate-200 p-2 bg-slate-50 rounded">
+              {sheet.physical_evidence_url.startsWith("data:application/pdf") ? (
+                <div className="text-center p-3 text-[10px] text-blue-700 font-semibold">
+                  <span>📄 Documento PDF de Respaldo Físico Digitalizado Adjunto</span>
+                </div>
+              ) : (
+                <img
+                  src={sheet.physical_evidence_url}
+                  alt="Respaldo Físico Digitalizado"
+                  className="max-h-[350px] w-auto object-contain border border-slate-300 rounded shadow-xs"
+                />
+              )}
+            </div>
+          </div>
+        )}
 
         <DocumentFooter institution={institution} />
       </div>

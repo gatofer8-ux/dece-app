@@ -249,6 +249,36 @@ function createConnection(): Database.Database {
   safeAddColumn("case_interviews", "physical_file_ref TEXT");
   safeAddColumn("case_interviews", "physical_evidence_url TEXT");
 
+  safeAddColumn("situational_reports", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("situational_reports", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("situational_reports", "physical_file_ref TEXT");
+  safeAddColumn("situational_reports", "physical_evidence_url TEXT");
+
+  safeAddColumn("bimonthly_reports", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("bimonthly_reports", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("bimonthly_reports", "physical_file_ref TEXT");
+  safeAddColumn("bimonthly_reports", "physical_evidence_url TEXT");
+
+  safeAddColumn("case_closure_reports", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("case_closure_reports", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("case_closure_reports", "physical_file_ref TEXT");
+  safeAddColumn("case_closure_reports", "physical_evidence_url TEXT");
+
+  safeAddColumn("violence_reports", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("violence_reports", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("violence_reports", "physical_file_ref TEXT");
+  safeAddColumn("violence_reports", "physical_evidence_url TEXT");
+
+  safeAddColumn("case_observation_sheets", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("case_observation_sheets", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("case_observation_sheets", "physical_file_ref TEXT");
+  safeAddColumn("case_observation_sheets", "physical_evidence_url TEXT");
+
+  safeAddColumn("case_accompaniment_reports", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("case_accompaniment_reports", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("case_accompaniment_reports", "physical_file_ref TEXT");
+  safeAddColumn("case_accompaniment_reports", "physical_evidence_url TEXT");
+
   safeAddColumn("institutions", "seal_image TEXT");
   safeAddColumn("institutions", "zona TEXT");
 

@@ -55,6 +55,16 @@ export default async function ImprimirInformeHechoViolenciaPage({
     analystRole = "ANALISTA DECE";
   }
 
+  // Firmas duales y respaldo físico
+  let violSignatures: any[] = [];
+  try {
+    if (report.signatures_json) {
+      violSignatures = JSON.parse(report.signatures_json);
+    }
+  } catch {}
+  const analystSig = violSignatures.find((s: any) => s.signer_id === "analyst" || s.role?.toLowerCase().includes("analista") || s.role?.toLowerCase().includes("dece"));
+  const rectoraSig = violSignatures.find((s: any) => s.signer_id === "rectora" || s.role?.toLowerCase().includes("rector"));
+
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
   const studentCourseFormatted = formatStudentCourseFull(student);
   const institution = db.prepare("SELECT * FROM institutions WHERE id = ?").get(institutionId) as InstitutionRow;
@@ -408,10 +418,25 @@ export default async function ImprimirInformeHechoViolenciaPage({
         )}
 
         {/* Firmas de Responsabilidad */}
-        <table className="w-full border-collapse mt-10 mb-6 text-center text-sm" style={{ border: "none", width: "100%" }}>
+        <table className="w-full border-collapse mt-8 mb-4 text-center text-sm" style={{ border: "none", width: "100%" }}>
           <tbody>
             <tr>
-              <td className="w-1/2 align-top text-center px-4" style={{ border: "none", width: "50%" }}>
+              <td className="w-1/2 align-bottom text-center px-4" style={{ border: "none", width: "50%" }}>
+                <div className="min-h-[50px] flex items-end justify-center mb-1">
+                  {analystSig?.tipo === "digital" && analystSig?.firma_data_url ? (
+                    <div className="flex flex-col items-center">
+                      <img src={analystSig.firma_data_url} alt="Firma Analista" className="h-12 max-w-[170px] object-contain" />
+                      <span className="text-[7.5px] text-slate-500 font-mono">Firma Digital Verificada</span>
+                    </div>
+                  ) : analystSig?.tipo === "fisica" ? (
+                    <div className="text-center py-1">
+                      <div className="w-48 border-b border-slate-700 mx-auto mb-1"></div>
+                      <span className="text-[7.5px] text-amber-800 font-semibold uppercase block">[ Firma Física en Archivo Institucional ]</span>
+                    </div>
+                  ) : (
+                    <div className="w-48 border-b border-slate-400 mx-auto mb-1"></div>
+                  )}
+                </div>
                 <div style={{ display: "inline-block", width: "260px", borderTop: "1px solid #000000", paddingTop: "4px" }} className="font-bold">
                   {report.analyst_name || "Mgtr. Marlon Alberto Jácome Santana"}
                 </div>
@@ -419,7 +444,22 @@ export default async function ImprimirInformeHechoViolenciaPage({
                   {analystRole}
                 </div>
               </td>
-              <td className="w-1/2 align-top text-center px-4" style={{ border: "none", width: "50%" }}>
+              <td className="w-1/2 align-bottom text-center px-4" style={{ border: "none", width: "50%" }}>
+                <div className="min-h-[50px] flex items-end justify-center mb-1">
+                  {rectoraSig?.tipo === "digital" && rectoraSig?.firma_data_url ? (
+                    <div className="flex flex-col items-center">
+                      <img src={rectoraSig.firma_data_url} alt="Firma Rectoral" className="h-12 max-w-[170px] object-contain" />
+                      <span className="text-[7.5px] text-slate-500 font-mono">Firma Digital Verificada</span>
+                    </div>
+                  ) : rectoraSig?.tipo === "fisica" ? (
+                    <div className="text-center py-1">
+                      <div className="w-48 border-b border-slate-700 mx-auto mb-1"></div>
+                      <span className="text-[7.5px] text-amber-800 font-semibold uppercase block">[ Firma Física en Archivo Institucional ]</span>
+                    </div>
+                  ) : (
+                    <div className="w-48 border-b border-slate-400 mx-auto mb-1"></div>
+                  )}
+                </div>
                 <div style={{ display: "inline-block", width: "260px", borderTop: "1px solid #000000", paddingTop: "4px" }} className="font-bold">
                   {report.rectora_name || "Msc. Diana Fernanda Manzano Villacís"}
                 </div>
@@ -430,6 +470,44 @@ export default async function ImprimirInformeHechoViolenciaPage({
             </tr>
           </tbody>
         </table>
+
+        {/* Banner de Custodia de Respaldo Físico */}
+        {report.physical_file_ref && (
+          <div className="my-3 p-2 bg-amber-50 border border-amber-300 rounded text-[9.5px] text-amber-900 flex items-center justify-between">
+            <div>
+              <span className="font-bold">📁 UBICACIÓN DE RESPALDO FÍSICO EN ARCHIVO INSTITUCIONAL: </span>
+              <span>{report.physical_file_ref}</span>
+            </div>
+            <span className="text-[8.5px] bg-amber-200/70 border border-amber-400 px-1.5 py-0.5 rounded font-bold uppercase">
+              Custodia DECE
+            </span>
+          </div>
+        )}
+
+        {/* Anexo de Auditoría Distrital: Respaldo Físico Escaneado */}
+        {report.physical_evidence_url && (
+          <div className="mt-4 pt-3 border-t border-dashed border-slate-300 page-break-inside-avoid">
+            <div className="text-center font-bold text-[10px] text-slate-800 uppercase tracking-wide bg-slate-100 py-1 border border-slate-300 rounded mb-2">
+              ANEXO DE AUDITORÍA DISTRITAL: RESPALDO FÍSICO DIGITALIZADO
+            </div>
+            <div className="text-[9px] text-slate-600 mb-2 italic text-center">
+              Copia digitalizada del reporte físico del hecho de violencia con firmas manuscritas y sellos institucionales bajo custodia confidencial DECE.
+            </div>
+            <div className="flex justify-center border border-slate-200 p-2 bg-slate-50 rounded">
+              {report.physical_evidence_url.startsWith("data:application/pdf") ? (
+                <div className="text-center p-3 text-[10px] text-blue-700 font-semibold">
+                  <span>📄 Documento PDF de Respaldo Físico Digitalizado Adjunto</span>
+                </div>
+              ) : (
+                <img
+                  src={report.physical_evidence_url}
+                  alt="Respaldo Físico Digitalizado"
+                  className="max-h-[350px] w-auto object-contain border border-slate-300 rounded shadow-xs"
+                />
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Nota Legal del COIP */}
         <div className="text-center text-xs italic text-slate-700 font-semibold pt-2">

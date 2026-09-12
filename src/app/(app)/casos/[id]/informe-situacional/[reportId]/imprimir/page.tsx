@@ -35,7 +35,19 @@ export default async function ImprimirInformeSituacionalPage({
     .get(params.reportId, caseFile.id, institutionId) as SituationalReportRow | undefined;
   if (!report) notFound();
 
-  const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
+    const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
+
+  let signatures: Record<string, { tipo: "digital" | "fisica"; firma_data_url?: string; fecha?: string; observacion?: string }> = {};
+  if (report.signatures_json) {
+    try {
+      signatures = JSON.parse(report.signatures_json);
+    } catch {
+      signatures = {};
+    }
+  }
+  const preparerSig = signatures.preparer;
+  const reviewerSig = signatures.reviewer;
+  const approverSig = signatures.approver;
   const studentCourseFormatted = formatStudentCourseFull(student);
 
   let analystRole = report.responsible_role || "ANALISTA DECE";

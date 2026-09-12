@@ -24,7 +24,19 @@ export default async function ImprimirInformeBimensualPage({
     .get(params.reportId, caseFile.id, institutionId) as BimonthlyReportRow | undefined;
   if (!report) notFound();
 
-  const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
+    const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
+
+  let signatures: Record<string, { tipo: "digital" | "fisica"; firma_data_url?: string; fecha?: string; observacion?: string }> = {};
+  if (report.signatures_json) {
+    try {
+      signatures = JSON.parse(report.signatures_json);
+    } catch {
+      signatures = {};
+    }
+  }
+  const elaboratedSig = signatures.elaborated;
+  const reviewedSig = signatures.reviewed;
+  const approvedSig = signatures.approved;
   const processes = parseProcessesData(report.processes_data);
 
   return (
@@ -191,8 +203,20 @@ export default async function ImprimirInformeBimensualPage({
                   <span className="font-bold">Nombre:</span><br />
                   <span className="font-medium">{report.elaborated_by_name || "—"}</span>
                 </td>
-                <td className="w-1/4 p-2 border border-black text-slate-900 align-top h-20">
-                  <span className="font-bold">Firma:</span>
+                <td className="w-1/4 p-2 border border-black text-slate-900 align-middle text-center h-20">
+                  {elaboratedSig?.firma_data_url ? (
+                    <div className="flex flex-col items-center justify-center">
+                      <img src={elaboratedSig.firma_data_url} alt="Firma Elaborador" className="max-h-12 max-w-[150px] object-contain" />
+                      <span className="text-[6.5pt] text-emerald-700 font-mono">Firma Digital Registrada</span>
+                    </div>
+                  ) : elaboratedSig?.tipo === "fisica" ? (
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="w-28 border-b border-dashed border-slate-400 mb-1"></div>
+                      <span className="text-[7pt] text-amber-800 font-semibold bg-amber-50 px-1 rounded">Firma Física en Archivo</span>
+                    </div>
+                  ) : (
+                    <span className="font-bold text-slate-400 text-[10px]">Firma</span>
+                  )}
                 </td>
               </tr>
 
@@ -205,8 +229,20 @@ export default async function ImprimirInformeBimensualPage({
                   <span className="font-bold">Nombre:</span><br />
                   <span className="font-medium">{report.reviewed_by_name || "—"}</span>
                 </td>
-                <td className="p-2 border border-black text-slate-900 align-top h-20">
-                  <span className="font-bold">Firma:</span>
+                <td className="p-2 border border-black text-slate-900 align-middle text-center h-20">
+                  {reviewedSig?.firma_data_url ? (
+                    <div className="flex flex-col items-center justify-center">
+                      <img src={reviewedSig.firma_data_url} alt="Firma Revisor" className="max-h-12 max-w-[150px] object-contain" />
+                      <span className="text-[6.5pt] text-emerald-700 font-mono">Firma Digital Registrada</span>
+                    </div>
+                  ) : reviewedSig?.tipo === "fisica" ? (
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="w-28 border-b border-dashed border-slate-400 mb-1"></div>
+                      <span className="text-[7pt] text-amber-800 font-semibold bg-amber-50 px-1 rounded">Firma Física en Archivo</span>
+                    </div>
+                  ) : (
+                    <span className="font-bold text-slate-400 text-[10px]">Firma</span>
+                  )}
                 </td>
               </tr>
 
@@ -219,13 +255,72 @@ export default async function ImprimirInformeBimensualPage({
                   <span className="font-bold">Nombre:</span><br />
                   <span className="font-medium">{report.approved_by_name || "—"}</span>
                 </td>
-                <td className="p-2 border border-black text-slate-900 align-top h-20">
-                  <span className="font-bold">Firma:</span>
+                <td className="p-2 border border-black text-slate-900 align-middle text-center h-20">
+                  {approvedSig?.firma_data_url ? (
+                    <div className="flex flex-col items-center justify-center">
+                      <img src={approvedSig.firma_data_url} alt="Firma Aprobador" className="max-h-12 max-w-[150px] object-contain" />
+                      <span className="text-[6.5pt] text-emerald-700 font-mono">Firma Digital Registrada</span>
+                    </div>
+                  ) : approvedSig?.tipo === "fisica" ? (
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="w-28 border-b border-dashed border-slate-400 mb-1"></div>
+                      <span className="text-[7pt] text-amber-800 font-semibold bg-amber-50 px-1 rounded">Firma Física en Archivo</span>
+                    </div>
+                  ) : (
+                    <span className="font-bold text-slate-400 text-[10px]">Firma</span>
+                  )}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
+
+        {/* Anexo de Auditoría Distrital: Informe Bimensual Sellado / Firmado */}
+        {report.physical_evidence_url && (
+          <div className="mt-8 pt-6 border-t-2 border-dashed border-slate-300 print:break-before-page">
+            <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 text-xs mb-4 text-amber-900 flex items-center justify-between">
+              <div>
+                <span className="font-bold uppercase tracking-wider text-amber-950">
+                  Anexo de Auditoría Distrital: Informe Bimensual Sellado y Digitalizado
+                </span>
+                <p className="text-[11px] text-amber-800 mt-0.5">
+                  Copia digitalizada del informe con sellos institucionales y firmas manuscritas archivadas físicamente.
+                  {report.physical_file_ref && (
+                    <span className="font-semibold block mt-0.5">
+                      Ubicación de archivo físico: {report.physical_file_ref}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-1 rounded">
+                EVIDENCIA DE CUSTODIA
+              </span>
+            </div>
+
+            <div className="flex justify-center items-center border border-slate-200 rounded-lg p-2 bg-slate-50">
+              {report.physical_evidence_url.startsWith("data:application/pdf") ? (
+                <div className="text-center py-12">
+                  <p className="text-sm font-semibold text-slate-700">Documento PDF Adjunto</p>
+                  <p className="text-xs text-slate-500 mt-1">El respaldo físico fue adjuntado en formato PDF.</p>
+                  <a
+                    href={report.physical_evidence_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="no-print inline-block mt-3 text-xs bg-blue-600 text-white font-medium px-4 py-2 rounded shadow hover:bg-blue-700"
+                  >
+                    Abrir PDF en nueva pestaña
+                  </a>
+                </div>
+              ) : (
+                <img
+                  src={report.physical_evidence_url}
+                  alt="Respaldo Físico Digitalizado"
+                  className="max-h-[800px] w-auto object-contain shadow-xs rounded"
+                />
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Pie de Página Oficial */}
         <div className="w-full pt-4 break-inside-avoid">

@@ -54,6 +54,17 @@ export default async function ImprimirInformeCierrePage({
     bimonthlyList = getCaseBimonthlyReports(caseFile.id);
   }
 
+    // Firmas duales y respaldo físico
+  let closureSignatures: any[] = [];
+  try {
+    if (report.signatures_json) {
+      closureSignatures = JSON.parse(report.signatures_json);
+    }
+  } catch {}
+  const elabSig = closureSignatures.find((s: any) => s.signer_id === "elaborated" || s.role?.toLowerCase().includes("analista") || s.role?.toLowerCase().includes("dece"));
+  const revSig = closureSignatures.find((s: any) => s.signer_id === "reviewed" || s.role?.toLowerCase().includes("coord"));
+  const appSig = closureSignatures.find((s: any) => s.signer_id === "approved" || s.role?.toLowerCase().includes("rector"));
+
   const exportWordUrl = `/api/casos/${caseFile.id}/informe-cierre/${report.id}/export-word`;
 
   return (
@@ -730,6 +741,44 @@ export default async function ImprimirInformeCierrePage({
               <div className="mt-2 text-[9.5px] text-slate-700 whitespace-pre-wrap bg-slate-50 p-2 rounded border border-slate-200">
                 <span className="font-bold">Observaciones de Anexos: </span>
                 {report.annexes_notes}
+              </div>
+            )}
+
+            {/* Banner de Custodia de Respaldo Físico */}
+            {report.physical_file_ref && (
+              <div className="mt-3 p-2 bg-amber-50 border border-amber-300 rounded text-[9.5px] text-amber-900 flex items-center justify-between">
+                <div>
+                  <span className="font-bold">📁 UBICACIÓN DE RESPALDO FÍSICO EN ARCHIVO INSTITUCIONAL: </span>
+                  <span>{report.physical_file_ref}</span>
+                </div>
+                <span className="text-[8.5px] bg-amber-200/70 border border-amber-400 px-1.5 py-0.5 rounded font-bold uppercase">
+                  Custodia DECE
+                </span>
+              </div>
+            )}
+
+            {/* Anexo de Auditoría Distrital: Respaldo Físico Escaneado */}
+            {report.physical_evidence_url && (
+              <div className="mt-4 pt-3 border-t border-dashed border-slate-300 page-break-inside-avoid">
+                <div className="text-center font-bold text-[10px] text-slate-800 uppercase tracking-wide bg-slate-100 py-1 border border-slate-300 rounded mb-2">
+                  ANEXO DE AUDITORÍA DISTRITAL: RESPALDO FÍSICO DIGITALIZADO
+                </div>
+                <div className="text-[9px] text-slate-600 mb-2 italic text-center">
+                  Copia digitalizada del informe físico de cierre con firmas manuscritas y sellos institucionales archivados bajo custodia institucional.
+                </div>
+                <div className="flex justify-center border border-slate-200 p-2 bg-slate-50 rounded">
+                  {report.physical_evidence_url.startsWith("data:application/pdf") ? (
+                    <div className="text-center p-3 text-[10px] text-blue-700 font-semibold">
+                      <span>📄 Documento PDF de Respaldo Físico Digitalizado Adjunto</span>
+                    </div>
+                  ) : (
+                    <img
+                      src={report.physical_evidence_url}
+                      alt="Respaldo Físico Digitalizado"
+                      className="max-h-[350px] w-auto object-contain border border-slate-300 rounded shadow-xs"
+                    />
+                  )}
+                </div>
               </div>
             )}
           </div>

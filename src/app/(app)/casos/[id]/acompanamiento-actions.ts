@@ -31,6 +31,7 @@ const TEXT_COLUMNS = [
   "student_age", "student_nationality", "student_document_id", "student_grade", "student_jornada",
   "rep_full_name", "rep_document_id", "rep_relationship", "rep_address", "rep_phone_cell", "rep_phone_landline",
   "family_situation", "academic_performance", "accompaniment_actions",
+  "signatures_json", "signature_type", "physical_file_ref", "physical_evidence_url",
 ] as const;
 
 function collectIndicators(fd: FormData): IndicatorsData {
