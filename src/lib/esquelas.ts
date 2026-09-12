@@ -208,7 +208,9 @@ export function createEsquela(
     if (input.caseFileId) {
       try {
         const actionId = randomUUID();
-        const actionDesc = `Emisión de Esquela de Citación N° ${citationNumber} para el representante ${input.representativeName.trim()} (Cita programada: ${input.citationDate} a las ${input.citationTime} en ${place}). Motivo: ${input.citationReason.trim()}`;
+        const actionDesc = `Esquela de Citación N° ${citationNumber} emitida al representante ${input.representativeName.trim()} (Cita: ${input.citationDate} ${input.citationTime} en ${place}).`;
+        const citationReason = input.citationReason.trim();
+        const citationReasonExcerpt = citationReason.slice(0, 120);
         resolvedDb
           .prepare(
             `INSERT INTO case_actions (id, case_file_id, author_id, date, type, description, intervention_type, observations)
@@ -220,7 +222,7 @@ export function createEsquela(
             input.professionalId || null,
             input.citationDate,
             actionDesc,
-            `Citación formal ${urgency}`
+            `Motivo: ${citationReasonExcerpt}${citationReason.length > 120 ? "..." : ""} (Citación ${urgency}).`
           );
       } catch {
         // Ignora si falla la inserción en bitácora para no bloquear la esquela
@@ -452,7 +454,9 @@ export function updateTalonStatus(
     if (existing.case_file_id && data.talonAttended === 1 && existing.talon_attended !== 1) {
       try {
         const actionId = randomUUID();
-        const actionDesc = `Comparecencia y atención por citación N° ${existing.citation_number}: Asistencia del representante ${existing.representative_name}. ${data.talonNotes?.trim() ? `Detalle: ${data.talonNotes.trim()}` : ""}`;
+        const actionDesc = `Comparecencia del representante ${existing.representative_name} por citación N° ${existing.citation_number}.`;
+        const talonNotes = data.talonNotes?.trim() || "";
+        const talonNotesExcerpt = talonNotes.slice(0, 140);
         resolvedDb
           .prepare(
             `INSERT INTO case_actions (id, case_file_id, author_id, date, type, description, intervention_type, observations)
@@ -464,7 +468,9 @@ export function updateTalonStatus(
             existing.professional_id || null,
             existing.citation_date,
             actionDesc,
-            "Atención a citación formal"
+            talonNotesExcerpt
+              ? `${talonNotesExcerpt}${talonNotes.length > 140 ? "..." : ""}`
+              : "Atención a citación formal."
           );
       } catch {
         // Ignorar si falla
