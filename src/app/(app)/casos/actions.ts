@@ -82,9 +82,18 @@ export async function createCase(formData: FormData) {
   });
 
   // Primera entrada automática en la bitácora del caso
+  const openingDescriptionExcerpt = (str(formData, "description") || "").slice(0, 140).trim();
   db.prepare(
-    `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Apertura de caso', ?)`
-  ).run(randomUUID(), id, session.user.id, "Caso registrado en el sistema.");
+    `INSERT INTO case_actions (id, case_file_id, author_id, type, description, observations) VALUES (?, ?, ?, 'Apertura de caso', ?, ?)`
+  ).run(
+    randomUUID(),
+    id,
+    session.user.id,
+    "Caso registrado en el sistema.",
+    openingDescriptionExcerpt
+      ? `${openingDescriptionExcerpt}${(str(formData, "description") || "").length > 140 ? "..." : ""}`
+      : null
+  );
 
   // Si el caso proviene de una alerta docente, vincularla (solo si pertenece a la institución)
   const alertId = str(formData, "alert_id");
@@ -399,6 +408,8 @@ export async function createInterview(caseId: string, formData: FormData) {
     const socialRelations = formData.getAll("social_relations").filter((v): v is string => typeof v === "string");
     const fullName = str(formData, "full_name");
     createdFullName = fullName || "s/n";
+    const representativeName = str(formData, "representative_name");
+    const interviewSummary = str(formData, "summary");
 
     const signaturesJson = str(formData, "signatures_json");
     const signatureType = str(formData, "signature_type") || "DIGITAL";
@@ -432,7 +443,7 @@ export async function createInterview(caseId: string, formData: FormData) {
       summary: str(formData, "summary"),
       recommendations: str(formData, "recommendations"),
       commitment: str(formData, "commitment"),
-      representative_name: str(formData, "representative_name"),
+      representative_name: representativeName,
       professional_id: session.user.id,
       signatures_json: signaturesJson,
       signature_type: signatureType,
@@ -440,9 +451,17 @@ export async function createInterview(caseId: string, formData: FormData) {
       physical_evidence_url: physicalEvidenceUrl,
     });
 
+    const interviewDescription = representativeName
+      ? `Entrevista realizada al representante ${representativeName} y estudiante ${createdFullName}.`
+      : `Entrevista realizada al/a la estudiante ${createdFullName}.`;
+    const interviewSummaryExcerpt = (interviewSummary || "").slice(0, 140).trim();
+    const interviewObservations = interviewSummaryExcerpt
+      ? `${interviewSummaryExcerpt}${(interviewSummary || "").length > 140 ? "..." : ""}`
+      : null;
+
     db.prepare(
-      `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Entrevista semiestructurada', ?)`
-    ).run(randomUUID(), caseId, session.user.id, `Entrevista registrada a: ${createdFullName}`);
+      `INSERT INTO case_actions (id, case_file_id, author_id, type, description, observations) VALUES (?, ?, ?, 'Entrevista semiestructurada', ?, ?)`
+    ).run(randomUUID(), caseId, session.user.id, interviewDescription, interviewObservations);
 
     logAudit({ userId: session.user.id, action: "CREAR", entityType: "CaseInterview", entityId: id, details: caseId, institutionId });
     revalidatePath(`/casos/${caseId}`);
@@ -521,9 +540,16 @@ export async function createObservationSheet(
         physical_evidence_url: physicalEvidenceUrl,
       });
 
+      const observationSummaryExcerpt = summaryObservations.slice(0, 140).trim();
       db.prepare(
-        `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Ficha de observación psicosocial', ?)`
-      ).run(randomUUID(), caseId, session.user.id, `Ficha Oficial de Observación registrada — Profesional: ${parsed.professional_name || session.user.name}.`);
+        `INSERT INTO case_actions (id, case_file_id, author_id, type, description, observations) VALUES (?, ?, ?, 'Ficha de observación psicosocial', ?, ?)`
+      ).run(
+        randomUUID(),
+        caseId,
+        session.user.id,
+        `Ficha Oficial de Observación registrada (riesgo: ${riskLevel}).`,
+        `${observationSummaryExcerpt}${summaryObservations.length > 140 ? "..." : ""}`
+      );
       autoMarkChecklistItems(caseId, ["ficha de observacion"], "Ficha de observación");
 
       logAudit({ userId: session.user.id, action: "CREAR", entityType: "CaseObservationSheet", entityId: id, details: caseId, institutionId });
@@ -573,9 +599,18 @@ export async function createObservationSheet(
         observations: str(formData, "observations"),
       });
 
+      const legacyObservationExcerpt = (str(formData, "observations") || "").slice(0, 140).trim();
       db.prepare(
-        `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Ficha de observación psicosocial', ?)`
-      ).run(randomUUID(), caseId, session.user.id, `Ficha registrada — nivel de riesgo: ${riskLevel}.`);
+        `INSERT INTO case_actions (id, case_file_id, author_id, type, description, observations) VALUES (?, ?, ?, 'Ficha de observación psicosocial', ?, ?)`
+      ).run(
+        randomUUID(),
+        caseId,
+        session.user.id,
+        `Ficha registrada — nivel de riesgo: ${riskLevel}.`,
+        legacyObservationExcerpt
+          ? `${legacyObservationExcerpt}${(str(formData, "observations") || "").length > 140 ? "..." : ""}`
+          : null
+      );
       autoMarkChecklistItems(caseId, ["ficha de observacion"], "Ficha de observación");
 
       logAudit({ userId: session.user.id, action: "CREAR", entityType: "CaseObservationSheet", entityId: id, details: caseId, institutionId });
@@ -692,9 +727,17 @@ export async function createCallLog(caseId: string, formData: FormData) {
     notes: str(formData, "notes"),
   });
 
+  const callNotes = str(formData, "notes");
+  const callObservations = `Motivo: ${reason.slice(0, 100).trim()}${reason.length > 100 ? "..." : ""}${callNotes ? ` ${callNotes.slice(0, 100).trim()}${callNotes.length > 100 ? "..." : ""}` : ""}`;
   db.prepare(
-    `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Llamada telefónica', ?)`
-  ).run(randomUUID(), caseId, session.user.id, `Llamada registrada — ${str(formData, "contact_name") || "contacto"}: ${reason}`);
+    `INSERT INTO case_actions (id, case_file_id, author_id, type, description, observations) VALUES (?, ?, ?, 'Llamada telefónica', ?, ?)`
+  ).run(
+    randomUUID(),
+    caseId,
+    session.user.id,
+    `Llamada telefónica con ${str(formData, "contact_name") || "contacto"}${str(formData, "contact_relation") ? ` (${str(formData, "contact_relation")})` : ""}.`,
+    callObservations
+  );
 
   logAudit({ userId: session.user.id, action: "CREAR", entityType: "CaseCallLog", entityId: id, details: caseId, institutionId });
   revalidatePath(`/casos/${caseId}`);
@@ -758,9 +801,16 @@ export async function createCarePlan(
       physical_evidence_url: physicalEvidenceUrl,
     });
 
+    const diagnosisExcerpt = diagnosisSummary.slice(0, 140).trim();
     db.prepare(
-      `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Plan de atención', ?)`
-    ).run(randomUUID(), caseId, session.user.id, `Plan de atención psicosocial y seguimiento registrado.`);
+      `INSERT INTO case_actions (id, case_file_id, author_id, type, description, observations) VALUES (?, ?, ?, 'Plan de atención', ?, ?)`
+    ).run(
+      randomUUID(),
+      caseId,
+      session.user.id,
+      `Plan de atención psicosocial y seguimiento registrado.`,
+      `${diagnosisExcerpt}${diagnosisSummary.length > 140 ? "..." : ""}`
+    );
     autoMarkChecklistItems(caseId, ["plan", "atencion psicosocial"], "Plan de Atención Psicosocial");
 
     logAudit({ userId: session.user.id, action: "CREAR", entityType: "CaseCarePlan", entityId: id, details: caseId, institutionId });
@@ -894,9 +944,18 @@ export async function createRestitutionPlan(
       physical_evidence_url: physicalEvidenceUrl,
     });
 
+    const restitutionNarrativeExcerpt = (str(formData, "report_narrative") || "").slice(0, 140).trim();
     db.prepare(
-      `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Plan de acompañamiento', ?)`
-    ).run(randomUUID(), caseId, session.user.id, `Plan de acompañamiento y restitución de derechos registrado.`);
+      `INSERT INTO case_actions (id, case_file_id, author_id, type, description, observations) VALUES (?, ?, ?, 'Plan de acompañamiento', ?, ?)`
+    ).run(
+      randomUUID(),
+      caseId,
+      session.user.id,
+      `Plan de acompañamiento y restitución de derechos registrado.`,
+      restitutionNarrativeExcerpt
+        ? `${restitutionNarrativeExcerpt}${(str(formData, "report_narrative") || "").length > 140 ? "..." : ""}`
+        : null
+    );
     autoMarkChecklistItems(caseId, ["plan de acompanamiento"], "Plan de acompañamiento y restitución");
 
     logAudit({ userId: session.user.id, action: "CREAR", entityType: "CaseRestitutionPlan", entityId: id, details: caseId, institutionId });
@@ -1051,9 +1110,18 @@ export async function updateRestitutionPlan(
       physical_evidence_url: physicalEvidenceUrl,
     });
 
+    const restitutionUpdateNarrativeExcerpt = (str(formData, "report_narrative") || "").slice(0, 140).trim();
     db.prepare(
-      `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Plan de acompañamiento', ?)`
-    ).run(randomUUID(), caseId, session.user.id, `Plan de acompañamiento y restitución de derechos actualizado.`);
+      `INSERT INTO case_actions (id, case_file_id, author_id, type, description, observations) VALUES (?, ?, ?, 'Plan de acompañamiento', ?, ?)`
+    ).run(
+      randomUUID(),
+      caseId,
+      session.user.id,
+      `Plan de acompañamiento y restitución de derechos actualizado.`,
+      restitutionUpdateNarrativeExcerpt
+        ? `${restitutionUpdateNarrativeExcerpt}${(str(formData, "report_narrative") || "").length > 140 ? "..." : ""}`
+        : null
+    );
     autoMarkChecklistItems(caseId, ["plan de acompanamiento"], "Plan de acompañamiento y restitución");
 
     logAudit({ userId: session.user.id, action: "ACTUALIZAR", entityType: "CaseRestitutionPlan", entityId: planId, details: caseId, institutionId });
@@ -1090,9 +1158,19 @@ export async function createCareFollowup(caseId: string, formData: FormData) {
     observations: str(formData, "observations"),
   });
 
+  const followupNotes = str(formData, "observations");
+  const descriptionExcerpt = description.slice(0, 140).trim();
+  const followupObservations =
+    `${descriptionExcerpt}${description.length > 140 ? "..." : ""}` + (followupNotes ? ` ${followupNotes}` : "");
   db.prepare(
-    `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Seguimiento atención psicosocial', ?)`
-  ).run(randomUUID(), caseId, session.user.id, `Sesión registrada: ${description}`);
+    `INSERT INTO case_actions (id, case_file_id, author_id, type, description, observations) VALUES (?, ?, ?, 'Seguimiento atención psicosocial', ?, ?)`
+  ).run(
+    randomUUID(),
+    caseId,
+    session.user.id,
+    `Sesión de seguimiento de la atención psicosocial (${interventionType}).`,
+    followupObservations
+  );
 
   logAudit({ userId: session.user.id, action: "CREAR", entityType: "CaseCareFollowup", entityId: id, details: caseId, institutionId });
   revalidatePath(`/casos/${caseId}`);
@@ -1127,9 +1205,17 @@ export async function createAdvisoryLog(caseId: string, formData: FormData) {
     advice_given: advice,
   });
 
+  const difficultyExcerpt = difficulty.slice(0, 80).trim();
+  const adviceExcerpt = advice.slice(0, 80).trim();
   db.prepare(
-    `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Asesoría a docente tutor', ?)`
-  ).run(randomUUID(), caseId, session.user.id, `Asesoría registrada a ${tutorName}.`);
+    `INSERT INTO case_actions (id, case_file_id, author_id, type, description, observations) VALUES (?, ?, ?, 'Asesoría a docente tutor', ?, ?)`
+  ).run(
+    randomUUID(),
+    caseId,
+    session.user.id,
+    `Asesoría registrada a ${tutorName}.`,
+    `Dificultad: ${difficultyExcerpt}${difficulty.length > 80 ? "..." : ""} Asesoría: ${adviceExcerpt}${advice.length > 80 ? "..." : ""}`
+  );
 
   logAudit({ userId: session.user.id, action: "CREAR", entityType: "CaseAdvisoryLog", entityId: id, details: caseId, institutionId });
   revalidatePath(`/casos/${caseId}`);
@@ -1218,9 +1304,18 @@ export async function createViolenceReport(
       created_by: session.user.id,
     });
 
+    const violenceSummaryExcerpt = (str(formData, "summary") || "").slice(0, 140).trim();
     db.prepare(
-      `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Reporte de hecho de violencia', ?)`
-    ).run(randomUUID(), caseId, session.user.id, `Informe de reporte del hecho de violencia registrado.`);
+      `INSERT INTO case_actions (id, case_file_id, author_id, type, description, observations) VALUES (?, ?, ?, 'Reporte de hecho de violencia', ?, ?)`
+    ).run(
+      randomUUID(),
+      caseId,
+      session.user.id,
+      `Informe de reporte del hecho de violencia registrado (N° ${reportNumber}).`,
+      violenceSummaryExcerpt
+        ? `${violenceSummaryExcerpt}${(str(formData, "summary") || "").length > 140 ? "..." : ""}`
+        : null
+    );
     autoMarkChecklistItems(caseId, ["reporte", "hecho de violencia"], "Ficha de reporte del hecho de violencia");
 
     logAudit({ userId: session.user.id, action: "CREAR", entityType: "ViolenceReport", entityId: id, details: caseId, institutionId });
@@ -1294,9 +1389,16 @@ export async function createSocializationAct(
       created_by: session.user.id,
     });
 
+    const socializationStrategyExcerpt = (str(formData, "psychosocial_strategies") || agreements[0] || "").slice(0, 140).trim();
     db.prepare(
-      `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Acta de socialización', ?)`
-    ).run(randomUUID(), caseId, session.user.id, `Acta de socialización de vulnerabilidad registrada.`);
+      `INSERT INTO case_actions (id, case_file_id, author_id, type, description, observations) VALUES (?, ?, ?, 'Acta de socialización', ?, ?)`
+    ).run(
+      randomUUID(),
+      caseId,
+      session.user.id,
+      `Acta de socialización de vulnerabilidad registrada (${vulnerabilityType}).`,
+      socializationStrategyExcerpt || null
+    );
     autoMarkChecklistItems(caseId, ["socializacion"], "Acta de socialización a docentes");
 
     logAudit({ userId: session.user.id, action: "CREAR", entityType: "SocializationAct", entityId: id, details: caseId, institutionId });
@@ -1369,9 +1471,18 @@ export async function createAuthorityAdvisoryAct(
       created_by: session.user.id,
     });
 
+    const authorityConclusionExcerpt = (str(formData, "conclusion") || "").slice(0, 140).trim();
     db.prepare(
-      `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Asesoramiento a máxima autoridad', ?)`
-    ).run(randomUUID(), caseId, session.user.id, `Acta de asesoramiento a la máxima autoridad registrada.`);
+      `INSERT INTO case_actions (id, case_file_id, author_id, type, description, observations) VALUES (?, ?, ?, 'Asesoramiento a máxima autoridad', ?, ?)`
+    ).run(
+      randomUUID(),
+      caseId,
+      session.user.id,
+      `Acta de asesoramiento a la máxima autoridad registrada.`,
+      authorityConclusionExcerpt
+        ? `${authorityConclusionExcerpt}${(str(formData, "conclusion") || "").length > 140 ? "..." : ""}`
+        : null
+    );
 
     logAudit({ userId: session.user.id, action: "CREAR", entityType: "AuthorityAdvisoryAct", entityId: id, details: caseId, institutionId });
     revalidatePath(`/casos/${caseId}`);
@@ -1483,9 +1594,18 @@ export async function createSituationalReport(
       created_by: session.user.id,
     });
 
+    const situationalConclusionExcerpt = (str(formData, "conclusions") || "").slice(0, 140).trim();
     db.prepare(
-      `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Informe situacional', ?)`
-    ).run(randomUUID(), caseId, session.user.id, `Informe técnico situacional registrado.`);
+      `INSERT INTO case_actions (id, case_file_id, author_id, type, description, observations) VALUES (?, ?, ?, 'Informe situacional', ?, ?)`
+    ).run(
+      randomUUID(),
+      caseId,
+      session.user.id,
+      `Informe técnico situacional registrado (N° ${reportNumber}).`,
+      situationalConclusionExcerpt
+        ? `${situationalConclusionExcerpt}${(str(formData, "conclusions") || "").length > 140 ? "..." : ""}`
+        : null
+    );
 
     logAudit({ userId: session.user.id, action: "CREAR", entityType: "SituationalReport", entityId: id, details: caseId, institutionId });
     revalidatePath(`/casos/${caseId}`);
@@ -2052,7 +2172,10 @@ export async function createCorresponsibilityAct(
 
     // Registrar en la Bitácora de acciones del caso
     const catalogInfo = CONFLICT_TYPES_CATALOG[conflictType] || CONFLICT_TYPES_CATALOG.OTRO;
-    const diffExcerpt = (detectedDifficulty || "").slice(0, 160).trim();
+    const agreementsExcerpt = (agreementsAndCommitments || "").slice(0, 140).trim();
+    const corresponsibilityActionSummary =
+      `Motivo: ${catalogInfo?.label || conflictType}. Acuerdos: ${agreementsExcerpt}${agreementsAndCommitments.length > 140 ? "..." : ""}` +
+      (observations ? ` ${observations}` : "");
     db.prepare(
       `INSERT INTO case_actions (id, case_file_id, author_id, date, type, description, intervention_type, observations)
        VALUES (?, ?, ?, ?, 'Acta de compromiso y corresponsabilidad', ?, 'Acuerdo de corresponsabilidad', ?)`
@@ -2061,8 +2184,8 @@ export async function createCorresponsibilityAct(
       caseId,
       session.user.id,
       actDate,
-      `Acta de compromiso y corresponsabilidad suscrita con ${representativeName} (${representativeRelationship || "Representante legal"}). Motivo: ${catalogInfo?.label || conflictType}. Dificultad: ${diffExcerpt}${diffExcerpt.length >= 160 ? "..." : ""}`,
-      observations || null
+      `Acta de compromiso suscrita con ${representativeName} (${representativeRelationship || "Representante legal"}).`,
+      corresponsibilityActionSummary
     );
 
     logAudit({
