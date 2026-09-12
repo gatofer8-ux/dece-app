@@ -66,6 +66,10 @@ export default async function AlertaIdentificacionDetailPage({ params }: { param
       <div className="card overflow-hidden">
         <div className="p-4 border-b bg-slate-50">
           <h3 className="text-sm font-semibold text-slate-800">Estudiantes en alerta</h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Descarga la ficha de notificación formal de cada estudiante para entregarla al DECE dentro de las 48
+            horas laborables, o para llevarla en físico.
+          </p>
         </div>
         {entries.length === 0 ? (
           <div className="p-6 text-sm text-slate-500">Todavía no llega ningún registro. Comparte el enlace o el código con los docentes.</div>
@@ -79,6 +83,7 @@ export default async function AlertaIdentificacionDetailPage({ params }: { param
                   <th>Descripción</th>
                   <th>Docente que alerta</th>
                   <th>Fecha</th>
+                  <th>Ficha de notificación</th>
                   {canManage && <th className="text-right">Acciones</th>}
                 </tr>
               </thead>
@@ -90,6 +95,14 @@ export default async function AlertaIdentificacionDetailPage({ params }: { param
                     <td className="text-xs text-slate-600 max-w-xs truncate" title={e.description || ""}>{e.description || "—"}</td>
                     <td className="text-xs text-slate-600">{e.teacher_name}</td>
                     <td className="text-xs text-slate-500 whitespace-nowrap">{formatDate(e.created_at)}</td>
+                    <td>
+                      <a
+                        href={`/api/alertas-identificacion/entries/${e.id}/export-notificacion`}
+                        className="text-xs text-brand-700 hover:underline font-semibold whitespace-nowrap"
+                      >
+                        📥 Descargar
+                      </a>
+                    </td>
                     {canManage && (
                       <td className="text-right">
                         <DeleteButton
