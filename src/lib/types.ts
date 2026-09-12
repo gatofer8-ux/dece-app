@@ -1499,6 +1499,51 @@ export interface StrategicBianualPlanRow {
   updated_at: string;
 }
 
+/**
+ * Circunstancia por la que se emite un oficio institucional del DECE.
+ * Determina el párrafo de encuadre legal/contextual por defecto: solo
+ * INFORME_RIESGO_VIOLENCIA cita el Art. 63.4 de Debida Diligencia.
+ */
+export type OficioType =
+  | "INFORME_RIESGO_VIOLENCIA"
+  | "SOLICITUD_APROBACION_ACTIVIDAD"
+  | "COORDINACION_ORGANISMO_EXTERNO"
+  | "NOTIFICACION_INFORMATIVA"
+  | "OTRO";
+
+/**
+ * Oficio institucional (correspondencia oficial saliente del DECE).
+ * Módulo autónomo: `case_file_id` es OPCIONAL, porque muchos oficios no
+ * corresponden a ningún expediente (p. ej. pedir autorización para una
+ * actividad de prevención con un organismo externo).
+ */
+export interface OficioRow {
+  id: string;
+  institution_id: string;
+  case_file_id: string | null;
+  student_id: string | null;
+  oficio_number: string;
+  oficio_type: OficioType | string;
+  oficio_date: string;
+  city: string;
+  asunto: string;
+  addressee_name: string;
+  addressee_role: string;
+  addressee_institution: string | null;
+  body_intro: string | null;
+  body_content: string;
+  closing_note: string;
+  signer_name: string;
+  signer_role: string;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type CorresponsibilityConflictType =
   | "CONVIVENCIA_AGRESIVIDAD"
   | "ASISTENCIA_ABANDONO"

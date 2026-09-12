@@ -22,6 +22,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/alertas-identificacion", label: "Actas de Identificación de Alertas", icon: "🚨", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
   { href: "/citas", label: "Citas y agenda", icon: "📅", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
   { href: "/esquelas", label: "Esquelas de citación", icon: "📨", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
+  { href: "/oficios", label: "Oficios institucionales", icon: "✉️", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
   { href: "/derivaciones", label: "Derivaciones", icon: "🔀", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
   { href: "/atencion-diaria", label: "Atención diaria", icon: "📋", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
   { href: "/offline", label: "Centro Offline", icon: "📡", roles: ["SUPERADMIN", "ADMIN", "DECE", "DOCENTE"], group: "Principal" },
