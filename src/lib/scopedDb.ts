@@ -55,6 +55,7 @@ export const INSTITUTION_SCOPED_TABLES = new Set<string>([
   "school_years",
   "situational_reports",
   "socialization_acts",
+  "strategic_plans_bianual",
   "student_enrollments",
   "students",
   "teacher_alerts",

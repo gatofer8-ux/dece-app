@@ -4,6 +4,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { listSchoolYears } from "@/lib/schoolYear";
 import { parseActionPlanItems, parseActionPlanAnalysts, parseActionPlanSignatories } from "@/lib/actionPlan";
 import { getSignatureDefaults } from "@/lib/caseDocumentDefaults";
+import { getLinkedBianualPlanRef } from "@/lib/strategicPlanBianualDb";
 import type { ActionPlanRow } from "@/lib/types";
 import ActionPlanForm from "../../ActionPlanForm";
 
@@ -60,6 +61,9 @@ export default async function EditarPlanAccionPage({ params }: { params: { id: s
   const analysts = parseActionPlanAnalysts(plan.analysts_data);
   const elaborated = parseActionPlanSignatories(plan.elaborated_by);
 
+  // El POA se desprende del Plan Estratégico Bianual vigente, si existe.
+  const linkedBianualPlan = getLinkedBianualPlanRef(institution.id);
+
   const parseSignatorySafe = (val: any, fallback?: any) => {
     if (!val) return fallback;
     if (typeof val === "object") return val;
@@ -90,6 +94,7 @@ export default async function EditarPlanAccionPage({ params }: { params: { id: s
         defaultReviewedBy={parseSignatorySafe(plan.reviewed_by, sig.deceCoordinator.fullName ? { name: sig.deceCoordinator.fullName, role: "Coordinador(a) DECE" } : undefined)}
         defaultApprovedBy={parseSignatorySafe(plan.approved_by, sig.authority.fullName ? { name: sig.authority.fullName, role: sig.authority.role } : undefined)}
         deceStaffNames={deceStaffNames}
+        linkedBianualPlan={linkedBianualPlan}
         isEditing={true}
       />
     </div>

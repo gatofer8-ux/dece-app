@@ -1417,6 +1417,49 @@ export interface ActionPlanRow {
   updated_at: string;
 }
 
+/**
+ * Plan Estratégico Bianual del DECE.
+ *
+ * Documento de planificación a dos años del que se desprende cada Plan de
+ * Acción Anual (POA). Su matriz se agrupa por los mismos 4 ejes de acción del
+ * DECE que usa el POA, pero con columnas propias del formato bianual:
+ * Metas / Acciones / Responsables / Indicador de evaluación / Plazos.
+ */
+export interface StrategicBianualAxisItem {
+  id: string;
+  axis: string;
+  goal: string;
+  actions: string;
+  responsible: string;
+  evaluation_indicator: string;
+  execution_term: string;
+}
+
+export interface StrategicBianualPlanRow {
+  id: string;
+  institution_id: string;
+  period_start_year: string;
+  period_end_year: string;
+  period_text: string;
+  district_code: string;
+  district_name: string;
+  coordinator_name: string;
+  analysts_data: string; // JSON de ActionPlanAnalyst[]
+  students_count: number;
+  professionals_count: number;
+  available_resources: string;
+  socioeconomic_condition: string;
+  general_objective: string;
+  specific_objectives: string; // JSON de string[]
+  axis_items_data: string; // JSON de StrategicBianualAxisItem[]
+  elaborated_by: string; // JSON de ActionPlanSignatory[]
+  reviewed_by: string; // JSON de ActionPlanSignatory
+  approved_by: string; // JSON de ActionPlanSignatory
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type CorresponsibilityConflictType =
   | "CONVIVENCIA_AGRESIVIDAD"
   | "ASISTENCIA_ABANDONO"
