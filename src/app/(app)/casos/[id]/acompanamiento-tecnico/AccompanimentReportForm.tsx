@@ -26,6 +26,7 @@ import {
   type ACCOMPANIMENT_AI_LABELS,
 } from "@/lib/accompanimentReport";
 import type { CaseAccompanimentReportRow } from "@/lib/types";
+import DualSignatureModal, { type DualSignatureData } from "@/components/DualSignatureModal";
 
 type AiKey = keyof typeof ACCOMPANIMENT_AI_LABELS;
 
@@ -103,6 +104,48 @@ export default function AccompanimentReportForm({
   const psy = initialData ? parsePsychosocialReferral(initialData.psychosocial_referral_json) : { entries: [] };
   const psyName = (opt: string) => psy.entries.find((e) => e.option === opt)?.name || "";
 
+  // Estados de firmas duales y respaldo físico
+  const initialSignatures: DualSignatureData[] = (() => {
+    try {
+      return initialData?.signatures_json ? JSON.parse(initialData.signatures_json) : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  const [professionalSigning, setProfessionalSigning] = useState(v("professional_signing"));
+  const [deceSig, setDeceSig] = useState<DualSignatureData | null>(
+    initialSignatures.find((s) => s.signer_id === "dece" || s.role?.toLowerCase().includes("dece") || s.tipo) || null
+  );
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [physicalFileRef, setPhysicalFileRef] = useState(initialData?.physical_file_ref || "");
+  const [physicalEvidenceUrl, setPhysicalEvidenceUrl] = useState(initialData?.physical_evidence_url || "");
+  const [physicalEvidenceName, setPhysicalEvidenceName] = useState("");
+
+  const handleEvidenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhysicalEvidenceName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setPhysicalEvidenceUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const currentSignatures: DualSignatureData[] = deceSig
+    ? [{ ...deceSig, signer_id: "dece", role: "PROFESIONAL DECE", signer_name: professionalSigning || "Profesional DECE" }]
+    : [];
+
+  const overallSignatureType =
+    currentSignatures.length === 0
+      ? "PENDIENTE"
+      : deceSig?.tipo === "digital"
+      ? "DIGITAL"
+      : "FISICA";
+
   const action = mode === "edit" ? updateAccompanimentReport.bind(null, reportId!, caseId) : createAccompanimentReport.bind(null, caseId);
 
   const IN = (name: string, label: string, type = "text", w = "") => (
@@ -126,6 +169,10 @@ export default function AccompanimentReportForm({
 
   return (
     <form action={action} className="card p-6 space-y-7 max-w-4xl">
+      <input type="hidden" name="signatures_json" value={JSON.stringify(currentSignatures)} />
+      <input type="hidden" name="signature_type" value={overallSignatureType} />
+      <input type="hidden" name="physical_file_ref" value={physicalFileRef} />
+      <input type="hidden" name="physical_evidence_url" value={physicalEvidenceUrl} />
       {mode !== "edit" && (
         <p className="text-xs text-slate-500">El «Informe N°» se asigna automáticamente al guardar (numeración oficial MinEduc).</p>
       )}
@@ -247,12 +294,129 @@ export default function AccompanimentReportForm({
         </div>
       </section>
 
-      <section>
-        <h3 className="text-xs font-semibold text-slate-500 uppercase mb-2">Firma</h3>
+      <section className="space-y-4">
+        <h3 className="text-xs font-semibold text-slate-500 uppercase mb-2">Firma y Responsabilidad Institucional</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {IN("professional_signing", "Profesional DECE que elabora el informe")}
+          <div>
+            <label className="label text-xs">Profesional DECE que elabora el informe</label>
+            <input
+              name="professional_signing"
+              value={professionalSigning}
+              onChange={(e) => setProfessionalSigning(e.target.value)}
+              placeholder="Nombre del profesional DECE"
+              className="input !py-1 text-sm font-medium"
+            />
+          </div>
           {IN("signing_date", "Fecha de elaboración (firma)", "date")}
         </div>
+
+        {/* Panel de Firma Dual */}
+        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 text-center space-y-2">
+          <div className="text-slate-500 text-xs font-semibold">Estado de Firma del Profesional</div>
+          <div className="min-h-[45px] flex items-center justify-center">
+            {deceSig?.tipo === "digital" && deceSig?.firma_data_url ? (
+              <div className="flex flex-col items-center">
+                <img src={deceSig.firma_data_url} alt="Firma Profesional" className="h-10 max-w-[150px] object-contain" />
+                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded mt-1">✓ Firma Digital Registrada</span>
+              </div>
+            ) : deceSig?.tipo === "fisica" ? (
+              <div className="text-center py-1">
+                <div className="w-48 border-b border-slate-700 mx-auto mb-1"></div>
+                <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded">📄 Modalidad Física (Firma Manuscrita en Papel)</span>
+              </div>
+            ) : (
+              <span className="text-xs text-slate-400 italic">Sin firma registrada aún</span>
+            )}
+          </div>
+          <div className="pt-2 flex justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(true)}
+              className="btn-secondary text-xs px-3 py-1 flex items-center gap-1.5"
+            >
+              <span>✍️</span>
+              <span>{deceSig ? "Cambiar Firma / Modalidad" : "Registrar Firma (Digital o Física)"}</span>
+            </button>
+            {deceSig && (
+              <button
+                type="button"
+                onClick={() => setDeceSig(null)}
+                className="text-xs text-rose-600 hover:underline px-2 py-1"
+              >
+                Quitar Firma
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Respaldo Físico DECE e Informe en Papel */}
+        <div className="p-4 bg-amber-50/60 rounded-xl border border-amber-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+              <span>📁</span> Respaldo Físico DECE e Informe de Acompañamiento en Papel (Auditoría Ministerial)
+            </span>
+            <span className="text-[11px] text-amber-700 bg-amber-100/70 border border-amber-300 px-2 py-0.5 rounded-full font-medium">
+              Custodia Institucional
+            </span>
+          </div>
+          <p className="text-xs text-amber-800/90 leading-relaxed">
+            Para garantizar la constancia legal y auditoría física, registra la ubicación física en carpeta/archivador y opcionalmente adjunta copia escaneada o foto (PDF o Imagen) del informe con firmas manuscritas y sellos institucionales.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div>
+              <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+                Ubicación en Archivo Físico Institucional
+              </label>
+              <input
+                type="text"
+                value={physicalFileRef}
+                onChange={(e) => setPhysicalFileRef(e.target.value)}
+                placeholder="Ej. Archivador Casos Violencia 2026 / Informes Acompañamiento"
+                className="w-full text-xs rounded-lg border border-amber-300 bg-white px-3 py-2 text-slate-800 placeholder-slate-400 focus:ring-1 focus:ring-amber-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+                Adjuntar Informe Sellado / Firmado (PDF o Imagen)
+              </label>
+              {physicalEvidenceUrl ? (
+                <div className="flex items-center justify-between p-2 bg-white rounded-lg border border-amber-300">
+                  <span className="text-xs text-emerald-800 font-medium flex items-center gap-1.5 truncate max-w-[200px]">
+                    <span>📎</span> {physicalEvidenceName || "Informe_Acompanamiento_Sellado"}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <a href={physicalEvidenceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">Ver</a>
+                    <button type="button" onClick={() => { setPhysicalEvidenceUrl(""); setPhysicalEvidenceName(""); }} className="text-xs text-rose-600 hover:underline font-medium">Quitar</button>
+                  </div>
+                </div>
+              ) : (
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleEvidenceUpload}
+                  className="w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 cursor-pointer"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Modal DualSignatureModal */}
+        {isModalOpen && (
+          <DualSignatureModal
+            isOpen={true}
+            onClose={() => setIsModalOpen(false)}
+            signatoryName={professionalSigning || "Profesional DECE"}
+            signatoryRole="PROFESIONAL DECE"
+            initialData={deceSig}
+            onSave={(data) => {
+              setDeceSig(data);
+              setIsModalOpen(false);
+            }}
+          />
+        )}
       </section>
 
       <div className="flex justify-end">

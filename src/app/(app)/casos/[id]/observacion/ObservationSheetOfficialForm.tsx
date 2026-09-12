@@ -9,6 +9,7 @@ import { generateObservationCommentAi, generateObservationGlobalAnalysisAi } fro
 import type { OfficialObservationData, OfficialObservationQuestionItem } from "@/lib/types";
 import { OFFICIAL_OBSERVATION_QUESTIONS } from "@/lib/observationSheet";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
+import DualSignatureModal, { type DualSignatureData } from "@/components/DualSignatureModal";
 
 const initialState: ActionState = { error: null };
 
@@ -43,6 +44,10 @@ export default function ObservationSheetOfficialForm({
   defaultData,
   sheetId,
   isEditing = false,
+  initialSignaturesJson,
+  initialSignatureType,
+  initialPhysicalFileRef,
+  initialPhysicalEvidenceUrl,
 }: {
   caseId: string;
   caseCode: string;
@@ -51,6 +56,10 @@ export default function ObservationSheetOfficialForm({
   defaultData: OfficialObservationData;
   sheetId?: string;
   isEditing?: boolean;
+  initialSignaturesJson?: string | null;
+  initialSignatureType?: string | null;
+  initialPhysicalFileRef?: string | null;
+  initialPhysicalEvidenceUrl?: string | null;
 }) {
   const actionToUse = isEditing
     ? updateObservationSheet.bind(null, sheetId!, caseId)
@@ -67,6 +76,47 @@ export default function ObservationSheetOfficialForm({
   const [isExterna, setIsExterna] = useState(defaultData.is_externa || false);
 
   // 17 Preguntas conductuales
+  // Estados de firmas duales y respaldo físico
+  const initialSignatures: DualSignatureData[] = (() => {
+    try {
+      return initialSignaturesJson ? JSON.parse(initialSignaturesJson) : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  const [deceSig, setDeceSig] = useState<DualSignatureData | null>(
+    initialSignatures.find((s) => s.signer_id === "dece" || s.role?.toLowerCase().includes("dece") || s.tipo) || null
+  );
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [physicalFileRef, setPhysicalFileRef] = useState(initialPhysicalFileRef || "");
+  const [physicalEvidenceUrl, setPhysicalEvidenceUrl] = useState(initialPhysicalEvidenceUrl || "");
+  const [physicalEvidenceName, setPhysicalEvidenceName] = useState("");
+
+  const handleEvidenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhysicalEvidenceName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setPhysicalEvidenceUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const currentSignatures: DualSignatureData[] = deceSig
+    ? [{ ...deceSig, signer_id: "dece", role: "PROFESIONAL DECE", signer_name: defaultData.professional_name || "Profesional DECE" }]
+    : [];
+
+  const overallSignatureType =
+    currentSignatures.length === 0
+      ? "PENDIENTE"
+      : deceSig?.tipo === "digital"
+      ? "DIGITAL"
+      : "FISICA";
+
   const [questions, setQuestions] = useState<OfficialObservationQuestionItem[]>(() => {
     return OFFICIAL_OBSERVATION_QUESTIONS.map((q) => {
       const found = defaultData.questions?.find((it) => it.id === q.id);
@@ -300,6 +350,10 @@ export default function ObservationSheetOfficialForm({
         value={JSON.stringify(fullObservationData)}
       />
       <input type="hidden" name="observation_date" value={applicationDate} />
+      <input type="hidden" name="signatures_json" value={JSON.stringify(currentSignatures)} />
+      <input type="hidden" name="signature_type" value={overallSignatureType} />
+      <input type="hidden" name="physical_file_ref" value={physicalFileRef} />
+      <input type="hidden" name="physical_evidence_url" value={physicalEvidenceUrl} />
 
       {/* Alerta de Error de envío */}
       {state.error && (
@@ -965,14 +1019,116 @@ export default function ObservationSheetOfficialForm({
             </div>
           </div>
 
-          <div className="p-4 bg-white border border-dashed border-slate-300 rounded-lg text-center space-y-2">
-            <div className="text-slate-400 text-[11px]">Espacio para Firma de Responsabilidad</div>
-            <div className="w-64 border-b border-slate-800 mx-auto pt-8"></div>
+          <div className="p-4 bg-white border border-dashed border-slate-300 rounded-lg text-center space-y-3">
+            <div className="text-slate-400 text-[11px]">Firma de Responsabilidad Institucional</div>
+            <div className="min-h-[50px] flex items-center justify-center">
+              {deceSig?.tipo === "digital" && deceSig?.firma_data_url ? (
+                <div className="flex flex-col items-center">
+                  <img src={deceSig.firma_data_url} alt="Firma Profesional" className="h-12 max-w-[170px] object-contain" />
+                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded mt-1">✓ Firma Digital Registrada</span>
+                </div>
+              ) : deceSig?.tipo === "fisica" ? (
+                <div className="text-center py-1">
+                  <div className="w-48 border-b border-slate-700 mx-auto mb-1"></div>
+                  <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded">📄 Modalidad Física (Firma Manuscrita en Archivo)</span>
+                </div>
+              ) : (
+                <div className="w-64 border-b border-slate-400 mx-auto pt-6"></div>
+              )}
+            </div>
             <div className="font-bold text-slate-800 text-xs">
               {professionalName || "Profesional DECE"}
             </div>
             <div className="text-slate-500 text-[11px]">DECE Institucional</div>
+            <div className="pt-2 flex justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(true)}
+                className="btn-secondary text-xs px-3 py-1 flex items-center gap-1.5"
+              >
+                <span>✍️</span>
+                <span>{deceSig ? "Cambiar Firma / Modalidad" : "Registrar Firma (Digital o Física)"}</span>
+              </button>
+              {deceSig && (
+                <button
+                  type="button"
+                  onClick={() => setDeceSig(null)}
+                  className="text-xs text-rose-600 hover:underline px-2 py-1"
+                >
+                  Quitar Firma
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Respaldo Físico DECE y Ficha de Observación en Papel */}
+          <div className="p-4 bg-amber-50/60 rounded-xl border border-amber-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                <span>📁</span> Respaldo Físico DECE y Ficha de Observación en Papel (Auditoría Ministerial)
+              </span>
+              <span className="text-[11px] text-amber-700 bg-amber-100/70 border border-amber-300 px-2 py-0.5 rounded-full font-medium">
+                Custodia Institucional
+              </span>
+            </div>
+            <p className="text-xs text-amber-800/90 leading-relaxed">
+              Para garantizar la constancia legal y auditoría física, registra la ubicación física en carpeta/archivador y opcionalmente adjunta copia escaneada o foto (PDF o Imagen) de la ficha de observación con firmas manuscritas y sellos institucionales.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+                  Ubicación en Archivo Físico Institucional
+                </label>
+                <input
+                  type="text"
+                  value={physicalFileRef}
+                  onChange={(e) => setPhysicalFileRef(e.target.value)}
+                  placeholder="Ej. Archivador Observaciones Áulicas 2026 / Carpeta Caso"
+                  className="w-full text-xs rounded-lg border border-amber-300 bg-white px-3 py-2 text-slate-800 placeholder-slate-400 focus:ring-1 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+                  Adjuntar Ficha Sellada / Firmada (PDF o Imagen)
+                </label>
+                {physicalEvidenceUrl ? (
+                  <div className="flex items-center justify-between p-2 bg-white rounded-lg border border-amber-300">
+                    <span className="text-xs text-emerald-800 font-medium flex items-center gap-1.5 truncate max-w-[200px]">
+                      <span>📎</span> {physicalEvidenceName || "Ficha_Observacion_Sellada"}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <a href={physicalEvidenceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">Ver</a>
+                      <button type="button" onClick={() => { setPhysicalEvidenceUrl(""); setPhysicalEvidenceName(""); }} className="text-xs text-rose-600 hover:underline font-medium">Quitar</button>
+                    </div>
+                  </div>
+                ) : (
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={handleEvidenceUpload}
+                    className="w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 cursor-pointer"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Modal Universal DualSignatureModal */}
+          {isModalOpen && (
+            <DualSignatureModal
+              isOpen={true}
+              onClose={() => setIsModalOpen(false)}
+              signatoryName={professionalName || "Profesional DECE"}
+              signatoryRole="PROFESIONAL DECE INSTITUCIONAL"
+              initialData={deceSig}
+              onSave={(data) => {
+                setDeceSig(data);
+                setIsModalOpen(false);
+              }}
+            />
+          )}
 
           <div className="text-[11px] text-slate-500 italic text-center pt-1 border-t border-slate-200">
             *La información registrada en este documento es confidencial y de uso exclusivo del Departamento de Consejería Estudiantil.

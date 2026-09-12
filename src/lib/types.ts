@@ -405,6 +405,10 @@ export interface CaseObservationSheetRow {
   institutional_actions: string;
   observations: string | null;
   observation_data?: string; // JSON OfficialObservationData
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_at: string;
 }
 
@@ -548,6 +552,10 @@ export interface ViolenceReportRow {
   analyst_name: string | null;
   analyst_role?: string | null;
   rectora_name: string | null;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -662,6 +670,10 @@ export interface SituationalReportRow {
   preparer_role: string | null;
   approver_name: string | null;
   approver_role: string | null;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -1082,6 +1094,10 @@ export interface CaseAccompanimentReportRow {
   ext_referral_json: string;
   psychosocial_referral_json: string;
   restitution_plan_id: string | null;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -1254,6 +1270,10 @@ export interface BimonthlyReportRow {
   reviewed_by_role: string;
   approved_by_name: string | null;
   approved_by_role: string;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -1344,6 +1364,10 @@ export interface CaseClosureReportRow {
   approved_by_role: string;
   approved_date: string;
   annexes_notes: string | null;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

@@ -46,6 +46,10 @@ export default async function EditarFichaObservacionPage({
         defaultData={parsedData}
         sheetId={sheet.id}
         isEditing={true}
+        initialSignaturesJson={sheet.signatures_json}
+        initialSignatureType={sheet.signature_type}
+        initialPhysicalFileRef={sheet.physical_file_ref}
+        initialPhysicalEvidenceUrl={sheet.physical_evidence_url}
       />
     </div>
   );

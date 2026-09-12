@@ -47,6 +47,15 @@ export default async function ImprimirInformeAcompanamientoPage({
   const psy = parsePsychosocialReferral(r.psychosocial_referral_json);
   const psyName = (o: string) => psy.entries.find((e) => e.option === o)?.name;
 
+  // Firmas duales y respaldo físico
+  let acompSignatures: any[] = [];
+  try {
+    if (r.signatures_json) {
+      acompSignatures = JSON.parse(r.signatures_json);
+    }
+  } catch {}
+  const deceSig = acompSignatures.find((s: any) => s.signer_id === "dece" || s.role?.toLowerCase().includes("dece") || s.tipo);
+
   const cell = "border border-black px-2 py-1 text-[10pt] align-top bg-[#F2F2F2]";
   const lbl = `${cell} font-semibold`;
   const bar = "border border-black bg-[#BFBFBF] font-bold px-2 py-1 text-[10pt]";
@@ -152,9 +161,64 @@ export default async function ImprimirInformeAcompanamientoPage({
         </tbody></table>
 
         <p className="text-[10pt] mt-4">Fecha de elaboración del Informe técnico de acompañamiento a víctimas de violencia ({fmt(r.signing_date || r.report_date)}):</p>
-        <p className="text-[10pt] mt-1">Nombre del profesional o la profesional DECE que elaboró el Informe técnico de acompañamiento a víctimas de violencia: {r.professional_signing || ""}</p>
-        <p className="text-[10pt] mt-8">_______________________________</p>
-        <p className="text-[10pt]">FIRMA</p>
+        <p className="text-[10pt] mt-1 mb-4">Nombre del profesional o la profesional DECE que elaboró el Informe técnico de acompañamiento a víctimas de violencia: <span className="font-semibold">{r.professional_signing || ""}</span></p>
+
+        <div className="my-4">
+          {deceSig?.tipo === "digital" && deceSig?.firma_data_url ? (
+            <div className="flex flex-col items-start">
+              <img src={deceSig.firma_data_url} alt="Firma Profesional" className="h-12 max-w-[180px] object-contain border border-slate-200 rounded px-2 bg-white" />
+              <span className="text-[8pt] text-slate-500 font-mono mt-0.5">Firma Digital Verificada</span>
+            </div>
+          ) : deceSig?.tipo === "fisica" ? (
+            <div>
+              <div className="w-56 border-b border-black mb-1"></div>
+              <span className="text-[8.5pt] text-amber-900 font-semibold">[ FIRMA FÍSICA EN CUSTODIA INSTITUCIONAL ]</span>
+            </div>
+          ) : (
+            <div>
+              <p className="text-[10pt]">_______________________________</p>
+              <p className="text-[10pt]">FIRMA</p>
+            </div>
+          )}
+        </div>
+
+        {/* Banner de Custodia de Respaldo Físico */}
+        {r.physical_file_ref && (
+          <div className="my-4 p-2 bg-amber-50 border border-amber-300 rounded text-[9.5pt] text-amber-900 flex items-center justify-between">
+            <div>
+              <span className="font-bold">📁 UBICACIÓN DE RESPALDO FÍSICO EN ARCHIVO INSTITUCIONAL: </span>
+              <span>{r.physical_file_ref}</span>
+            </div>
+            <span className="text-[8pt] bg-amber-200/70 border border-amber-400 px-2 py-0.5 rounded font-bold uppercase">
+              Custodia DECE
+            </span>
+          </div>
+        )}
+
+        {/* Anexo de Auditoría Distrital: Respaldo Físico Escaneado */}
+        {r.physical_evidence_url && (
+          <div className="mt-6 pt-4 border-t border-dashed border-slate-300 page-break-inside-avoid">
+            <div className="text-center font-bold text-[10pt] text-slate-800 uppercase tracking-wide bg-slate-100 py-1.5 border border-slate-300 rounded mb-2">
+              ANEXO DE AUDITORÍA DISTRITAL: RESPALDO FÍSICO DIGITALIZADO
+            </div>
+            <div className="text-[9pt] text-slate-600 mb-2 italic text-center">
+              Copia digitalizada del informe físico de acompañamiento con firma manuscrita y sellos institucionales archivados bajo custodia confidencial DECE.
+            </div>
+            <div className="flex justify-center border border-slate-200 p-2 bg-slate-50 rounded">
+              {r.physical_evidence_url.startsWith("data:application/pdf") ? (
+                <div className="text-center p-3 text-[10pt] text-blue-700 font-semibold">
+                  <span>📄 Documento PDF de Respaldo Físico Digitalizado Adjunto</span>
+                </div>
+              ) : (
+                <img
+                  src={r.physical_evidence_url}
+                  alt="Respaldo Físico Digitalizado"
+                  className="max-h-[350px] w-auto object-contain border border-slate-300 rounded shadow-xs"
+                />
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
