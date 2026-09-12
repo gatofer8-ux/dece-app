@@ -409,6 +409,8 @@ export function updateTalonStatus(
     receivedDate?: string | null;
     talonAttended?: number; // 0=pendiente, 1=asistió, 2=justificó, 3=no asistió injustificado
     talonNotes?: string | null;
+    physicalFileRef?: string | null;
+    physicalEvidenceUrl?: string | null;
   },
   dbInstance?: Database.Database
 ): DeceEsquelaRow {
@@ -427,6 +429,8 @@ export function updateTalonStatus(
            received_date = ?,
            talon_attended = ?,
            talon_notes = ?,
+           physical_file_ref = COALESCE(?, physical_file_ref),
+           physical_evidence_url = COALESCE(?, physical_evidence_url),
            updated_at = datetime('now')
          WHERE id = ? AND institution_id = ?`
       )
@@ -438,6 +442,8 @@ export function updateTalonStatus(
         data.receivedDate || null,
         data.talonAttended ?? 0,
         data.talonNotes?.trim() || null,
+        data.physicalFileRef?.trim() || null,
+        data.physicalEvidenceUrl || null,
         id,
         institutionId
       );

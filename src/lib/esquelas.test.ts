@@ -82,6 +82,8 @@ describe("Sistema de Esquelas de Citación", () => {
         received_date TEXT,
         talon_attended INTEGER DEFAULT 0,
         talon_notes TEXT,
+        physical_file_ref TEXT,
+        physical_evidence_url TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
       );

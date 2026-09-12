@@ -29,14 +29,19 @@ function insertReferral(
   const id = randomUUID();
 
   const currentSituation = str(formData, "current_situation_history") || str(formData, "background_summary");
+  const signaturesJson = str(formData, "signatures_json") || "[]";
+  const signatureType = str(formData, "signature_type") || "PENDIENTE";
+  const physicalFileRef = str(formData, "physical_file_ref");
+  const physicalEvidenceUrl = str(formData, "physical_evidence_url");
 
   db.prepare(
     `INSERT INTO referrals
       (id, case_file_id, created_by_id, scope, institution, reason, informed_consent, consent_signed_by, referral_date, status,
        destination_detail, background_summary, current_situation_history, actions_taken, care_type_required, observations,
        elaborated_by_name, received_by, authority_name,
-       student_age, student_disability, student_nationality, representative_document_id, district_office_label)
-     VALUES (?, ?, ?, ?, ?, ?, 0, NULL, ?, 'PENDIENTE', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       student_age, student_disability, student_nationality, representative_document_id, district_office_label,
+       signatures_json, signature_type, physical_file_ref, physical_evidence_url)
+     VALUES (?, ?, ?, ?, ?, ?, 0, NULL, ?, 'PENDIENTE', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     caseId,
@@ -60,7 +65,11 @@ function insertReferral(
     str(formData, "student_disability"),
     str(formData, "student_nationality"),
     str(formData, "representative_document_id"),
-    str(formData, "district_office_label")
+    str(formData, "district_office_label"),
+    signaturesJson,
+    signatureType,
+    physicalFileRef,
+    physicalEvidenceUrl
   );
 
   db.prepare(
@@ -114,6 +123,10 @@ export async function updateOfficialReferral(
   requireOwnedCase(caseId, institutionId);
 
   const currentSituation = str(formData, "current_situation_history") || str(formData, "background_summary");
+  const signaturesJson = str(formData, "signatures_json");
+  const signatureType = str(formData, "signature_type");
+  const physicalFileRef = str(formData, "physical_file_ref");
+  const physicalEvidenceUrl = str(formData, "physical_evidence_url");
 
   try {
     db.prepare(
@@ -136,6 +149,10 @@ export async function updateOfficialReferral(
         student_nationality = ?,
         representative_document_id = ?,
         district_office_label = ?,
+        signatures_json = COALESCE(?, signatures_json),
+        signature_type = COALESCE(?, signature_type),
+        physical_file_ref = COALESCE(?, physical_file_ref),
+        physical_evidence_url = COALESCE(?, physical_evidence_url),
         updated_at = datetime('now')
       WHERE id = ? AND case_file_id = ?`
     ).run(
@@ -157,6 +174,10 @@ export async function updateOfficialReferral(
       str(formData, "student_nationality"),
       str(formData, "representative_document_id"),
       str(formData, "district_office_label"),
+      signaturesJson,
+      signatureType,
+      physicalFileRef,
+      physicalEvidenceUrl,
       referralId,
       caseId
     );

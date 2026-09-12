@@ -16,7 +16,7 @@ export interface DualSignatureModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: DualSignatureData) => void;
-  initialData?: Partial<DualSignatureData>;
+  initialData?: Partial<DualSignatureData> | null;
   signatoryName?: string;
   signatoryRole?: string;
   title?: string;

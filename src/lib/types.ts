@@ -338,6 +338,10 @@ export interface CaseInterviewRow {
   commitment: string | null;
   representative_name: string | null;
   professional_id: string | null;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_at: string;
 }
 
@@ -444,6 +448,10 @@ export interface ReferralRow {
   student_nationality: string | null;
   representative_document_id: string | null;
   district_office_label: string | null;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -561,6 +569,10 @@ export interface SocializationActRow {
   approved_by_name: string | null;
   received_by_name: string | null;
   received_by_role: string | null;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -583,6 +595,10 @@ export interface AuthorityAdvisoryActRow {
   dece_professional_name: string | null;
   authority_name: string | null;
   authority_role: string | null;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -1915,6 +1931,8 @@ export interface DeceEsquelaRow {
   received_date: string | null;
   talon_attended: number; // 0=pendiente, 1=asistió, 2=justificó, 3=injustificado
   talon_notes: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_at: string;
   updated_at: string;
 }

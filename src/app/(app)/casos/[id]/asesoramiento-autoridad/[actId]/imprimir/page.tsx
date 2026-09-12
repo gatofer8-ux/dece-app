@@ -32,6 +32,16 @@ export default async function ImprimirActaAsesoramientoAutoridadPage({
   const measures = parseJsonArray<string>(act.measures);
   const advisoryScope = parseJsonArray<string>(act.advisory_scope);
 
+  const sigMap: Record<string, any> = (() => {
+    try {
+      return act.signatures_json ? JSON.parse(act.signatures_json) : {};
+    } catch {
+      return {};
+    }
+  })();
+  const deceSig = sigMap.dece;
+  const authoritySig = sigMap.authority;
+
   return (
     <div className="max-w-4xl mx-auto bg-white">
       {/* Barra superior de acciones no imprimible */}
@@ -62,6 +72,18 @@ export default async function ImprimirActaAsesoramientoAutoridadPage({
         />
         {act.standard_code && (
           <p className="text-center text-xs text-slate-500 mb-4">Estándar de Calidad DECE: {act.standard_code}</p>
+        )}
+
+        {act.physical_file_ref && (
+          <div className="mb-4 p-2.5 bg-amber-50/80 border border-amber-300 rounded text-xs text-amber-900 flex items-center justify-between print:border-amber-400">
+            <div>
+              <span className="font-bold">📁 Respaldo Físico Institucional:</span> Documento original custodiado en:{" "}
+              <span className="font-semibold underline">{act.physical_file_ref}</span>
+            </div>
+            <span className="text-[10px] bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded font-medium print:hidden">
+              Custodia Rectorado / DECE
+            </span>
+          </div>
         )}
 
         <section className="mb-4">
@@ -168,17 +190,35 @@ export default async function ImprimirActaAsesoramientoAutoridadPage({
         <table className="w-full text-xs border border-slate-800 border-collapse mb-6">
           <thead>
             <tr className="bg-[#2F5496] text-white">
-              <th className="border border-slate-400 px-2 py-1 text-left">Rol</th>
+              <th className="border border-slate-400 px-2 py-1 text-left w-1/4">Rol</th>
               <th className="border border-slate-400 px-2 py-1 text-left">Nombre</th>
-              <th className="border border-slate-400 px-2 py-1 text-left">Firma</th>
-              <th className="border border-slate-400 px-2 py-1 text-left">Fecha</th>
+              <th className="border border-slate-400 px-2 py-1 text-center w-1/3">Firma</th>
+              <th className="border border-slate-400 px-2 py-1 text-left w-1/6">Fecha</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td className="border border-slate-400 px-2 py-1 font-medium">Profesional DECE</td>
               <td className="border border-slate-400 px-2 py-1">{act.dece_professional_name || "—"}</td>
-              <td className="border border-slate-400 px-2 py-1">&nbsp;</td>
+              <td className="border border-slate-400 px-2 py-1 text-center align-middle">
+                {deceSig?.tipo === "digital" && deceSig.firma_data_url ? (
+                  <div className="flex flex-col items-center py-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={deceSig.firma_data_url} alt="Firma Digital" className="h-10 object-contain max-w-[130px]" />
+                    <span className="text-[8.5pt] text-emerald-700 font-medium">✓ Firma digital</span>
+                  </div>
+                ) : deceSig?.tipo === "fisica" ? (
+                  <div className="py-1 text-center">
+                    <div className="border-b border-dotted border-slate-500 w-28 mx-auto mb-0.5"></div>
+                    <span className="text-[8.5pt] text-amber-800 font-semibold block">Firma en papel</span>
+                    {deceSig.referencia_fisica && (
+                      <span className="text-[7.5pt] text-slate-500 block">📁 {deceSig.referencia_fisica}</span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="h-9">&nbsp;</div>
+                )}
+              </td>
               <td className="border border-slate-400 px-2 py-1">{formatDate(act.act_date)}</td>
             </tr>
             <tr>
@@ -188,13 +228,76 @@ export default async function ImprimirActaAsesoramientoAutoridadPage({
                 <span className="text-slate-400 font-normal">{act.authority_role || "Rector/a"}</span>
               </td>
               <td className="border border-slate-400 px-2 py-1">{act.authority_name || "—"}</td>
-              <td className="border border-slate-400 px-2 py-1">&nbsp;</td>
+              <td className="border border-slate-400 px-2 py-1 text-center align-middle">
+                {authoritySig?.tipo === "digital" && authoritySig.firma_data_url ? (
+                  <div className="flex flex-col items-center py-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={authoritySig.firma_data_url} alt="Firma Digital" className="h-10 object-contain max-w-[130px]" />
+                    <span className="text-[8.5pt] text-emerald-700 font-medium">✓ Firma digital</span>
+                  </div>
+                ) : authoritySig?.tipo === "fisica" ? (
+                  <div className="py-1 text-center">
+                    <div className="border-b border-dotted border-slate-500 w-28 mx-auto mb-0.5"></div>
+                    <span className="text-[8.5pt] text-amber-800 font-semibold block">Firma en papel</span>
+                    {authoritySig.referencia_fisica && (
+                      <span className="text-[7.5pt] text-slate-500 block">📁 {authoritySig.referencia_fisica}</span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="h-9">&nbsp;</div>
+                )}
+              </td>
               <td className="border border-slate-400 px-2 py-1">{formatDate(act.act_date)}</td>
             </tr>
           </tbody>
         </table>
 
         <DocumentFooter institution={institution} />
+
+        {/* Anexo de Auditoría Distrital: Acta Física Sellada Digitalizada */}
+        {act.physical_evidence_url && (
+          <div className="mt-8 pt-6 border-t-2 border-dashed border-slate-300 break-before-page print:pt-4">
+            <div className="bg-slate-100 p-3 rounded-t border border-slate-300 flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-bold uppercase text-slate-800 tracking-wider">
+                  ANEXO DE AUDITORÍA DISTRITAL: ACTA FÍSICA SELLADA Y DIGITALIZADA
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Documento original firmado y sellado por la máxima autoridad institucional digitalizado para auditoría.
+                </p>
+              </div>
+              {act.physical_file_ref && (
+                <span className="text-xs text-amber-800 font-semibold bg-amber-50 border border-amber-300 px-2.5 py-1 rounded">
+                  📁 {act.physical_file_ref}
+                </span>
+              )}
+            </div>
+            <div className="border border-t-0 border-slate-300 p-4 bg-white flex flex-col items-center justify-center min-h-[300px]">
+              {act.physical_evidence_url.startsWith("data:application/pdf") ? (
+                <div className="w-full text-center py-8">
+                  <p className="text-xs font-medium text-slate-700 mb-3">
+                    📄 Documento oficial en formato PDF adjunto como respaldo de auditoría distrital.
+                  </p>
+                  <a
+                    href={act.physical_evidence_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="no-print inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md transition-colors"
+                  >
+                    Ver documento PDF original escaneado ↗
+                  </a>
+                </div>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={act.physical_evidence_url}
+                  alt="Acta Física Sellada Digitalizada"
+                  className="max-h-[880px] w-auto object-contain border border-slate-200 rounded shadow-xs"
+                />
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
