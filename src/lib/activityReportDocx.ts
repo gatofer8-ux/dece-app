@@ -18,6 +18,7 @@ import {
   TableLayoutType,
 } from "docx";
 import type { ActivityReportRow, InstitutionRow } from "./types";
+import { parseDocxSignatures, createDocxSignatureParagraphs, createDocxCustodyCalloutTable, type DocxSignerInfo } from "./docxCustodyHelper";
 
 // Calca del formato oficial "INFORME DE TALLERES":
 //  - fuente Cambria
@@ -305,8 +306,17 @@ export async function generateActivityReportDocx(opts: {
   });
 
   // ---- FIRMAS ----
-  const firmaTable = (title: string, name: string | null, role: string | null, date: string | null) =>
-    new Table({
+  const dualSigs = parseDocxSignatures(report.signatures_json);
+
+  const firmaTable = (title: string, name: string | null, role: string | null, date: string | null, signerKey: string) => {
+    const matchedSig = dualSigs.find((s) => s.signer_id === signerKey || (signerKey === "elaborated" && s.signer_id === "elaborated_0"));
+    const firmaParas = createDocxSignatureParagraphs({
+      signer: matchedSig || null,
+      signatureType: matchedSig?.tipo === "digital" ? "DIGITAL" : matchedSig?.tipo === "fisica" ? "FISICA" : report.signature_type,
+      font: "Calibri",
+    });
+
+    return new Table({
       width: { size: W, type: WidthType.DXA },
       layout: TableLayoutType.FIXED,
       borders: cellBorders,
@@ -322,12 +332,18 @@ export async function generateActivityReportDocx(opts: {
         new TableRow({
           children: [
             valueCell([name || "—", role || ""]),
-            valueCell(" "),
+            new TableCell({
+              width: { size: Math.round(W * 0.3), type: WidthType.DXA },
+              margins: { top: 60, bottom: 60, left: 80, right: 80 },
+              verticalAlign: VerticalAlign.CENTER,
+              children: firmaParas,
+            }),
             valueCell(fmtDate(date), { align: AlignmentType.CENTER }),
           ],
         }),
       ],
     });
+  };
 
   const children: (Paragraph | Table)[] = [
     datosGenerales,
@@ -362,9 +378,25 @@ export async function generateActivityReportDocx(opts: {
     ...multiPara(report.recommendations),
 
     para("", { before: 200 }),
-    firmaTable("DESARROLLO DEL DOCUMENTO", report.elaborated_by_name, report.elaborated_by_role, report.elaborated_date),
+    firmaTable("DESARROLLO DEL DOCUMENTO", report.elaborated_by_name, report.elaborated_by_role, report.elaborated_date, "elaborated"),
     para("", { after: 120 }),
-    firmaTable("APROBACIÓN DEL DOCUMENTO", report.approved_by_name, report.approved_by_role, report.approved_date),
+    firmaTable("APROBACIÓN DEL DOCUMENTO", report.approved_by_name, report.approved_by_role, report.approved_date, "approved"),
+    ...(createDocxCustodyCalloutTable({
+      physicalFileRef: report.physical_file_ref,
+      physicalEvidenceUrl: report.physical_evidence_url,
+      widthDxa: W,
+      font: "Calibri",
+    })
+      ? [
+          para("", { after: 100 }),
+          createDocxCustodyCalloutTable({
+            physicalFileRef: report.physical_file_ref,
+            physicalEvidenceUrl: report.physical_evidence_url,
+            widthDxa: W,
+            font: "Calibri",
+          })!,
+        ]
+      : []),
   ];
 
   // ---- ANEXO: REGISTRO FOTOGRÁFICO ----

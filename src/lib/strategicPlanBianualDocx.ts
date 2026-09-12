@@ -30,6 +30,7 @@ import {
   parseBianualSpecificObjectives,
 } from "./strategicPlanBianual";
 import type { StrategicBianualPlanRow, ActionPlanSignatory } from "./types";
+import { parseDocxSignatures, createDocxSignatureParagraphs, createDocxCustodyCalloutTable } from "./docxCustodyHelper";
 
 const FONT = "Calibri";
 const NAVY = "1B365D";
@@ -337,40 +338,39 @@ export async function generateStrategicPlanBianualDocx(
   });
 
   // ── Tabla 3: firmas ──
+  const dualSigs = parseDocxSignatures(plan.signatures_json);
+
   const signatureBlock = (
-    sigs: ActionPlanSignatory[]
+    sigs: ActionPlanSignatory[],
+    prefix: string = "elaborated"
   ): Paragraph[] => {
-    if (sigs.length === 0) {
-      return [
-        new Paragraph({ spacing: { after: 0 }, children: [r(" ", { size: SMALL })] }),
-        new Paragraph({ spacing: { after: 0 }, children: [r("____________________", { size: SMALL })] }),
-      ];
-    }
     const out: Paragraph[] = [];
-    sigs.forEach((s) => {
-      out.push(
-        new Paragraph({
-          spacing: { after: 0, line: 232 },
-          children: [r(s.name || " ", { bold: true, size: SMALL })],
-        })
+    sigs.forEach((s, idx) => {
+      const signerId = prefix === "elaborated" ? `elaborated_${idx}` : prefix;
+      const matchedSig = dualSigs.find(
+        (d) =>
+          d.signer_id === signerId ||
+          (d.name && s.name && d.name.toLowerCase().trim() === s.name.toLowerCase().trim())
       );
-      out.push(
-        new Paragraph({
-          spacing: { after: 0, line: 232 },
-          children: [r(s.role || " ", { size: TINY, color: "555555" })],
-        })
-      );
-      out.push(
-        new Paragraph({ spacing: { before: 160, after: 0 }, children: [r("____________________", { size: SMALL })] })
-      );
-      out.push(
-        new Paragraph({
-          spacing: { after: 160, line: 232 },
-          children: [r(`Fecha: ${fmtD(s.date)}`, { size: TINY, color: "555555" })],
-        })
-      );
+
+      const sigParas = createDocxSignatureParagraphs({
+        signer: matchedSig || null,
+        name: s.name || "",
+        role: s.role || "",
+        dateText: fmtD(s.date),
+        signatureType:
+          matchedSig?.tipo === "digital"
+            ? "DIGITAL"
+            : matchedSig?.tipo === "fisica"
+            ? "FISICA"
+            : plan.signature_type,
+        font: FONT,
+      });
+      out.push(...sigParas);
     });
-    return out;
+    return out.length > 0
+      ? out
+      : [new Paragraph({ spacing: { after: 0 }, children: [r(" ", { size: SMALL })] })];
   };
 
   const signatureRows: TableRow[] = [
@@ -424,9 +424,9 @@ export async function generateStrategicPlanBianualDocx(
     }),
     new TableRow({
       children: [
-        cell(signatureBlock(elaboratedList), { span: 7, valign: VerticalAlign.TOP }),
-        cell(signatureBlock(reviewed ? [reviewed] : []), { span: 7, valign: VerticalAlign.TOP }),
-        cell(signatureBlock(approved ? [approved] : []), { span: 6, valign: VerticalAlign.TOP }),
+        cell(signatureBlock(elaboratedList, "elaborated"), { span: 7, valign: VerticalAlign.TOP }),
+        cell(signatureBlock(reviewed ? [reviewed] : [], "reviewed"), { span: 7, valign: VerticalAlign.TOP }),
+        cell(signatureBlock(approved ? [approved] : [], "approved"), { span: 6, valign: VerticalAlign.TOP }),
       ],
     }),
   ];
@@ -481,6 +481,22 @@ export async function generateStrategicPlanBianualDocx(
           matrixTable,
           new Paragraph({ spacing: { after: 200 }, children: [r(" ", { size: SMALL })] }),
           signatureTable,
+          ...(createDocxCustodyCalloutTable({
+            physicalFileRef: plan.physical_file_ref,
+            physicalEvidenceUrl: plan.physical_evidence_url,
+            widthDxa: W,
+            font: FONT,
+          })
+            ? [
+                new Paragraph({ spacing: { after: 120 }, children: [r(" ", { size: SMALL })] }),
+                createDocxCustodyCalloutTable({
+                  physicalFileRef: plan.physical_file_ref,
+                  physicalEvidenceUrl: plan.physical_evidence_url,
+                  widthDxa: W,
+                  font: FONT,
+                })!,
+              ]
+            : []),
         ],
       },
     ],

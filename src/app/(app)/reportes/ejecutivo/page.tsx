@@ -4,6 +4,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { formatDate } from "@/components/ui";
 import { RISK_TYPE_LABELS, type InstitutionRow, type RiskType } from "@/lib/types";
 import PrintButton from "@/components/PrintButton";
+import { getInstitutionCustodyAudit } from "@/lib/physicalCustodyAudit";
 
 export const dynamic = "force-dynamic";
 
@@ -133,6 +134,7 @@ export default async function ReporteEjecutivoDistritoPage({
   }
 
   const resolutionRate = caseStats.total > 0 ? Math.round((caseStats.cerrados / caseStats.total) * 100) : 0;
+  const custodyAudit = getInstitutionCustodyAudit(institutionId);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-16">
@@ -317,6 +319,117 @@ export default async function ReporteEjecutivoDistritoPage({
                 un alcance total de <strong className="text-slate-900 dark:text-slate-100">{activities.participantes}</strong> miembros de la comunidad educativa.
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* Auditoría de Custodia Física y Archivo Institucional (Semáforo Distrital) */}
+        <div className="mb-8">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-3 border-l-4 border-amber-600 pl-2">
+            5. Auditoría de Custodia Física y Archivo Documental Institucional (Semáforo Distrital)
+          </h3>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center mb-4">
+            <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/60">
+              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{custodyAudit.totalDocs}</div>
+              <div className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase mt-0.5">Docs. Oficiales Emitidos</div>
+            </div>
+
+            <div className="p-3.5 rounded-lg border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/40">
+              <div className="text-2xl font-bold text-emerald-800 dark:text-emerald-300">{custodyAudit.digitalDocs}</div>
+              <div className="text-[11px] font-semibold text-emerald-900 dark:text-emerald-200 uppercase mt-0.5">Respaldo Digitalizado ({custodyAudit.globalDigitalRate}%)</div>
+            </div>
+
+            <div className="p-3.5 rounded-lg border border-amber-200 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/40">
+              <div className="text-2xl font-bold text-amber-800 dark:text-amber-300">{custodyAudit.physicalOnlyDocs}</div>
+              <div className="text-[11px] font-semibold text-amber-900 dark:text-amber-200 uppercase mt-0.5">En Carpeta Física</div>
+            </div>
+
+            <div className="p-3.5 rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/40">
+              <div className="text-2xl font-bold text-rose-800 dark:text-rose-300">{custodyAudit.pendingDocs}</div>
+              <div className="text-[11px] font-semibold text-rose-900 dark:text-rose-200 uppercase mt-0.5">Pendientes de Archivo</div>
+            </div>
+          </div>
+
+          {/* Semáforo Banner */}
+          <div className="p-3 rounded-lg border mb-4 text-xs flex items-center justify-between gap-3 bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">
+                {custodyAudit.globalComplianceRate === 100 ? "🟢" : custodyAudit.globalComplianceRate >= 70 ? "🟡" : "🔴"}
+              </span>
+              <div>
+                <span className="font-bold text-slate-800 dark:text-slate-100">
+                  {custodyAudit.globalComplianceRate === 100
+                    ? "Conformidad Plena de Custodia Documental (100%)"
+                    : custodyAudit.globalComplianceRate >= 70
+                    ? `Custodia en Proceso Avanzado (${custodyAudit.globalComplianceRate}%)`
+                    : `Atención Requerida: Brecha en Archivo Físico (${custodyAudit.globalComplianceRate}%)`}
+                </span>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  {custodyAudit.pendingDocs === 0
+                    ? "Toda la documentación emitida cuenta con localización en archivador físico y/o respaldo probatorio digitalizado para auditorías del Ministerio de Educación."
+                    : `Existen ${custodyAudit.pendingDocs} documentos que requieren registro de referencia de carpeta o escaneo digitalizado antes de la próxima visita distrital.`}
+                </p>
+              </div>
+            </div>
+            <div className="font-mono font-bold text-sm text-slate-700 dark:text-slate-200 shrink-0">
+              {custodyAudit.globalComplianceRate}%
+            </div>
+          </div>
+
+          {/* Tabla de Desglose por Módulo */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
+            <table className="w-full text-xs">
+              <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold border-b border-slate-200 dark:border-slate-700">
+                <tr>
+                  <th className="p-2.5 text-left">Módulo / Proceso Institucional</th>
+                  <th className="p-2.5 text-center w-20">Total</th>
+                  <th className="p-2.5 text-center w-24">Digital 🟢</th>
+                  <th className="p-2.5 text-center w-24">Físico 🟡</th>
+                  <th className="p-2.5 text-center w-24">Pendiente 🔴</th>
+                  <th className="p-2.5 text-left w-36">Cumplimiento</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {custodyAudit.modules.map((m) => (
+                  <tr key={m.moduleKey} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
+                    <td className="p-2.5 font-medium text-slate-800 dark:text-slate-200">
+                      {m.moduleName}
+                    </td>
+                    <td className="p-2.5 text-center font-bold font-mono text-slate-900 dark:text-slate-100">
+                      {m.totalDocs}
+                    </td>
+                    <td className="p-2.5 text-center font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
+                      {m.digitalCount}
+                    </td>
+                    <td className="p-2.5 text-center font-mono text-amber-700 dark:text-amber-400 font-semibold">
+                      {m.physicalOnlyCount}
+                    </td>
+                    <td className="p-2.5 text-center font-mono text-rose-700 dark:text-rose-400 font-semibold">
+                      {m.pendingCount}
+                    </td>
+                    <td className="p-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                          <div
+                            className={`h-2 rounded-full ${
+                              m.complianceRate === 100
+                                ? "bg-emerald-600"
+                                : m.complianceRate >= 60
+                                ? "bg-amber-500"
+                                : "bg-rose-500"
+                            }`}
+                            style={{ width: `${m.complianceRate}%` }}
+                          />
+                        </div>
+                        <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400 w-8">
+                          {m.complianceRate}%
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 

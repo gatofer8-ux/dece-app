@@ -29,6 +29,7 @@ import {
 import path from "path";
 import fs from "fs";
 import { smartAlign } from "./wordJustify";
+import { parseDocxSignatures, createDocxSignatureParagraphs, createDocxCustodyCalloutTable, type DocxSignerInfo } from "./docxCustodyHelper";
 import type {
   CaseFileRow,
   StudentRow,
@@ -145,6 +146,11 @@ activeYear?: SchoolYearRow | null;
 }): Promise<Buffer> {
   const { report, caseFile, student, institution, activeYear } = data;
   const methodologyList = parseStringList(report.methodology || "[]");
+
+  const sitSigs = parseDocxSignatures(report.signatures_json);
+  const sitElabSig = sitSigs.find((s) => s.signer_id === "elaborated" || s.signer_id === "elaborated_0");
+  const sitRevSig = sitSigs.find((s) => s.signer_id === "reviewed" || s.signer_id === "reviewer");
+  const sitAppSig = sitSigs.find((s) => s.signer_id === "approved" || s.signer_id === "approver");
 
   const doc = new Document({
     creator: "DECE App",
@@ -648,7 +654,13 @@ activeYear?: SchoolYearRow | null;
                       new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: report.preparer_role || "ANALISTA DECE", bold: true, size: 14 })] }),
                     ],
                   }),
-                  new TableCell({ children: [new Paragraph({ text: "", spacing: { after: 600 } })] }), // Espacio para firma
+                  new TableCell({
+                    children: createDocxSignatureParagraphs({
+                      signer: sitElabSig || null,
+                      signatureType: sitElabSig?.tipo === "digital" ? "DIGITAL" : sitElabSig?.tipo === "fisica" ? "FISICA" : report.signature_type,
+                      font: "Calibri",
+                    }),
+                  }),
                   new TableCell({ verticalAlign: VerticalAlign.CENTER, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: formatDate(report.report_date), size: 14 })] })] }),
                 ],
               }),
@@ -678,7 +690,13 @@ activeYear?: SchoolYearRow | null;
                       new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: (report as any).reviewer_role || "COORDINADORA DECE", bold: true, size: 14 })] }),
                     ],
                   }),
-                  new TableCell({ children: [new Paragraph({ text: "", spacing: { after: 600 } })] }), // Espacio para firma
+                  new TableCell({
+                    children: createDocxSignatureParagraphs({
+                      signer: sitRevSig || null,
+                      signatureType: sitRevSig?.tipo === "digital" ? "DIGITAL" : sitRevSig?.tipo === "fisica" ? "FISICA" : report.signature_type,
+                      font: "Calibri",
+                    }),
+                  }),
                   new TableCell({ verticalAlign: VerticalAlign.CENTER, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: formatDate(report.report_date), size: 14 })] })] }),
                 ],
               }),
@@ -708,12 +726,32 @@ activeYear?: SchoolYearRow | null;
                       new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: report.approver_role || "RECTORA", bold: true, size: 14 })] }),
                     ],
                   }),
-                  new TableCell({ children: [new Paragraph({ text: "", spacing: { after: 600 } })] }), // Espacio para firma
+                  new TableCell({
+                    children: createDocxSignatureParagraphs({
+                      signer: sitAppSig || null,
+                      signatureType: sitAppSig?.tipo === "digital" ? "DIGITAL" : sitAppSig?.tipo === "fisica" ? "FISICA" : report.signature_type,
+                      font: "Calibri",
+                    }),
+                  }),
                   new TableCell({ verticalAlign: VerticalAlign.CENTER, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: formatDate(report.report_date), size: 14 })] })] }),
                 ],
               }),
             ],
           }),
+          ...(createDocxCustodyCalloutTable({
+            physicalFileRef: report.physical_file_ref,
+            physicalEvidenceUrl: report.physical_evidence_url,
+            widthDxa: 9500,
+          })
+            ? [
+                new Paragraph({ spacing: { before: 120, after: 60 } }),
+                createDocxCustodyCalloutTable({
+                  physicalFileRef: report.physical_file_ref,
+                  physicalEvidenceUrl: report.physical_evidence_url,
+                  widthDxa: 9500,
+                })!,
+              ]
+            : []),
         ],
       },
     ],
@@ -875,6 +913,10 @@ export async function generateViolenceReportDocx(opts: {
   const FONT_NAME = "Arial";
   const FONT_SIZE = 17; // ~8.5pt
   const HEADER_FONT_SIZE = 18; // 9pt
+
+  const vioSigs = parseDocxSignatures(report.signatures_json);
+  const vioAnalystSig = vioSigs.find((s) => s.signer_id === "analyst" || s.signer_id === "elaborated");
+  const vioAuthSig = vioSigs.find((s) => s.signer_id === "authority" || s.signer_id === "approved");
 
   const doc = new Document({
     sections: [
@@ -1869,6 +1911,7 @@ export async function generateViolenceReportDocx(opts: {
 
           new Paragraph({ spacing: { after: 120 } }),
 
+
           // Firmas de Responsabilidad
           new Table({
             width: { size: 9500, type: WidthType.DXA },
@@ -1879,76 +1922,24 @@ export async function generateViolenceReportDocx(opts: {
                   new TableCell({
                     width: { size: 4750, type: WidthType.DXA },
                     margins: { top: 250, bottom: 40, left: 100, right: 100 },
-                    children: [
-                      new Paragraph({
-                        alignment: AlignmentType.CENTER,
-                        spacing: { after: 30, before: 0 },
-                        children: [
-                          new TextRun({ text: "________________________________________", color: "000000" }),
-                        ],
-                      }),
-                      new Paragraph({
-                        alignment: AlignmentType.CENTER,
-                        spacing: { after: 20, before: 0 },
-                        children: [
-                          new TextRun({
-                            text: report.analyst_name || "Mgtr. Marlon Alberto Jácome Santana",
-                            bold: true,
-                            size: FONT_SIZE,
-                            font: FONT_NAME,
-                          }),
-                        ],
-                      }),
-                      new Paragraph({
-                        alignment: AlignmentType.CENTER,
-                        spacing: { after: 0, before: 0 },
-                        children: [
-                          new TextRun({
-                            text: report.analyst_role || "ANALISTA DECE",
-                            bold: true,
-                            size: 15,
-                            font: FONT_NAME,
-                          }),
-                        ],
-                      }),
-                    ],
+                    children: createDocxSignatureParagraphs({
+                      signer: vioAnalystSig || null,
+                      name: report.analyst_name || "Mgtr. Marlon Alberto Jácome Santana",
+                      role: report.analyst_role || "ANALISTA DECE",
+                      signatureType: vioAnalystSig?.tipo === "digital" ? "DIGITAL" : vioAnalystSig?.tipo === "fisica" ? "FISICA" : report.signature_type,
+                      font: FONT_NAME,
+                    }),
                   }),
                   new TableCell({
                     width: { size: 4750, type: WidthType.DXA },
                     margins: { top: 250, bottom: 40, left: 100, right: 100 },
-                    children: [
-                      new Paragraph({
-                        alignment: AlignmentType.CENTER,
-                        spacing: { after: 30, before: 0 },
-                        children: [
-                          new TextRun({ text: "________________________________________", color: "000000" }),
-                        ],
-                      }),
-                      new Paragraph({
-                        alignment: AlignmentType.CENTER,
-                        spacing: { after: 20, before: 0 },
-                        children: [
-                          new TextRun({
-                            text: report.rectora_name || "Msc. Diana Fernanda Manzano Villacís",
-                            bold: true,
-                            size: FONT_SIZE,
-                            font: FONT_NAME,
-                          }),
-                        ],
-                      }),
-                      new Paragraph({
-                        alignment: AlignmentType.CENTER,
-                        spacing: { after: 0, before: 0 },
-                        children: [
-                          new TextRun({
-                            text: "RECTORA",
-                            bold: true,
-                            size: 15,
-                            font: FONT_NAME,
-                          }),
-                        ],
-                      }),
-                    ],
+                    children: createDocxSignatureParagraphs({
+                      signer: vioAuthSig || null,
+                      name: report.rectora_name || institution?.rector_name || "Msc. Diana Fernanda Manzano Villacís",
+                      role: "RECTORA",
+                      signatureType: vioAuthSig?.tipo === "digital" ? "DIGITAL" : vioAuthSig?.tipo === "fisica" ? "FISICA" : report.signature_type,
+                      font: FONT_NAME,
+                    }),
                   }),
                 ],
               }),
@@ -1969,6 +1960,22 @@ export async function generateViolenceReportDocx(opts: {
             ],
             spacing: { before: 120 },
           }),
+          ...(createDocxCustodyCalloutTable({
+            physicalFileRef: report.physical_file_ref,
+            physicalEvidenceUrl: report.physical_evidence_url,
+            widthDxa: 9500,
+            font: FONT_NAME,
+          })
+            ? [
+                new Paragraph({ spacing: { before: 120, after: 60 } }),
+                createDocxCustodyCalloutTable({
+                  physicalFileRef: report.physical_file_ref,
+                  physicalEvidenceUrl: report.physical_evidence_url,
+                  widthDxa: 9500,
+                  font: FONT_NAME,
+                })!,
+              ]
+            : []),
         ],
       },
     ],
@@ -2454,6 +2461,9 @@ export async function generateObservationSheetDocx(opts: {
   );
 
   // Fila 34: Firma y Profesional
+  const obsSigs = parseDocxSignatures(sheet.signatures_json);
+  const obsSig = obsSigs[0] || null;
+
   rows.push(
     new TableRow({
       children: [
@@ -2466,19 +2476,14 @@ export async function generateObservationSheetDocx(opts: {
                 new TextRun({ text: "Nombre de la o el profesional DECE que realiza la observación: ", bold: true, size: 18, font: "Arial" }),
                 new TextRun({ text: official.professional_name || "—", size: 18, font: "Arial" }),
               ],
-              spacing: { after: 360 },
+              spacing: { after: 120 },
             }),
-            new Paragraph({
-              children: [
-                new TextRun({ text: "Firma de responsabilidad:  _____________________________________", bold: true, size: 18, font: "Arial" }),
-              ],
-              spacing: { after: 200 },
-            }),
-            new Paragraph({
-              children: [
-                new TextRun({ text: "Fecha de aplicación: ", bold: true, size: 18, font: "Arial" }),
-                new TextRun({ text: official.application_date ? formatDate(official.application_date) : formatDate(sheet.observation_date), size: 18, font: "Arial" }),
-              ],
+            ...createDocxSignatureParagraphs({
+              signer: obsSig,
+              role: "Firma de responsabilidad",
+              dateText: official.application_date ? formatDate(official.application_date) : formatDate(sheet.observation_date),
+              signatureType: obsSig?.tipo === "digital" ? "DIGITAL" : obsSig?.tipo === "fisica" ? "FISICA" : sheet.signature_type,
+              font: "Arial",
             }),
           ],
         }),
@@ -3384,6 +3389,11 @@ function createOfficialLandscapeFooter() {
 export async function generateBimonthlyReportDocx(report: BimonthlyReportRow): Promise<Buffer> {
   const processes = parseProcessesData(report.processes_data);
 
+    const bimSigs = parseDocxSignatures(report.signatures_json);
+  const bimElabSig = bimSigs.find((s) => s.signer_id === "elaborated" || s.signer_id === "elaborated_0");
+  const bimRevSig = bimSigs.find((s) => s.signer_id === "reviewed" || s.signer_id === "reviewer");
+  const bimAppSig = bimSigs.find((s) => s.signer_id === "approved" || s.signer_id === "approver");
+
   const doc = new Document({
     sections: [
       {
@@ -3749,12 +3759,11 @@ export async function generateBimonthlyReportDocx(report: BimonthlyReportRow): P
                   }),
                   new TableCell({
                     width: { size: 25, type: WidthType.PERCENTAGE },
-                    children: [
-                      new Paragraph({
-                        children: [new TextRun({ text: "Firma:", bold: true, size: 19, font: "Calibri" })],
-                      }),
-                      new Paragraph({ text: "", spacing: { after: 700 } }),
-                    ],
+                    children: createDocxSignatureParagraphs({
+                      signer: bimElabSig || null,
+                      signatureType: bimElabSig?.tipo === "digital" ? "DIGITAL" : bimElabSig?.tipo === "fisica" ? "FISICA" : report.signature_type,
+                      font: "Calibri",
+                    }),
                   }),
                 ],
               }),
@@ -3794,12 +3803,11 @@ export async function generateBimonthlyReportDocx(report: BimonthlyReportRow): P
                   }),
                   new TableCell({
                     width: { size: 25, type: WidthType.PERCENTAGE },
-                    children: [
-                      new Paragraph({
-                        children: [new TextRun({ text: "Firma:", bold: true, size: 19, font: "Calibri" })],
-                      }),
-                      new Paragraph({ text: "", spacing: { after: 700 } }),
-                    ],
+                    children: createDocxSignatureParagraphs({
+                      signer: bimRevSig || null,
+                      signatureType: bimRevSig?.tipo === "digital" ? "DIGITAL" : bimRevSig?.tipo === "fisica" ? "FISICA" : report.signature_type,
+                      font: "Calibri",
+                    }),
                   }),
                 ],
               }),
@@ -3839,17 +3847,32 @@ export async function generateBimonthlyReportDocx(report: BimonthlyReportRow): P
                   }),
                   new TableCell({
                     width: { size: 25, type: WidthType.PERCENTAGE },
-                    children: [
-                      new Paragraph({
-                        children: [new TextRun({ text: "Firma:", bold: true, size: 19, font: "Calibri" })],
-                      }),
-                      new Paragraph({ text: "", spacing: { after: 700 } }),
-                    ],
+                    children: createDocxSignatureParagraphs({
+                      signer: bimAppSig || null,
+                      signatureType: bimAppSig?.tipo === "digital" ? "DIGITAL" : bimAppSig?.tipo === "fisica" ? "FISICA" : report.signature_type,
+                      font: "Calibri",
+                    }),
                   }),
                 ],
               }),
             ],
           }),
+          ...(createDocxCustodyCalloutTable({
+            physicalFileRef: report.physical_file_ref,
+            physicalEvidenceUrl: report.physical_evidence_url,
+            widthDxa: 13436,
+            font: "Calibri",
+          })
+            ? [
+                new Paragraph({ spacing: { before: 120, after: 60 } }),
+                createDocxCustodyCalloutTable({
+                  physicalFileRef: report.physical_file_ref,
+                  physicalEvidenceUrl: report.physical_evidence_url,
+                  widthDxa: 13436,
+                  font: "Calibri",
+                })!,
+              ]
+            : []),
         ],
       },
     ],
@@ -4673,6 +4696,19 @@ export async function generateInterviewDocx(opts: {
     })
   );
 
+  const intCustody = createDocxCustodyCalloutTable({
+    physicalFileRef: interview.physical_file_ref,
+    physicalEvidenceUrl: interview.physical_evidence_url,
+    widthDxa: 9500,
+    font: FONT_NAME,
+  });
+  if (intCustody) {
+    children.push(
+      new Paragraph({ spacing: { before: 120, after: 60 } }),
+      intCustody
+    );
+  }
+
   const doc = new Document({
     sections: [
       {
@@ -5048,6 +5084,9 @@ export async function generateCarePlanDocx(opts: {
 
   // Firma
   const dynamicRole = analystRole || "PROFESIONAL DECE";
+  const careSigs = parseDocxSignatures(plan.signatures_json);
+  const careSig = careSigs.find((s) => s.signer_id === "professional" || s.signer_id === "elaborated") || careSigs[0];
+
   children.push(
     new Table({
       width: { size: 9500, type: WidthType.DXA },
@@ -5057,27 +5096,32 @@ export async function generateCarePlanDocx(opts: {
           children: [
             new TableCell({
               width: { size: 9500, type: WidthType.DXA },
-              children: [
-                new Paragraph({
-                  alignment: AlignmentType.CENTER,
-                  children: [new TextRun({ text: "____________________________________", font: FONT_NAME, size: FONT_SIZE_SM })],
-                  spacing: { after: 30 },
-                }),
-                new Paragraph({
-                  alignment: AlignmentType.CENTER,
-                  children: [new TextRun({ text: `FIRMA ${dynamicRole.toUpperCase()}`, bold: true, font: FONT_NAME, size: FONT_SIZE_SM })],
-                }),
-                new Paragraph({
-                  alignment: AlignmentType.CENTER,
-                  children: [new TextRun({ text: professional?.name || "—", font: FONT_NAME, size: FONT_SIZE_XS, color: "475569" })],
-                }),
-              ],
+              children: createDocxSignatureParagraphs({
+                signer: careSig || null,
+                name: professional?.name,
+                role: `FIRMA ${dynamicRole.toUpperCase()}`,
+                signatureType: careSig?.tipo === "digital" ? "DIGITAL" : careSig?.tipo === "fisica" ? "FISICA" : plan.signature_type,
+                font: FONT_NAME,
+              }),
             }),
           ],
         }),
       ],
     })
   );
+
+  const careCustody = createDocxCustodyCalloutTable({
+    physicalFileRef: plan.physical_file_ref,
+    physicalEvidenceUrl: plan.physical_evidence_url,
+    widthDxa: 9500,
+    font: FONT_NAME,
+  });
+  if (careCustody) {
+    children.push(
+      new Paragraph({ spacing: { before: 120, after: 60 } }),
+      careCustody
+    );
+  }
 
   const doc = new Document({
     sections: [

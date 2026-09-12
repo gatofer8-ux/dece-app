@@ -28,6 +28,7 @@ import {
 } from "@/lib/strategicPlanBianual";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
 import AIAssistButton from "@/components/AIAssistButton";
+import DualSignatureModal, { type DualSignatureData } from "@/components/DualSignatureModal";
 
 const initialState: ActionState = { error: null };
 
@@ -77,6 +78,10 @@ export default function StrategicPlanBianualForm({
   defaultElaboratedBy,
   defaultReviewedBy,
   defaultApprovedBy,
+  defaultSignaturesJson,
+  defaultSignatureType,
+  defaultPhysicalFileRef,
+  defaultPhysicalEvidenceUrl,
   deceStaffNames = [],
   isEditing = false,
 }: {
@@ -98,6 +103,10 @@ export default function StrategicPlanBianualForm({
   defaultElaboratedBy?: ActionPlanSignatory[];
   defaultReviewedBy?: ActionPlanSignatory;
   defaultApprovedBy?: ActionPlanSignatory;
+  defaultSignaturesJson?: string | null;
+  defaultSignatureType?: string | null;
+  defaultPhysicalFileRef?: string | null;
+  defaultPhysicalEvidenceUrl?: string | null;
   deceStaffNames: string[];
   isEditing: boolean;
 }) {
@@ -165,6 +174,53 @@ export default function StrategicPlanBianualForm({
       date: new Date().toISOString().slice(0, 10),
     }
   );
+
+  // Estados de Firma Dual y Custodia Física
+  const [dualSignatures, setDualSignatures] = useState<DualSignatureData[]>(() => {
+    if (!defaultSignaturesJson) return [];
+    try {
+      const parsed = JSON.parse(defaultSignaturesJson);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+  const [activeModalSigner, setActiveModalSigner] = useState<{
+    id: string;
+    name: string;
+    role: string;
+  } | null>(null);
+  const [physicalFileRef, setPhysicalFileRef] = useState<string>(
+    defaultPhysicalFileRef || ""
+  );
+  const [physicalEvidenceUrl, setPhysicalEvidenceUrl] = useState<string>(
+    defaultPhysicalEvidenceUrl || ""
+  );
+  const [physicalEvidenceName, setPhysicalEvidenceName] = useState<string>(
+    defaultPhysicalEvidenceUrl ? "Plan_Bianual_Sellado_Respaldo" : ""
+  );
+
+  const overallSignatureType = useMemo(() => {
+    if (dualSignatures.some((s) => s.tipo === "digital")) return "DIGITAL";
+    if (dualSignatures.some((s) => s.tipo === "fisica") || physicalFileRef.trim()) return "FISICA";
+    return defaultSignatureType || "PENDIENTE";
+  }, [dualSignatures, physicalFileRef, defaultSignatureType]);
+
+  const handleEvidenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("El archivo excede el límite de 8MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPhysicalEvidenceUrl(reader.result as string);
+      setPhysicalEvidenceName(file.name);
+      toast.success("Documento de respaldo cargado");
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Estados de IA
   const toast = useToast();
@@ -380,6 +436,10 @@ export default function StrategicPlanBianualForm({
       <input type="hidden" name="elaborated_by" value={JSON.stringify(elaboratedList)} />
       <input type="hidden" name="reviewed_by" value={JSON.stringify(reviewedSignatory)} />
       <input type="hidden" name="approved_by" value={JSON.stringify(approvedSignatory)} />
+      <input type="hidden" name="signatures_json" value={JSON.stringify(dualSignatures)} />
+      <input type="hidden" name="signature_type" value={overallSignatureType} />
+      <input type="hidden" name="physical_file_ref" value={physicalFileRef} />
+      <input type="hidden" name="physical_evidence_url" value={physicalEvidenceUrl} />
 
       {state.error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800 flex items-start gap-3">
@@ -1360,11 +1420,34 @@ export default function StrategicPlanBianualForm({
               </button>
             </div>
             <div className="space-y-2">
-              {elaboratedList.map((sig, i) => (
+              {elaboratedList.map((sig, i) => {
+                const signerId = `elaborated_${i}`;
+                const currentSig = dualSignatures.find((s) => s.signer_id === signerId);
+                return (
                 <div
                   key={i}
                   className="space-y-1 bg-white p-2 rounded border border-slate-100"
                 >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold text-slate-500">Miembro #{i + 1}</span>
+                    {currentSig?.tipo === "digital" ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-[9px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 px-1 py-0.5 rounded">🖋️ Digital</span>
+                        <button type="button" onClick={() => setActiveModalSigner({ id: signerId, name: sig.name, role: sig.role })} className="text-[9px] text-brand-700 hover:underline">Cambiar</button>
+                        <button type="button" onClick={() => setDualSignatures(dualSignatures.filter((s) => s.signer_id !== signerId))} className="text-[9px] text-rose-600 hover:underline">✕</button>
+                      </div>
+                    ) : currentSig?.tipo === "fisica" ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-[9px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-1 py-0.5 rounded">📄 Papel</span>
+                        <button type="button" onClick={() => setActiveModalSigner({ id: signerId, name: sig.name, role: sig.role })} className="text-[9px] text-brand-700 hover:underline">Cambiar</button>
+                        <button type="button" onClick={() => setDualSignatures(dualSignatures.filter((s) => s.signer_id !== signerId))} className="text-[9px] text-rose-600 hover:underline">✕</button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => setActiveModalSigner({ id: signerId, name: sig.name, role: sig.role })} className="text-[10px] font-semibold text-brand-700 hover:underline">
+                        ✍️ Firma
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={sig.name}
@@ -1412,17 +1495,41 @@ export default function StrategicPlanBianualForm({
                     )}
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
+        </div>
 
-          {/* REVISIÓN */}
+        {/* REVISIÓN */}
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
             <div className="font-extrabold text-xs text-slate-700 uppercase tracking-wider pb-1 border-b border-slate-200 flex items-center justify-between">
               <span>REVISIÓN</span>
               <span className="text-[10px] text-brand-600 font-bold">Coordinación</span>
             </div>
             <div className="space-y-2 bg-white p-2.5 rounded border border-slate-100">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-500">Firma Coordinación:</span>
+                {(() => {
+                  const revSig = dualSignatures.find((s) => s.signer_id === "reviewed");
+                  return revSig?.tipo === "digital" ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 px-1 py-0.5 rounded">🖋️ Digital</span>
+                      <button type="button" onClick={() => setActiveModalSigner({ id: "reviewed", name: reviewedSignatory.name, role: reviewedSignatory.role })} className="text-[9px] text-brand-700 hover:underline">Cambiar</button>
+                      <button type="button" onClick={() => setDualSignatures(dualSignatures.filter((s) => s.signer_id !== "reviewed"))} className="text-[9px] text-rose-600 hover:underline">✕</button>
+                    </div>
+                  ) : revSig?.tipo === "fisica" ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-1 py-0.5 rounded">📄 Papel</span>
+                      <button type="button" onClick={() => setActiveModalSigner({ id: "reviewed", name: reviewedSignatory.name, role: reviewedSignatory.role })} className="text-[9px] text-brand-700 hover:underline">Cambiar</button>
+                      <button type="button" onClick={() => setDualSignatures(dualSignatures.filter((s) => s.signer_id !== "reviewed"))} className="text-[9px] text-rose-600 hover:underline">✕</button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => setActiveModalSigner({ id: "reviewed", name: reviewedSignatory.name, role: reviewedSignatory.role })} className="text-[10px] font-semibold text-brand-700 hover:underline">
+                      ✍️ Firma
+                    </button>
+                  );
+                })()}
+              </div>
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600">
                   Nombres y Apellidos
@@ -1473,6 +1580,29 @@ export default function StrategicPlanBianualForm({
               <span className="text-[10px] text-brand-600 font-bold">Autoridad</span>
             </div>
             <div className="space-y-2 bg-white p-2.5 rounded border border-slate-100">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-500">Firma Autoridad:</span>
+                {(() => {
+                  const appSig = dualSignatures.find((s) => s.signer_id === "approved");
+                  return appSig?.tipo === "digital" ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 px-1 py-0.5 rounded">🖋️ Digital</span>
+                      <button type="button" onClick={() => setActiveModalSigner({ id: "approved", name: approvedSignatory.name, role: approvedSignatory.role })} className="text-[9px] text-brand-700 hover:underline">Cambiar</button>
+                      <button type="button" onClick={() => setDualSignatures(dualSignatures.filter((s) => s.signer_id !== "approved"))} className="text-[9px] text-rose-600 hover:underline">✕</button>
+                    </div>
+                  ) : appSig?.tipo === "fisica" ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-1 py-0.5 rounded">📄 Papel</span>
+                      <button type="button" onClick={() => setActiveModalSigner({ id: "approved", name: approvedSignatory.name, role: approvedSignatory.role })} className="text-[9px] text-brand-700 hover:underline">Cambiar</button>
+                      <button type="button" onClick={() => setDualSignatures(dualSignatures.filter((s) => s.signer_id !== "approved"))} className="text-[9px] text-rose-600 hover:underline">✕</button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => setActiveModalSigner({ id: "approved", name: approvedSignatory.name, role: approvedSignatory.role })} className="text-[10px] font-semibold text-brand-700 hover:underline">
+                      ✍️ Firma
+                    </button>
+                  );
+                })()}
+              </div>
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600">
                   Nombres y Apellidos
@@ -1517,6 +1647,77 @@ export default function StrategicPlanBianualForm({
           </div>
         </div>
       </div>
+      {/* Respaldo Físico DECE y Plan Bianual en Papel */}
+      <div className="p-4 bg-amber-50/60 rounded-xl border border-amber-200 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+            <span>📁</span> Respaldo Físico DECE y Plan Estratégico Bianual en Papel (Auditoría Ministerial)
+          </span>
+          <span className="text-[11px] text-amber-700 bg-amber-100/70 border border-amber-300 px-2 py-0.5 rounded-full font-medium">
+            Custodia DECE
+          </span>
+        </div>
+        <p className="text-xs text-amber-800/90 leading-relaxed">
+          Para garantizar la constancia legal y auditoría física, registra la ubicación física en carpeta/archivador y opcionalmente adjunta copia escaneada o foto (PDF o Imagen) del plan bianual firmado y sellado.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div>
+            <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+              Ubicación en Archivo Físico Institucional
+            </label>
+            <input
+              type="text"
+              value={physicalFileRef}
+              onChange={(e) => setPhysicalFileRef(e.target.value)}
+              placeholder="Ej. Archivador Planes Estratégicos DECE / Carpeta Bianual"
+              className="w-full text-xs rounded-lg border border-amber-300 bg-white px-3 py-2 text-slate-800 placeholder-slate-400 focus:ring-1 focus:ring-amber-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+              Adjuntar Plan Firmado / Sellado (PDF o Imagen)
+            </label>
+            {physicalEvidenceUrl ? (
+              <div className="flex items-center justify-between p-2 bg-white rounded-lg border border-amber-300">
+                <span className="text-xs text-emerald-800 font-medium flex items-center gap-1.5 truncate max-w-[200px]">
+                  <span>📎</span> {physicalEvidenceName || "Plan_Bianual_Sellado"}
+                </span>
+                <div className="flex items-center gap-2">
+                  <a href={physicalEvidenceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">Ver</a>
+                  <button type="button" onClick={() => { setPhysicalEvidenceUrl(""); setPhysicalEvidenceName(""); }} className="text-xs text-rose-600 hover:underline font-medium">Quitar</button>
+                </div>
+              </div>
+            ) : (
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={handleEvidenceUpload}
+                className="w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 cursor-pointer"
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {activeModalSigner && (
+        <DualSignatureModal
+          isOpen={true}
+          onClose={() => setActiveModalSigner(null)}
+          signatoryName={activeModalSigner.name || "Profesional DECE"}
+          signatoryRole={activeModalSigner.role || "PROFESIONAL DECE"}
+          initialData={dualSignatures.find((s) => s.signer_id === activeModalSigner.id) || null}
+          onSave={(data: DualSignatureData) => {
+            const next = dualSignatures.filter((s) => s.signer_id !== activeModalSigner.id);
+            next.push({ ...data, signer_id: activeModalSigner.id });
+            setDualSignatures(next);
+            setActiveModalSigner(null);
+          }}
+        />
+      )}
+
+
 
       {/* Barra inferior flotante de guardado */}
       <div className="sticky bottom-4 z-20 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-slate-200 flex items-center justify-between gap-4 max-w-4xl mx-auto">
