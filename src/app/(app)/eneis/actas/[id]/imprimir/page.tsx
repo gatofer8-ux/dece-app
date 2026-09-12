@@ -32,6 +32,15 @@ export default async function ImprimirEneisActaPage({ params }: { params: { id: 
   const institution = db.prepare("SELECT * FROM institutions WHERE id = ?").get(institutionId) as InstitutionRow;
   const header = getEneisActaHeaderInfo(institution, a.id);
 
+  let signaturesList: { signer_id?: string; tipo: "digital" | "fisica"; firma_data_url?: string; observacion?: string }[] = [];
+  if (a.signatures_json) {
+    try {
+      signaturesList = JSON.parse(a.signatures_json);
+    } catch {
+      signaturesList = [];
+    }
+  }
+
   const participants = parseEneisActaParticipants(a.participants_json);
   const compromisos = parseEneisActaCompromisos(a.compromisos_json);
   const partRows = [...participants, ...Array(Math.max(2, 6 - participants.length)).fill({ nombre: "", cargo: "" })];
@@ -129,15 +138,72 @@ export default async function ImprimirEneisActaPage({ params }: { params: { id: 
               <td className={title}>CARGO</td>
               <td className={title}>FIRMAS</td>
             </tr>
-            {partRows.map((p, i) => (
-              <tr key={i}>
-                <td className={cell}>{p.nombre || " "}</td>
-                <td className={cell}>{p.cargo || " "}</td>
-                <td className={cell} style={{ height: 34 }}>&nbsp;</td>
-              </tr>
-            ))}
+            {partRows.map((p, i) => {
+              const s = signaturesList.find((item: { signer_id?: string }) => item.signer_id === `p_${i}`);
+              return (
+                <tr key={i}>
+                  <td className={cell}>{p.nombre || " "}</td>
+                  <td className={cell}>{p.cargo || " "}</td>
+                  <td className={`${cell} text-center align-middle`} style={{ height: 36 }}>
+                    {s?.tipo === "digital" && s.firma_data_url ? (
+                      <div className="flex flex-col items-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={s.firma_data_url} alt="Firma digital" className="max-h-10 max-w-[120px] object-contain" />
+                        <span className="text-[7px] text-emerald-800 font-bold uppercase mt-0.5">Firma Digital</span>
+                      </div>
+                    ) : s?.tipo === "fisica" ? (
+                      <div className="text-[8px] text-slate-500 italic">
+                        <span>___________________________</span>
+                        <div className="text-[7px] text-amber-800 font-semibold">[Firma física manuscrita]</div>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 text-xs">___________________________</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
+
+        {/* Banner de Custodia de Respaldo Físico */}
+        {a.physical_file_ref && (
+          <div className="mt-4 p-2 bg-amber-50 border border-amber-300 rounded text-xs text-amber-900 flex items-center justify-between break-inside-avoid">
+            <div>
+              <span className="font-bold">📁 UBICACIÓN DE RESPALDO FÍSICO EN ARCHIVO INSTITUCIONAL: </span>
+              <span>{a.physical_file_ref}</span>
+            </div>
+            <span className="text-[9px] bg-amber-200/70 border border-amber-400 px-1.5 py-0.5 rounded font-bold uppercase">
+              Custodia DECE
+            </span>
+          </div>
+        )}
+
+        {/* Anexo de Auditoría Distrital: Respaldo Físico Escaneado */}
+        {a.physical_evidence_url && (
+          <div className="mt-4 pt-4 border-t border-dashed border-slate-300 page-break-inside-avoid">
+            <div className="text-center font-bold text-xs text-slate-800 uppercase tracking-wide bg-slate-100 py-1 border border-slate-300 rounded mb-2">
+              ANEXO DE AUDITORÍA DISTRITAL: RESPALDO FÍSICO DIGITALIZADO
+            </div>
+            <div className="text-[9.5px] text-slate-600 mb-2 italic text-center">
+              Copia digitalizada del acta de reunión ENEIS firmada y sellada bajo custodia institucional.
+            </div>
+            <div className="flex justify-center border border-slate-200 p-2 bg-slate-50 rounded">
+              {a.physical_evidence_url.startsWith("data:application/pdf") ? (
+                <div className="text-center p-3 text-xs text-blue-700 font-semibold">
+                  <span>📄 Documento PDF de Respaldo Físico Digitalizado Adjunto</span>
+                </div>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={a.physical_evidence_url}
+                  alt="Respaldo Físico Digitalizado"
+                  className="max-h-[350px] w-auto object-contain border border-slate-300 rounded shadow-xs"
+                />
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

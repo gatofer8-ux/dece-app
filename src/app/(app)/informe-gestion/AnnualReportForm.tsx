@@ -1,5 +1,7 @@
 "use client";
 
+import DualSignatureModal, { type DualSignatureData } from "@/components/DualSignatureModal";
+
 import { useState, useTransition, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -269,6 +271,25 @@ export default function AnnualReportForm({
     report?.recommendations_district ||
       `1. Gestionar mesas intersectoriales distritales con el Ministerio de Salud Pública (MSP) para agilizar la atención psicológica especializada a estudiantes derivados.\n2. Dotar de mayor equipamiento tecnológico y espacios físicos confidenciales adecuados para la labor de los profesionales DECE en las instituciones educativas.\n3. Promover capacitaciones técnicas continuas desde la Dirección Distrital sobre reformas normativas y protocolos de actuación DECE.`
   );
+
+  // Estados de respaldo físico y modal de firmas
+  const [physicalFileRef, setPhysicalFileRef] = useState(report?.physical_file_ref || "");
+  const [physicalEvidenceUrl, setPhysicalEvidenceUrl] = useState(report?.physical_evidence_url || "");
+  const [physicalEvidenceName, setPhysicalEvidenceName] = useState("");
+  const [activeSignerIdx, setActiveSignerIdx] = useState<number | null>(null);
+
+  const handleEvidenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhysicalEvidenceName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setPhysicalEvidenceUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Firmas
   const [signatures, setSignatures] = useState<ManagementReportSignatureItem[]>(
@@ -594,6 +615,9 @@ export default function AnnualReportForm({
         annexes_notes: "Registro fotográfico de proyectos de promoción y prevención sustentado en archivo digital/físico DECE.",
         annex_photos_json: "[]",
         signatures_json: JSON.stringify(signatures),
+        signature_type: signatures.every((s) => s.signature_type === "digital") ? "digital" : signatures.every((s) => s.signature_type === "fisica") ? "fisica" : "mixta",
+        physical_file_ref: physicalFileRef,
+        physical_evidence_url: physicalEvidenceUrl,
       });
 
       if (res.error) {
@@ -1017,9 +1041,14 @@ export default function AnnualReportForm({
 
       {/* FIRMAS DE LEGALIZACIÓN */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-4">
-        <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-slate-200 pb-2">
-          Firmas de Legalización
-        </h2>
+        <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+            Firmas de Legalización
+          </h2>
+          <span className="text-[11px] font-semibold text-brand-700 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-full">
+            Constancia Dual: Digital o Física
+          </span>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="border border-slate-200 rounded-lg p-3 bg-slate-50 space-y-2">
@@ -1027,12 +1056,42 @@ export default function AnnualReportForm({
               Desarrollo del Documento (Profesionales DECE)
             </span>
             {signatures
-              .filter((s) => s.type === "DESARROLLO")
-              .map((s, idx) => (
-                <div key={idx} className="bg-white p-2 rounded border border-slate-200 text-xs">
-                  <p className="font-bold text-slate-800">{s.name}</p>
+              .map((s, globalIdx) => ({ s, globalIdx }))
+              .filter(({ s }) => s.type === "DESARROLLO")
+              .map(({ s, globalIdx }) => (
+                <div key={globalIdx} className="bg-white p-2.5 rounded border border-slate-200 text-xs space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <p className="font-bold text-slate-800">{s.name}</p>
+                    {s.signature_type === "digital" ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 px-1.5 py-0.5 rounded">🖋️ Digital</span>
+                        <button type="button" onClick={() => setActiveSignerIdx(globalIdx)} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                        <button type="button" onClick={() => {
+                          const next = [...signatures];
+                          delete next[globalIdx].signature_type;
+                          delete next[globalIdx].firma_data_url;
+                          setSignatures(next);
+                        }} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                      </div>
+                    ) : s.signature_type === "fisica" ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded">📄 Papel</span>
+                        <button type="button" onClick={() => setActiveSignerIdx(globalIdx)} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                        <button type="button" onClick={() => {
+                          const next = [...signatures];
+                          delete next[globalIdx].signature_type;
+                          delete next[globalIdx].observacion;
+                          setSignatures(next);
+                        }} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => setActiveSignerIdx(globalIdx)} className="text-[10px] font-semibold text-brand-700 hover:underline">
+                        ✍️ Registrar Firma
+                      </button>
+                    )}
+                  </div>
                   <p className="text-slate-500">{s.cargo}</p>
-                  <p className="text-[11px] text-slate-400 mt-1">Fecha: {s.date || reportDate}</p>
+                  <p className="text-[11px] text-slate-400">Fecha: {s.date || reportDate}</p>
                 </div>
               ))}
           </div>
@@ -1042,20 +1101,48 @@ export default function AnnualReportForm({
               Aprobación del Documento (Rectorado)
             </span>
             {signatures
-              .filter((s) => s.type === "APROBACION")
-              .map((s, idx) => (
-                <div key={idx} className="bg-white p-2 rounded border border-slate-200 text-xs space-y-2">
+              .map((s, globalIdx) => ({ s, globalIdx }))
+              .filter(({ s }) => s.type === "APROBACION")
+              .map(({ s, globalIdx }) => (
+                <div key={globalIdx} className="bg-white p-2.5 rounded border border-slate-200 text-xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-slate-700">Firma Autoridad:</span>
+                    {s.signature_type === "digital" ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 px-1.5 py-0.5 rounded">🖋️ Digital</span>
+                        <button type="button" onClick={() => setActiveSignerIdx(globalIdx)} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                        <button type="button" onClick={() => {
+                          const next = [...signatures];
+                          delete next[globalIdx].signature_type;
+                          delete next[globalIdx].firma_data_url;
+                          setSignatures(next);
+                        }} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                      </div>
+                    ) : s.signature_type === "fisica" ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded">📄 Papel</span>
+                        <button type="button" onClick={() => setActiveSignerIdx(globalIdx)} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                        <button type="button" onClick={() => {
+                          const next = [...signatures];
+                          delete next[globalIdx].signature_type;
+                          delete next[globalIdx].observacion;
+                          setSignatures(next);
+                        }} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => setActiveSignerIdx(globalIdx)} className="text-[10px] font-semibold text-brand-700 hover:underline">
+                        ✍️ Registrar Firma
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="text"
                     placeholder="Nombre del Rector/a o Autoridad"
                     value={s.name}
                     onChange={(e) => {
                       const next = [...signatures];
-                      const targetIdx = next.findIndex((item) => item.type === "APROBACION");
-                      if (targetIdx >= 0) {
-                        next[targetIdx].name = e.target.value;
-                        setSignatures(next);
-                      }
+                      next[globalIdx].name = e.target.value;
+                      setSignatures(next);
                     }}
                     className="w-full text-xs p-1.5 border border-slate-300 rounded font-semibold"
                   />
@@ -1065,11 +1152,8 @@ export default function AnnualReportForm({
                     value={s.cargo}
                     onChange={(e) => {
                       const next = [...signatures];
-                      const targetIdx = next.findIndex((item) => item.type === "APROBACION");
-                      if (targetIdx >= 0) {
-                        next[targetIdx].cargo = e.target.value;
-                        setSignatures(next);
-                      }
+                      next[globalIdx].cargo = e.target.value;
+                      setSignatures(next);
                     }}
                     className="w-full text-xs p-1.5 border border-slate-300 rounded"
                   />
@@ -1079,6 +1163,86 @@ export default function AnnualReportForm({
           </div>
         </div>
       </div>
+
+      {/* Respaldo Físico DECE e Informe Anual en Papel */}
+      <div className="p-4 bg-amber-50/60 rounded-xl border border-amber-200 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+            <span>📁</span> Respaldo Físico DECE e Informe de Gestión en Papel (Auditoría Ministerial)
+          </span>
+          <span className="text-[11px] text-amber-700 bg-amber-100/70 border border-amber-300 px-2 py-0.5 rounded-full font-medium">
+            Custodia Institucional
+          </span>
+        </div>
+        <p className="text-xs text-amber-800/90 leading-relaxed">
+          Para garantizar la constancia legal y auditoría física, registra la ubicación física en carpeta/archivador y opcionalmente adjunta copia escaneada o foto (PDF o Imagen) del informe anual/semestral firmado y sellado.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div>
+            <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+              Ubicación en Archivo Físico Institucional
+            </label>
+            <input
+              type="text"
+              value={physicalFileRef}
+              onChange={(e) => setPhysicalFileRef(e.target.value)}
+              placeholder="Ej. Archivador Informes de Gestión DECE 2026 / Carpeta Anual"
+              className="w-full text-xs rounded-lg border border-amber-300 bg-white px-3 py-2 text-slate-800 placeholder-slate-400 focus:ring-1 focus:ring-amber-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+              Adjuntar Informe Firmado / Sellado (PDF o Imagen)
+            </label>
+            {physicalEvidenceUrl ? (
+              <div className="flex items-center justify-between p-2 bg-white rounded-lg border border-amber-300">
+                <span className="text-xs text-emerald-800 font-medium flex items-center gap-1.5 truncate max-w-[200px]">
+                  <span>📎</span> {physicalEvidenceName || "Informe_Gestion_Sellado"}
+                </span>
+                <div className="flex items-center gap-2">
+                  <a href={physicalEvidenceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">Ver</a>
+                  <button type="button" onClick={() => { setPhysicalEvidenceUrl(""); setPhysicalEvidenceName(""); }} className="text-xs text-rose-600 hover:underline font-medium">Quitar</button>
+                </div>
+              </div>
+            ) : (
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={handleEvidenceUpload}
+                className="w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 cursor-pointer"
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {activeSignerIdx !== null && signatures[activeSignerIdx] && (
+        <DualSignatureModal
+          isOpen={true}
+          onClose={() => setActiveSignerIdx(null)}
+          signatoryName={signatures[activeSignerIdx].name || "Profesional DECE"}
+          signatoryRole={signatures[activeSignerIdx].cargo || "PROFESIONAL DECE"}
+          initialData={
+            signatures[activeSignerIdx].signature_type
+              ? {
+                  tipo: signatures[activeSignerIdx].signature_type!,
+                  firma_data_url: signatures[activeSignerIdx].firma_data_url,
+                  observacion: signatures[activeSignerIdx].observacion, observacion_firma: signatures[activeSignerIdx].observacion,
+                }
+              : null
+          }
+          onSave={(data: DualSignatureData) => {
+            const next = [...signatures];
+            next[activeSignerIdx].signature_type = data.tipo;
+            next[activeSignerIdx].firma_data_url = data.firma_data_url;
+            next[activeSignerIdx].observacion = data.observacion || data.observacion_firma;
+            setSignatures(next);
+            setActiveSignerIdx(null);
+          }}
+        />
+      )}
 
       {/* Botón Flotante / Inferior de Guardar */}
       <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">

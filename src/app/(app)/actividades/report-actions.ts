@@ -27,6 +27,7 @@ const REPORT_COLUMNS = [
   "advances", "critical_nodes", "conclusions", "recommendations",
   "elaborated_by_name", "elaborated_by_role", "elaborated_date",
   "approved_by_name", "approved_by_role", "approved_date",
+  "signatures_json", "signature_type", "physical_file_ref", "physical_evidence_url",
 ] as const;
 
 function readReportFields(formData: FormData): Record<string, string | number | null> {

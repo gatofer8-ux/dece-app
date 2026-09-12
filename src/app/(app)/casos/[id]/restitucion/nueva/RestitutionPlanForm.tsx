@@ -28,6 +28,7 @@ import {
 import type { CaseRestitutionPlanRow, StudentRow, InstitutionRow, SchoolYearRow } from "@/lib/types";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
 import AIAssistButton from "@/components/AIAssistButton";
+import DualSignatureModal, { type DualSignatureData } from "@/components/DualSignatureModal";
 
 const initialState: ActionState = { error: null };
 
@@ -150,6 +151,67 @@ export default function RestitutionPlanForm({
   const [legalInstances, setLegalInstances] = useState<LegalInstanceEntry[]>(defaultLegalInstances);
   const [accompanimentActions, setAccompanimentActions] = useState<AccompanimentActionEntry[]>(defaultAccompActions);
   const [preparedByRole, setPreparedByRole] = useState<string>(initialData?.prepared_by_role || "Analista DECE");
+
+  // Estados de firmas duales y custodia física
+  const initialSignatures: DualSignatureData[] = (() => {
+    try {
+      return initialData?.signatures_json ? JSON.parse(initialData.signatures_json) : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  const [preparedSig, setPreparedSig] = useState<DualSignatureData | null>(
+    initialSignatures.find((s) => s.signer_id === "prepared" || s.role?.toLowerCase().includes("elaborado") || s.role?.toLowerCase().includes("analista")) || null
+  );
+  const [reviewedCoordinatorSig, setReviewedCoordinatorSig] = useState<DualSignatureData | null>(
+    initialSignatures.find((s) => s.signer_id === "reviewed_coordinator" || s.role?.toLowerCase().includes("coordinador")) || null
+  );
+  const [reviewedAuthoritySig, setReviewedAuthoritySig] = useState<DualSignatureData | null>(
+    initialSignatures.find((s) => s.signer_id === "reviewed_authority" || s.role?.toLowerCase().includes("autoridad") || s.role?.toLowerCase().includes("rector")) || null
+  );
+  const [approvedSig, setApprovedSig] = useState<DualSignatureData | null>(
+    initialSignatures.find((s) => s.signer_id === "approved" || s.role?.toLowerCase().includes("distrito") || s.role?.toLowerCase().includes("apoyo")) || null
+  );
+
+  const [activeSignerModal, setActiveSignerModal] = useState<
+    "prepared" | "reviewed_coordinator" | "reviewed_authority" | "approved" | null
+  >(null);
+
+  const [physicalFileRef, setPhysicalFileRef] = useState(initialData?.physical_file_ref || "");
+  const [physicalEvidenceUrl, setPhysicalEvidenceUrl] = useState(initialData?.physical_evidence_url || "");
+  const [physicalEvidenceName, setPhysicalEvidenceName] = useState("");
+
+  const handleEvidenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhysicalEvidenceName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setPhysicalEvidenceUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const currentSignatures: DualSignatureData[] = [
+    ...(preparedSig ? [{ ...preparedSig, signer_id: "prepared" }] : []),
+    ...(preparedByRole === "Analista DECE" && reviewedCoordinatorSig
+      ? [{ ...reviewedCoordinatorSig, signer_id: "reviewed_coordinator" }]
+      : []),
+    ...(reviewedAuthoritySig ? [{ ...reviewedAuthoritySig, signer_id: "reviewed_authority" }] : []),
+    ...(approvedSig ? [{ ...approvedSig, signer_id: "approved" }] : []),
+  ];
+
+  const overallSignatureType =
+    currentSignatures.length === 0
+      ? (initialData?.signature_type || "digital")
+      : currentSignatures.every((s) => s.tipo === "digital")
+      ? "digital"
+      : currentSignatures.every((s) => s.tipo === "fisica")
+      ? "fisica"
+      : "mixta";
 
   // Helper to toggle risk factor chip into riskFactorsText
   const handleToggleRiskChip = (chip: string, category: "individual" | "familiar" | "escolar" | "comunitario") => {
@@ -872,13 +934,30 @@ export default function RestitutionPlanForm({
 
       {/* 9. Firmas de Responsabilidad */}
       <div className="border border-slate-200 rounded-xl p-5 space-y-4">
+        {/* Hidden inputs para firmas duales y respaldo físico */}
+        <input type="hidden" name="signatures_json" value={JSON.stringify(currentSignatures)} />
+        <input type="hidden" name="signature_type" value={overallSignatureType} />
+        <input type="hidden" name="physical_file_ref" value={physicalFileRef} />
+        <input type="hidden" name="physical_evidence_url" value={physicalEvidenceUrl} />
+
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
           <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
             <span>✍️</span> Firmas de Responsabilidad Institucional
           </h3>
-          <span className="text-xs text-slate-500">
-            {preparedByRole === "Analista DECE" ? "4 firmas requeridas" : "3 firmas requeridas"}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">
+              {preparedByRole === "Analista DECE" ? "4 firmas requeridas" : "3 firmas requeridas"}
+            </span>
+            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+              overallSignatureType === "digital"
+                ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                : overallSignatureType === "fisica"
+                ? "bg-amber-50 text-amber-700 border-amber-300"
+                : "bg-blue-50 text-blue-700 border-blue-300"
+            }`}>
+              Modalidad: {overallSignatureType === "digital" ? "Digital" : overallSignatureType === "fisica" ? "Física (Papel)" : "Mixta"}
+            </span>
+          </div>
         </div>
 
         {/* Selector de rol de quien elabora */}
@@ -911,10 +990,30 @@ export default function RestitutionPlanForm({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Fila 1: Elaborado por */}
           <div className="p-3.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
-            <p className="text-xs font-bold text-slate-700">
-              Elaborado por: {preparedByRole === "Analista DECE" ? "Analista DECE" : "Coordinador/a DECE"}
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-slate-700">
+                Elaborado por: {preparedByRole === "Analista DECE" ? "Analista DECE" : "Coordinador/a DECE"}
+              </p>
+              {preparedSig?.tipo === "digital" ? (
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 px-1.5 py-0.5 rounded">🖋️ Digital</span>
+                  <button type="button" onClick={() => setActiveSignerModal("prepared")} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                  <button type="button" onClick={() => setPreparedSig(null)} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                </div>
+              ) : preparedSig?.tipo === "fisica" ? (
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded">📄 Papel</span>
+                  <button type="button" onClick={() => setActiveSignerModal("prepared")} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                  <button type="button" onClick={() => setPreparedSig(null)} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setActiveSignerModal("prepared")} className="text-[10px] font-semibold text-brand-700 hover:underline">
+                  ✍️ Registrar Firma
+                </button>
+              )}
+            </div>
             <input
+              id="restitution_prepared_by_name"
               name="prepared_by_name"
               defaultValue={initialData?.prepared_by_name || defaultPreparedBy}
               placeholder="Nombre y título del profesional que elabora"
@@ -935,8 +1034,28 @@ export default function RestitutionPlanForm({
           {/* Fila 2: Revisado por Coordinador DECE (Solo si elabora Analista DECE) */}
           {preparedByRole === "Analista DECE" && (
             <div className="p-3.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
-              <p className="text-xs font-bold text-slate-700">Revisado por: Coordinador/a DECE</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold text-slate-700">Revisado por: Coordinador/a DECE</p>
+                {reviewedCoordinatorSig?.tipo === "digital" ? (
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 px-1.5 py-0.5 rounded">🖋️ Digital</span>
+                    <button type="button" onClick={() => setActiveSignerModal("reviewed_coordinator")} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                    <button type="button" onClick={() => setReviewedCoordinatorSig(null)} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                  </div>
+                ) : reviewedCoordinatorSig?.tipo === "fisica" ? (
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded">📄 Papel</span>
+                    <button type="button" onClick={() => setActiveSignerModal("reviewed_coordinator")} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                    <button type="button" onClick={() => setReviewedCoordinatorSig(null)} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setActiveSignerModal("reviewed_coordinator")} className="text-[10px] font-semibold text-brand-700 hover:underline">
+                    ✍️ Registrar Firma
+                  </button>
+                )}
+              </div>
               <input
+                id="restitution_reviewed_coordinator_name"
                 name="reviewed_coordinator_name"
                 defaultValue={initialData?.reviewed_coordinator_name || defaultCoordinatorName || "Mg. Marlon Jácome"}
                 placeholder="Nombre Coordinador/a DECE"
@@ -957,8 +1076,28 @@ export default function RestitutionPlanForm({
 
           {/* Fila 3: Revisado por la Autoridad Educativa */}
           <div className="p-3.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
-            <p className="text-xs font-bold text-slate-700">Revisado por: Autoridad Institucional (Rector/a)</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-slate-700">Revisado por: Autoridad Institucional (Rector/a)</p>
+              {reviewedAuthoritySig?.tipo === "digital" ? (
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 px-1.5 py-0.5 rounded">🖋️ Digital</span>
+                  <button type="button" onClick={() => setActiveSignerModal("reviewed_authority")} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                  <button type="button" onClick={() => setReviewedAuthoritySig(null)} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                </div>
+              ) : reviewedAuthoritySig?.tipo === "fisica" ? (
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded">📄 Papel</span>
+                  <button type="button" onClick={() => setActiveSignerModal("reviewed_authority")} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                  <button type="button" onClick={() => setReviewedAuthoritySig(null)} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setActiveSignerModal("reviewed_authority")} className="text-[10px] font-semibold text-brand-700 hover:underline">
+                  ✍️ Registrar Firma
+                </button>
+              )}
+            </div>
             <input
+              id="restitution_reviewed_authority_name"
               name="reviewed_authority_name"
               defaultValue={initialData?.reviewed_authority_name || defaultAuthorityName || (institution as any)?.rector_name || ""}
               placeholder="Nombre de la Rectora / Director"
@@ -978,8 +1117,28 @@ export default function RestitutionPlanForm({
 
           {/* Fila 4: Aprobado por: Profesional de Apoyo al DECE (Distrito) */}
           <div className="p-3.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
-            <p className="text-xs font-bold text-slate-700">Aprobado por: Profesional de Apoyo al DECE (Distrito)</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-slate-700">Aprobado por: Profesional de Apoyo al DECE (Distrito)</p>
+              {approvedSig?.tipo === "digital" ? (
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 px-1.5 py-0.5 rounded">🖋️ Digital</span>
+                  <button type="button" onClick={() => setActiveSignerModal("approved")} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                  <button type="button" onClick={() => setApprovedSig(null)} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                </div>
+              ) : approvedSig?.tipo === "fisica" ? (
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded">📄 Papel</span>
+                  <button type="button" onClick={() => setActiveSignerModal("approved")} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                  <button type="button" onClick={() => setApprovedSig(null)} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setActiveSignerModal("approved")} className="text-[10px] font-semibold text-brand-700 hover:underline">
+                  ✍️ Registrar Firma
+                </button>
+              )}
+            </div>
             <input
+              id="restitution_approved_by_name"
               name="approved_by_name"
               defaultValue={initialData?.approved_by_name || "Psic. Silvia Paredes"}
               placeholder="Nombre del Profesional de Apoyo (Distrito)"
@@ -998,6 +1157,102 @@ export default function RestitutionPlanForm({
           </div>
         </div>
       </div>
+
+      {/* Respaldo Físico DECE y Ubicación Institucional */}
+      <div className="p-4 bg-amber-50/60 rounded-xl border border-amber-200 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+            <span>📁</span> Respaldo Físico DECE y Ubicación de Archivo Institucional (Auditoría Ministerial)
+          </span>
+          <span className="text-[11px] text-amber-700 bg-amber-100/70 border border-amber-300 px-2 py-0.5 rounded-full font-medium">
+            Custodia Institucional
+          </span>
+        </div>
+        <p className="text-xs text-amber-800/90 leading-relaxed">
+          Para garantizar la constancia legal y auditoría física, registra la ubicación física en carpeta/archivador y opcionalmente adjunta copia escaneada o foto (PDF o Imagen) del plan con firmas manuscritas y sellos institucionales.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div>
+            <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+              Ubicación en Archivo Físico Institucional
+            </label>
+            <input
+              type="text"
+              value={physicalFileRef}
+              onChange={(e) => setPhysicalFileRef(e.target.value)}
+              placeholder="Ej. Archivador Planes de Restitución 2026 / Carpeta Caso"
+              className="w-full text-xs rounded-lg border border-amber-300 bg-white px-3 py-2 text-slate-800 placeholder-slate-400 focus:ring-1 focus:ring-amber-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+              Adjuntar Plan Sellado / Firmado (PDF o Imagen)
+            </label>
+            {physicalEvidenceUrl ? (
+              <div className="flex items-center justify-between p-2 bg-white rounded-lg border border-amber-300">
+                <span className="text-xs text-emerald-800 font-medium flex items-center gap-1.5 truncate max-w-[200px]">
+                  <span>📎</span> {physicalEvidenceName || "Plan_Restitucion_Sellado"}
+                </span>
+                <div className="flex items-center gap-2">
+                  <a href={physicalEvidenceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">Ver</a>
+                  <button type="button" onClick={() => { setPhysicalEvidenceUrl(""); setPhysicalEvidenceName(""); }} className="text-xs text-rose-600 hover:underline font-medium">Quitar</button>
+                </div>
+              </div>
+            ) : (
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={handleEvidenceUpload}
+                className="w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 cursor-pointer"
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Modal DualSignatureModal */}
+      {activeSignerModal && (
+        <DualSignatureModal
+          isOpen={true}
+          onClose={() => setActiveSignerModal(null)}
+          signatoryName={
+            activeSignerModal === "prepared"
+              ? (document.getElementById("restitution_prepared_by_name") as HTMLInputElement)?.value || defaultPreparedBy
+              : activeSignerModal === "reviewed_coordinator"
+              ? (document.getElementById("restitution_reviewed_coordinator_name") as HTMLInputElement)?.value || defaultCoordinatorName || "Coordinador/a DECE"
+              : activeSignerModal === "reviewed_authority"
+              ? (document.getElementById("restitution_reviewed_authority_name") as HTMLInputElement)?.value || defaultAuthorityName || "Autoridad Institucional"
+              : (document.getElementById("restitution_approved_by_name") as HTMLInputElement)?.value || "Profesional de Apoyo al DECE"
+          }
+          signatoryRole={
+            activeSignerModal === "prepared"
+              ? (preparedByRole === "Analista DECE" ? "ANALISTA DECE" : "COORDINADOR/A DECE")
+              : activeSignerModal === "reviewed_coordinator"
+              ? "COORDINADOR/A DECE"
+              : activeSignerModal === "reviewed_authority"
+              ? "RECTOR/A INSTITUCIONAL"
+              : "PROFESIONAL DE APOYO AL DECE (DISTRITO)"
+          }
+          initialData={
+            activeSignerModal === "prepared"
+              ? preparedSig
+              : activeSignerModal === "reviewed_coordinator"
+              ? reviewedCoordinatorSig
+              : activeSignerModal === "reviewed_authority"
+              ? reviewedAuthoritySig
+              : approvedSig
+          }
+          onSave={(data) => {
+            if (activeSignerModal === "prepared") setPreparedSig({ ...data, signer_id: "prepared" });
+            if (activeSignerModal === "reviewed_coordinator") setReviewedCoordinatorSig({ ...data, signer_id: "reviewed_coordinator" });
+            if (activeSignerModal === "reviewed_authority") setReviewedAuthoritySig({ ...data, signer_id: "reviewed_authority" });
+            if (activeSignerModal === "approved") setApprovedSig({ ...data, signer_id: "approved" });
+            setActiveSignerModal(null);
+          }}
+        />
+      )}
 
       {/* Botones de acción */}
       <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-200">

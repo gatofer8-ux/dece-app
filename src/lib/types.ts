@@ -479,6 +479,10 @@ export interface CaseCarePlanRow {
   intervention_types: string; // JSON string[]
   actions: string; // JSON {accion, profesional, tiempo, observaciones}[]
   status: CarePlanStatus;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -705,6 +709,10 @@ export interface CaseRestitutionPlanRow {
   reviewed_authority_date: string | null;
   approved_by_name: string | null;
   approved_date: string | null;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -832,6 +840,10 @@ export interface EneisActaRow {
   desarrollo: string | null;
   participants_json: string;
   compromisos_json: string;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -872,6 +884,10 @@ export interface EneisInformeDeceRow {
   created_by_id: string | null;
   periodo: string;
   actividades_json: string;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -1057,6 +1073,10 @@ export interface ActivityReportRow {
   approved_by_name: string | null;
   approved_by_role: string | null;
   approved_date: string | null;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -1412,6 +1432,10 @@ export interface ActionPlanRow {
   elaborated_by: string; // JSON de ActionPlanSignatory[]
   reviewed_by: string; // JSON de ActionPlanSignatory
   approved_by: string; // JSON de ActionPlanSignatory
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -1455,6 +1479,10 @@ export interface StrategicBianualPlanRow {
   elaborated_by: string; // JSON de ActionPlanSignatory[]
   reviewed_by: string; // JSON de ActionPlanSignatory
   approved_by: string; // JSON de ActionPlanSignatory
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -1702,6 +1730,9 @@ export interface ManagementReportSignatureItem {
   cargo: string;
   date: string;
   type: "DESARROLLO" | "APROBACION";
+  signature_type?: "digital" | "fisica";
+  firma_data_url?: string;
+  observacion?: string;
 }
 
 export interface AnnualManagementReportRow {
@@ -1740,6 +1771,9 @@ export interface AnnualManagementReportRow {
   annexes_notes: string;
   annex_photos_json: string;
   signatures_json: string;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -279,6 +279,40 @@ function createConnection(): Database.Database {
   safeAddColumn("case_accompaniment_reports", "physical_file_ref TEXT");
   safeAddColumn("case_accompaniment_reports", "physical_evidence_url TEXT");
 
+  safeAddColumn("case_restitution_plans", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("case_restitution_plans", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("case_restitution_plans", "physical_file_ref TEXT");
+  safeAddColumn("case_restitution_plans", "physical_evidence_url TEXT");
+
+  safeAddColumn("case_care_plans", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("case_care_plans", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("case_care_plans", "physical_file_ref TEXT");
+  safeAddColumn("case_care_plans", "physical_evidence_url TEXT");
+
+  safeAddColumn("activity_reports", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("activity_reports", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("activity_reports", "physical_file_ref TEXT");
+  safeAddColumn("activity_reports", "physical_evidence_url TEXT");
+
+  safeAddColumn("annual_management_reports", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("annual_management_reports", "physical_file_ref TEXT");
+  safeAddColumn("annual_management_reports", "physical_evidence_url TEXT");
+
+  safeAddColumn("action_plans", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("action_plans", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("action_plans", "physical_file_ref TEXT");
+  safeAddColumn("action_plans", "physical_evidence_url TEXT");
+
+  safeAddColumn("eneis_actas", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("eneis_actas", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("eneis_actas", "physical_file_ref TEXT");
+  safeAddColumn("eneis_actas", "physical_evidence_url TEXT");
+
+  safeAddColumn("eneis_informes_dece", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("eneis_informes_dece", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("eneis_informes_dece", "physical_file_ref TEXT");
+  safeAddColumn("eneis_informes_dece", "physical_evidence_url TEXT");
+
   safeAddColumn("institutions", "seal_image TEXT");
   safeAddColumn("institutions", "zona TEXT");
 

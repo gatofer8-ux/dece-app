@@ -24,6 +24,7 @@ import {
   ACCOMPANIMENT_ACTION_CATEGORIES,
 } from "@/lib/restitutionPlan";
 import { formatDate } from "@/components/ui";
+import { type DualSignatureData } from "@/components/DualSignatureModal";
 import { formatStudentCourseFull } from "@/lib/studentCourse";
 
 export default async function ImprimirPlanRestitucionPage({
@@ -96,6 +97,20 @@ export default async function ImprimirPlanRestitucionPage({
   const isAnalista =
     Boolean(plan.reviewed_coordinator_name) ||
     (plan.prepared_by_role ? plan.prepared_by_role.toUpperCase().includes("ANALISTA") : true);
+
+  // Parse signatures
+  let signaturesList: DualSignatureData[] = [];
+  if (plan.signatures_json) {
+    try {
+      signaturesList = JSON.parse(plan.signatures_json);
+    } catch {
+      signaturesList = [];
+    }
+  }
+  const preparedSig = signaturesList.find((s) => s.signer_id === "prepared" || s.role?.toLowerCase().includes("elaborado") || s.role?.toLowerCase().includes("analista"));
+  const reviewedCoordinatorSig = signaturesList.find((s) => s.signer_id === "reviewed_coordinator" || s.role?.toLowerCase().includes("coordinador"));
+  const reviewedAuthoritySig = signaturesList.find((s) => s.signer_id === "reviewed_authority" || s.role?.toLowerCase().includes("autoridad") || s.role?.toLowerCase().includes("rector"));
+  const approvedSig = signaturesList.find((s) => s.signer_id === "approved" || s.role?.toLowerCase().includes("distrito") || s.role?.toLowerCase().includes("apoyo"));
 
   return (
     <div className="min-h-screen bg-slate-100 py-6 print:py-0 print:bg-white text-black font-sans">

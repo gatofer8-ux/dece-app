@@ -55,11 +55,16 @@ export async function createEneisInformeDeceAction(formData: FormData): Promise<
     return { error: err instanceof Error ? err.message : "Error al procesar las fotos." };
   }
 
+  const signaturesJson = str(formData, "signatures_json") || "[]";
+  const signatureType = str(formData, "signature_type") || null;
+  const physicalFileRef = str(formData, "physical_file_ref") || null;
+  const physicalEvidenceUrl = str(formData, "physical_evidence_url") || null;
+
   const id = randomUUID();
   db.prepare(
-    `INSERT INTO eneis_informes_dece (id, institution_id, created_by_id, periodo, actividades_json)
-     VALUES (?, ?, ?, ?, ?)`
-  ).run(id, institutionId, session.user.id, periodo, actividadesJson);
+    `INSERT INTO eneis_informes_dece (id, institution_id, created_by_id, periodo, actividades_json, signatures_json, signature_type, physical_file_ref, physical_evidence_url)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(id, institutionId, session.user.id, periodo, actividadesJson, signaturesJson, signatureType, physicalFileRef, physicalEvidenceUrl);
   logAudit({ userId: session.user.id, action: "CREAR", entityType: "EneisInformeDece", entityId: id, institutionId });
   revalidatePath("/eneis/informe-dece");
   redirect(`/eneis/informe-dece/${id}/imprimir`);
@@ -90,9 +95,14 @@ export async function updateEneisInformeDeceAction(id: string, formData: FormDat
     return { error: err instanceof Error ? err.message : "Error al procesar las fotos." };
   }
 
+  const signaturesJson = str(formData, "signatures_json") || "[]";
+  const signatureType = str(formData, "signature_type") || null;
+  const physicalFileRef = str(formData, "physical_file_ref") || null;
+  const physicalEvidenceUrl = str(formData, "physical_evidence_url") || null;
+
   db.prepare(
-    "UPDATE eneis_informes_dece SET periodo = ?, actividades_json = ?, updated_at = datetime('now') WHERE id = ? AND institution_id = ?"
-  ).run(periodo, actividadesJson, id, institutionId);
+    "UPDATE eneis_informes_dece SET periodo = ?, actividades_json = ?, signatures_json = ?, signature_type = ?, physical_file_ref = ?, physical_evidence_url = ?, updated_at = datetime('now') WHERE id = ? AND institution_id = ?"
+  ).run(periodo, actividadesJson, signaturesJson, signatureType, physicalFileRef, physicalEvidenceUrl, id, institutionId);
   logAudit({ userId: session.user.id, action: "EDITAR", entityType: "EneisInformeDece", entityId: id, institutionId });
   revalidatePath("/eneis/informe-dece");
   redirect(`/eneis/informe-dece/${id}/imprimir`);

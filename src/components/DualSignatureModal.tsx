@@ -10,6 +10,7 @@ export interface DualSignatureData {
   respaldo_archivo_url?: string;
   respaldo_nombre?: string;
   observacion_firma?: string;
+  observacion?: string;
   signer_id?: string;
   role?: string;
   signer_name?: string;

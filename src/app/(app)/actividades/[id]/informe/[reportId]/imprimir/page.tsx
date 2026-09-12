@@ -27,6 +27,17 @@ export default async function ImprimirInformeTallerPage({
     .get(params.reportId, institutionId) as ActivityReportRow | undefined;
   if (!r) notFound();
   const institution = db.prepare("SELECT * FROM institutions WHERE id = ?").get(institutionId) as InstitutionRow;
+  let signaturesList: { signer_id?: string; tipo: "digital" | "fisica"; firma_data_url?: string; observacion?: string }[] = [];
+  if (r.signatures_json) {
+    try {
+      signaturesList = JSON.parse(r.signatures_json);
+    } catch {
+      signaturesList = [];
+    }
+  }
+  const elaboratedSig = signaturesList.find((s) => s.signer_id === "elaborated" || !s.signer_id) || null;
+  const approvedSig = signaturesList.find((s) => s.signer_id === "approved") || null;
+
   const photos = db
     .prepare("SELECT id, caption FROM attachments WHERE activity_report_id = ? ORDER BY uploaded_at ASC")
     .all(params.reportId) as { id: string; caption: string | null }[];
@@ -127,16 +138,78 @@ export default async function ImprimirInformeTallerPage({
         <h2 className={secH}>RECOMENDACIONES</h2>
         {lines(r.recommendations).map((l, i) => <p key={i} className={p}>{l}</p>)}
 
-        {[["DESARROLLO DEL DOCUMENTO", r.elaborated_by_name, r.elaborated_by_role, r.elaborated_date],
-          ["APROBACIÓN DEL DOCUMENTO", r.approved_by_name, r.approved_by_role, r.approved_date]].map(([t, n, c, d], i) => (
-          <table key={i} className="w-full border-collapse mt-3">
-            <tbody>
-              <tr><td className={head} colSpan={3}>{t as string}</td></tr>
-              <tr><td className={head} style={{ width: "50%" }}>Nombre / Cargo</td><td className={head}>Firma</td><td className={head}>Fecha</td></tr>
-              <tr><td className={cell}>{(n as string) || "—"}<br />{(c as string) || ""}</td><td className={cell} style={{ height: 44 }}></td><td className={`${cell} text-center`}>{fmt(d as string)}</td></tr>
-            </tbody>
-          </table>
-        ))}
+        {[["DESARROLLO DEL DOCUMENTO", r.elaborated_by_name, r.elaborated_by_role, r.elaborated_date, elaboratedSig],
+          ["APROBACIÓN DEL DOCUMENTO", r.approved_by_name, r.approved_by_role, r.approved_date, approvedSig]].map(([t, n, c, d, sig], i) => {
+          const s = sig as { tipo: "digital" | "fisica"; firma_data_url?: string; observacion?: string } | null;
+          return (
+            <table key={i} className="w-full border-collapse mt-3 break-inside-avoid">
+              <tbody>
+                <tr><td className={head} colSpan={3}>{t as string}</td></tr>
+                <tr><td className={head} style={{ width: "50%" }}>Nombre / Cargo</td><td className={head}>Firma</td><td className={head}>Fecha</td></tr>
+                <tr>
+                  <td className={cell}>{(n as string) || "—"}<br />{(c as string) || ""}</td>
+                  <td className={`${cell} text-center align-middle`} style={{ height: 44 }}>
+                    {s?.tipo === "digital" && s.firma_data_url ? (
+                      <div className="flex flex-col items-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={s.firma_data_url} alt="Firma digital" className="max-h-12 max-w-[130px] object-contain" />
+                        <span className="text-[7.5px] text-emerald-800 font-bold uppercase mt-0.5">Firma Digital Registrada</span>
+                      </div>
+                    ) : s?.tipo === "fisica" ? (
+                      <div className="text-[8.5px] text-slate-500 italic">
+                        <span>___________________________</span>
+                        <div className="text-[7.5px] text-amber-800 font-semibold">[Firma física manuscrita]</div>
+                        {s.observacion && <div className="text-[7px] text-slate-500">{s.observacion}</div>}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 text-xs">___________________________</span>
+                    )}
+                  </td>
+                  <td className={`${cell} text-center`}>{fmt(d as string)}</td>
+                </tr>
+              </tbody>
+            </table>
+          );
+        })}
+
+        {/* Banner de Custodia de Respaldo Físico */}
+        {r.physical_file_ref && (
+          <div className="mt-4 p-2 bg-amber-50 border border-amber-300 rounded text-xs text-amber-900 flex items-center justify-between break-inside-avoid">
+            <div>
+              <span className="font-bold">📁 UBICACIÓN DE RESPALDO FÍSICO EN ARCHIVO INSTITUCIONAL: </span>
+              <span>{r.physical_file_ref}</span>
+            </div>
+            <span className="text-[9px] bg-amber-200/70 border border-amber-400 px-1.5 py-0.5 rounded font-bold uppercase">
+              Custodia DECE
+            </span>
+          </div>
+        )}
+
+        {/* Anexo de Auditoría Distrital: Respaldo Físico Escaneado */}
+        {r.physical_evidence_url && (
+          <div className="mt-4 pt-4 border-t border-dashed border-slate-300 page-break-inside-avoid">
+            <div className="text-center font-bold text-xs text-slate-800 uppercase tracking-wide bg-slate-100 py-1 border border-slate-300 rounded mb-2">
+              ANEXO DE AUDITORÍA DISTRITAL: RESPALDO FÍSICO DIGITALIZADO
+            </div>
+            <div className="text-[9.5px] text-slate-600 mb-2 italic text-center">
+              Copia digitalizada del informe de actividad firmado y sellado bajo custodia institucional.
+            </div>
+            <div className="flex justify-center border border-slate-200 p-2 bg-slate-50 rounded">
+              {r.physical_evidence_url.startsWith("data:application/pdf") ? (
+                <div className="text-center p-3 text-xs text-blue-700 font-semibold">
+                  <span>📄 Documento PDF de Respaldo Físico Digitalizado Adjunto</span>
+                </div>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={r.physical_evidence_url}
+                  alt="Respaldo Físico Digitalizado"
+                  className="max-h-[350px] w-auto object-contain border border-slate-300 rounded shadow-xs"
+                />
+              )}
+            </div>
+          </div>
+        )}
 
         {photos.length > 0 && (
           <>

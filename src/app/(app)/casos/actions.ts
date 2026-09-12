@@ -730,10 +730,17 @@ export async function createCarePlan(
       }))
       .filter((a) => a.accion.length > 0);
 
+    const signaturesJson = str(formData, "signatures_json") || "[]";
+    const signatureType = str(formData, "signature_type") || "PENDIENTE";
+    const physicalFileRef = str(formData, "physical_file_ref");
+    const physicalEvidenceUrl = str(formData, "physical_evidence_url");
+
     db.prepare(
       `INSERT INTO case_care_plans
-        (id, case_file_id, institution_id, professional_id, plan_date, jornada, tutor_name, diagnosis_summary, intervention_types, actions)
-       VALUES (@id, @case_file_id, @institution_id, @professional_id, @plan_date, @jornada, @tutor_name, @diagnosis_summary, @intervention_types, @actions)`
+        (id, case_file_id, institution_id, professional_id, plan_date, jornada, tutor_name, diagnosis_summary, intervention_types, actions,
+         signatures_json, signature_type, physical_file_ref, physical_evidence_url)
+       VALUES (@id, @case_file_id, @institution_id, @professional_id, @plan_date, @jornada, @tutor_name, @diagnosis_summary, @intervention_types, @actions,
+         @signatures_json, @signature_type, @physical_file_ref, @physical_evidence_url)`
     ).run({
       id,
       case_file_id: caseId,
@@ -745,6 +752,10 @@ export async function createCarePlan(
       diagnosis_summary: diagnosisSummary,
       intervention_types: interventionTypes,
       actions: JSON.stringify(actions),
+      signatures_json: signaturesJson,
+      signature_type: signatureType,
+      physical_file_ref: physicalFileRef,
+      physical_evidence_url: physicalEvidenceUrl,
     });
 
     db.prepare(
@@ -832,18 +843,25 @@ export async function createRestitutionPlan(
       fecha_fin: (accFechaFin[i] || "").trim(),
     }));
 
+    const signaturesJson = str(formData, "signatures_json") || "[]";
+    const signatureType = str(formData, "signature_type") || "PENDIENTE";
+    const physicalFileRef = str(formData, "physical_file_ref");
+    const physicalEvidenceUrl = str(formData, "physical_evidence_url");
+
     db.prepare(
       `INSERT INTO case_restitution_plans
         (id, case_file_id, institution_id, school_year, elaboration_date, risk_factors,
          violence_types, violence_modality, violence_modality_other, perpetrator_relation,
          victims, perpetrators, report_narrative, legal_instances, accompaniment_actions,
          prepared_by_name, prepared_by_email, prepared_by_role, prepared_date, reviewed_coordinator_name, reviewed_coordinator_date,
-         reviewed_authority_name, reviewed_authority_date, approved_by_name, approved_date)
+         reviewed_authority_name, reviewed_authority_date, approved_by_name, approved_date,
+         signatures_json, signature_type, physical_file_ref, physical_evidence_url)
        VALUES (@id, @case_file_id, @institution_id, @school_year, @elaboration_date, @risk_factors,
          @violence_types, @violence_modality, @violence_modality_other, @perpetrator_relation,
          @victims, @perpetrators, @report_narrative, @legal_instances, @accompaniment_actions,
          @prepared_by_name, @prepared_by_email, @prepared_by_role, @prepared_date, @reviewed_coordinator_name, @reviewed_coordinator_date,
-         @reviewed_authority_name, @reviewed_authority_date, @approved_by_name, @approved_date)`
+         @reviewed_authority_name, @reviewed_authority_date, @approved_by_name, @approved_date,
+         @signatures_json, @signature_type, @physical_file_ref, @physical_evidence_url)`
     ).run({
       id,
       case_file_id: caseId,
@@ -870,6 +888,10 @@ export async function createRestitutionPlan(
       reviewed_authority_date: str(formData, "reviewed_authority_date"),
       approved_by_name: str(formData, "approved_by_name"),
       approved_date: str(formData, "approved_date"),
+      signatures_json: signaturesJson,
+      signature_type: signatureType,
+      physical_file_ref: physicalFileRef,
+      physical_evidence_url: physicalEvidenceUrl,
     });
 
     db.prepare(
@@ -964,6 +986,11 @@ export async function updateRestitutionPlan(
       fecha_fin: (accFechaFin[i] || "").trim(),
     }));
 
+    const signaturesJson = str(formData, "signatures_json");
+    const signatureType = str(formData, "signature_type");
+    const physicalFileRef = str(formData, "physical_file_ref");
+    const physicalEvidenceUrl = str(formData, "physical_evidence_url");
+
     db.prepare(
       `UPDATE case_restitution_plans
        SET school_year = @school_year,
@@ -987,7 +1014,11 @@ export async function updateRestitutionPlan(
            reviewed_authority_name = @reviewed_authority_name,
            reviewed_authority_date = @reviewed_authority_date,
            approved_by_name = @approved_by_name,
-           approved_date = @approved_date
+           approved_date = @approved_date,
+           signatures_json = COALESCE(@signatures_json, signatures_json),
+           signature_type = COALESCE(@signature_type, signature_type),
+           physical_file_ref = COALESCE(@physical_file_ref, physical_file_ref),
+           physical_evidence_url = COALESCE(@physical_evidence_url, physical_evidence_url)
        WHERE id = @id AND case_file_id = @case_file_id`
     ).run({
       id: planId,
@@ -1014,6 +1045,10 @@ export async function updateRestitutionPlan(
       reviewed_authority_date: str(formData, "reviewed_authority_date"),
       approved_by_name: str(formData, "approved_by_name"),
       approved_date: str(formData, "approved_date"),
+      signatures_json: signaturesJson,
+      signature_type: signatureType,
+      physical_file_ref: physicalFileRef,
+      physical_evidence_url: physicalEvidenceUrl,
     });
 
     db.prepare(
@@ -2970,6 +3005,11 @@ export async function updateCarePlan(
       }))
       .filter((a) => a.accion.length > 0);
 
+    const signaturesJson = str(formData, "signatures_json");
+    const signatureType = str(formData, "signature_type");
+    const physicalFileRef = str(formData, "physical_file_ref");
+    const physicalEvidenceUrl = str(formData, "physical_evidence_url");
+
     db.prepare(
       `UPDATE case_care_plans SET
         plan_date = @plan_date,
@@ -2978,6 +3018,10 @@ export async function updateCarePlan(
         diagnosis_summary = @diagnosis_summary,
         intervention_types = @intervention_types,
         actions = @actions,
+        signatures_json = COALESCE(@signatures_json, signatures_json),
+        signature_type = COALESCE(@signature_type, signature_type),
+        physical_file_ref = COALESCE(@physical_file_ref, physical_file_ref),
+        physical_evidence_url = COALESCE(@physical_evidence_url, physical_evidence_url),
         updated_at = datetime('now')
       WHERE id = @id AND case_file_id = @case_file_id AND institution_id = @institution_id`
     ).run({
@@ -2990,6 +3034,10 @@ export async function updateCarePlan(
       diagnosis_summary: diagnosisSummary,
       intervention_types: interventionTypes,
       actions: JSON.stringify(actions),
+      signatures_json: signaturesJson,
+      signature_type: signatureType,
+      physical_file_ref: physicalFileRef,
+      physical_evidence_url: physicalEvidenceUrl,
     });
 
     logAudit({ userId: session.user.id, action: "EDITAR", entityType: "CaseCarePlan", entityId: planId, details: caseId, institutionId });
