@@ -6,6 +6,7 @@ import { CASE_STATUS_LABELS, CASE_PRIORITY_LABELS, RISK_TYPE_LABELS, type CaseFi
 import { caseStatusStyle, priorityStyle, riskTypeStyle } from "@/lib/statusColors";
 import { getSelectedSchoolYear } from "@/lib/schoolYear";
 import { getInactiveCases } from "@/lib/caseAlerts";
+import { getInstitutionCustodyAudit, getCasesCustodyMap } from "@/lib/physicalCustodyAudit";
 import DashboardCharts from "@/components/DashboardCharts";
 import KpiCard from "@/components/KpiCard";
 
@@ -17,6 +18,13 @@ export default async function DashboardPage() {
   const yearCondition = selectedYear
     ? `AND (cf.school_year_id = '${selectedYear.id}' OR (cf.school_year_id IS NULL AND cf.detection_date >= '${selectedYear.start_date}' AND cf.detection_date <= '${selectedYear.end_date}'))`
     : "";
+
+  let custodyAudit: ReturnType<typeof getInstitutionCustodyAudit> | null = null;
+  try {
+    custodyAudit = getInstitutionCustodyAudit(institutionId);
+  } catch (err) {
+    console.error("[dashboard] Error consultando auditoria de custodia:", err);
+  }
 
   // 1. Total Estudiantes
   const totalStudents = (
@@ -179,6 +187,8 @@ export default async function DashboardPage() {
     )
     .all(institutionId) as (CaseFileRow & { student_name: string; student_course: string })[];
 
+  const recentCustodyMap = getCasesCustodyMap(recentCases.map((c) => c.id));
+
   return (
     <div className="space-y-6 max-w-7xl">
       <PageHeader
@@ -229,6 +239,40 @@ export default async function DashboardPage() {
         </div>
       )}
 
+      {/* Banner de Auditoría de Custodia Física y Archivo Institucional */}
+      {custodyAudit && custodyAudit.pendingDocs > 0 && (
+        <div className="p-4 bg-gradient-to-r from-amber-50/90 via-orange-50/60 to-white dark:from-amber-950/30 dark:via-slate-900 dark:to-slate-900 border border-amber-200 dark:border-amber-800/60 rounded-xl text-xs text-amber-950 dark:text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl mt-0.5">📁</span>
+            <div>
+              <div className="font-bold text-sm text-amber-950 dark:text-amber-100 flex items-center gap-2">
+                <span>Auditoría de Archivo Físico: {custodyAudit.pendingDocs} documento(s) pendientes de archivar</span>
+                <span className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 rounded-full">
+                  {custodyAudit.globalComplianceRate}% conforme
+                </span>
+              </div>
+              <p className="text-amber-800 dark:text-amber-300/80 mt-0.5">
+                Folie o asigne archivador a los documentos para garantizar el cumplimiento normativo en inspecciones distritales.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              href="/casos?custodia=pendiente"
+              className="btn-secondary text-xs font-semibold px-3 py-1.5 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+            >
+              Ver casos pendientes →
+            </Link>
+            <Link
+              href="/reportes/ejecutivo#auditoria-custodia"
+              className="btn-primary text-xs font-semibold px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white"
+            >
+              Semáforo Distrital
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Tarjetas KPI — clicables, perfectamente alineadas y simétricas */}
       <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3.5 items-stretch">
         <KpiCard label="Estudiantes" value={totalStudents} hint="Matrícula activa" tone="brand" href="/estudiantes" />
@@ -274,31 +318,58 @@ export default async function DashboardPage() {
             {recentCases.length === 0 ? (
               <p className="text-xs text-slate-400 py-6 text-center">Aún no hay casos registrados.</p>
             ) : (
-              recentCases.map((c) => (
-                <Link
-                  key={c.id}
-                  href={`/casos/${c.id}`}
-                  className="py-2.5 flex justify-between items-center gap-2 hover:bg-brand-50/50 -mx-2 px-2 rounded-lg transition-colors group"
-                >
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold text-slate-800 group-hover:text-brand-900 truncate">
-                      {c.student_name}
+              recentCases.map((c) => {
+                const cust = recentCustodyMap.get(c.id);
+                return (
+                  <Link
+                    key={c.id}
+                    href={`/casos/${c.id}`}
+                    className="py-2.5 flex justify-between items-center gap-2 hover:bg-brand-50/50 -mx-2 px-2 rounded-lg transition-colors group"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold text-slate-800 group-hover:text-brand-900 truncate">
+                        {c.student_name}
+                      </div>
+                      <div className="text-[11px] text-slate-500 truncate flex items-center gap-1.5">
+                        <span className={`h-1.5 w-1.5 rounded-full ${riskTypeStyle(c.risk_type).dot}`} />
+                        {c.code} · {RISK_TYPE_LABELS[c.risk_type] || c.risk_type}
+                      </div>
                     </div>
-                    <div className="text-[11px] text-slate-500 truncate flex items-center gap-1.5">
-                      <span className={`h-1.5 w-1.5 rounded-full ${riskTypeStyle(c.risk_type).dot}`} />
-                      {c.code} · {RISK_TYPE_LABELS[c.risk_type] || c.risk_type}
+                    <div className="shrink-0 flex items-center gap-1.5">
+                      {cust && cust.total > 0 && (
+                        cust.complianceRate === 100 ? (
+                          <span
+                            className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300"
+                            title={`${cust.total} doc(s): 100% archivado`}
+                          >
+                            🟢 100%
+                          </span>
+                        ) : cust.complianceRate >= 60 ? (
+                          <span
+                            className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300"
+                            title={`${cust.total} doc(s): ${cust.complianceRate}% archivado`}
+                          >
+                            🟡 {cust.complianceRate}%
+                          </span>
+                        ) : (
+                          <span
+                            className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-300"
+                            title={`${cust.pending} doc(s) sin archivar en carpeta física`}
+                          >
+                            🔴 {cust.pending} pend.
+                          </span>
+                        )
+                      )}
+                      {c.priority === "ALTA" && (
+                        <span className={`badge ${priorityStyle("ALTA").badge}`}>{CASE_PRIORITY_LABELS.ALTA}</span>
+                      )}
+                      <span className={`badge ${caseStatusStyle(c.status).badge}`}>
+                        {CASE_STATUS_LABELS[c.status] || c.status}
+                      </span>
                     </div>
-                  </div>
-                  <div className="shrink-0 flex items-center gap-1">
-                    {c.priority === "ALTA" && (
-                      <span className={`badge ${priorityStyle("ALTA").badge}`}>{CASE_PRIORITY_LABELS.ALTA}</span>
-                    )}
-                    <span className={`badge ${caseStatusStyle(c.status).badge}`}>
-                      {CASE_STATUS_LABELS[c.status] || c.status}
-                    </span>
-                  </div>
-                </Link>
-              ))
+                  </Link>
+                );
+              })
             )}
           </div>
         </div>
