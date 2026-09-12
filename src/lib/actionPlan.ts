@@ -111,6 +111,77 @@ export const DECE_QUALITY_STANDARDS: QualityStandardInfo[] = [
   }
 ];
 
+/**
+ * Temáticas oficiales del EJE DE ESTRATEGIAS DE PREVENCIÓN (Acuerdo Ministerial
+ * MINEDUC-2020-00044-A).
+ *
+ * Catálogo único y compartido: lo consumen tanto la generación autónoma del
+ * Plan de Acción Anual (POA) como la del Plan Estratégico Bianual, para
+ * garantizar cobertura temática idéntica y completa en ambos documentos, sin
+ * saltar ninguna temática y sin deriva entre los dos módulos.
+ */
+export interface PreventionAxisTheme {
+  code: string;
+  label: string;
+  description: string;
+}
+
+export const PREVENTION_AXIS_THEMES: PreventionAxisTheme[] = [
+  {
+    code: "VIOLENCIAS",
+    label: "Prevención de Violencias (física, psicológica y sexual)",
+    description:
+      "Sensibilización y desarrollo de factores protectores frente a la violencia física, psicológica y sexual, con rutas y protocolos de actuación conocidos por toda la comunidad educativa.",
+  },
+  {
+    code: "ACOSO_CIBERACOSO",
+    label: "Prevención del Acoso Escolar (bullying) y Ciberacoso",
+    description:
+      "Estrategias de convivencia, empatía digital y uso seguro y responsable de redes sociales para prevenir el acoso escolar y el ciberacoso entre pares.",
+  },
+  {
+    code: "DROGAS",
+    label: "Prevención del Uso y Consumo de Drogas (alcohol, tabaco y estupefacientes)",
+    description:
+      "Prevención integral del uso y consumo de alcohol, tabaco y otras sustancias estupefacientes y psicotrópicas, con enfoque de toma responsable de decisiones y proyecto de vida.",
+  },
+  {
+    code: "SUICIDIO_SALUD_MENTAL",
+    label: "Prevención del Suicidio y Conductas Autolíticas / Promoción de la Salud Mental",
+    description:
+      "Promoción de la salud mental, identificación temprana de factores de riesgo suicida y conductas autolesivas, primeros auxilios psicológicos y redes de apoyo entre pares y familias.",
+  },
+  {
+    code: "ENEIS_EMBARAZO",
+    label: "Educación Integral en Sexualidad (ENEIS) y Prevención del Embarazo Adolescente",
+    description:
+      "Implementación de la Estrategia Nacional de Educación Integral en Sexualidad (ENEIS), derechos sexuales y reproductivos y prevención del embarazo en niñas y adolescentes.",
+  },
+  {
+    code: "CONVIVENCIA_RESTAURATIVA",
+    label: "Convivencia Pacífica, Prácticas y Círculos Restaurativos",
+    description:
+      "Construcción de una cultura de paz mediante prácticas y círculos restaurativos, resolución pacífica de conflictos y acuerdos de convivencia armónica.",
+  },
+  {
+    code: "VINCULO_FAMILIAR",
+    label: "Fortalecimiento del Vínculo Familiar (Escuela para Familias)",
+    description:
+      "Espacios de Escuela para Familias orientados a la crianza positiva, comunicación asertiva, establecimiento de límites y corresponsabilidad familiar en la protección de derechos.",
+  },
+  {
+    code: "ALERTAS_AUSENTISMO",
+    label: "Alertas Tempranas por Ausentismo y Prevención de la Deserción",
+    description:
+      "Sistema de alertas tempranas por ausentismo reiterado, seguimiento de la asistencia y acciones de permanencia escolar para prevenir el abandono y la deserción.",
+  },
+];
+
+/** Lista en viñetas de las temáticas de prevención para insertar en prompts de IA. */
+export function preventionThemesPromptList(): string {
+  return PREVENTION_AXIS_THEMES.map((t, i) => `   ${i + 1}. ${t.label}: ${t.description}`).join("\n");
+}
+
 export const DEFAULT_ACTION_PLAN_ITEMS: ActionPlanItem[] = [
   {
     "id": "item_1",

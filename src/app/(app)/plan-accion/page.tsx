@@ -49,15 +49,25 @@ export default async function PlanAccionPage() {
             description="Planificación operativa anual alineada a los 14 Estándares de Calidad y 4 Dimensiones de la gestión DECE."
           />
         </div>
-        {canEdit && (
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
           <Link
-            href="/plan-accion/nuevo"
-            className="btn-primary flex items-center justify-center gap-2 self-start sm:self-auto shadow-sm"
+            href="/plan-estrategico-bianual"
+            className="btn-secondary flex items-center justify-center gap-2 text-xs px-3 py-2 shadow-xs"
+            title="El Plan de Acción Anual se desprende del Plan Estratégico Bianual"
           >
-            <span>✨</span>
-            <span>Nuevo Plan de Acción</span>
+            <span>🧭</span>
+            <span>Plan Estratégico Bianual</span>
           </Link>
-        )}
+          {canEdit && (
+            <Link
+              href="/plan-accion/nuevo"
+              className="btn-primary flex items-center justify-center gap-2 shadow-sm"
+            >
+              <span>✨</span>
+              <span>Nuevo Plan de Acción</span>
+            </Link>
+          )}
+        </div>
       </div>
 
       {plans.length === 0 ? (

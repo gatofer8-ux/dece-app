@@ -59,6 +59,7 @@ export default function ActionPlanForm({
   defaultApprovedBy,
   deceStaffNames = [],
   defaultDeceResponsibleName,
+  linkedBianualPlan,
   isEditing = false,
 }: {
   planId?: string;
@@ -78,6 +79,12 @@ export default function ActionPlanForm({
   defaultApprovedBy?: ActionPlanSignatory;
   deceStaffNames: string[];
   defaultDeceResponsibleName?: string;
+  /**
+   * Plan Estratégico Bianual vigente de la institución, si existe. El POA se
+   * desprende de él: sus objetivos y metas por eje se inyectan como contexto en
+   * la generación autónoma con IA (la server action los consulta en la base).
+   */
+  linkedBianualPlan?: { id: string; period_text: string } | null;
   isEditing: boolean;
 }) {
   const actionToUse = isEditing ? updateActionPlan.bind(null, planId!) : createActionPlan;
@@ -685,6 +692,25 @@ export default function ActionPlanForm({
                 <span>Gestión Documental</span>
               </Link>
             )}
+            {linkedBianualPlan ? (
+              <Link
+                href={`/plan-estrategico-bianual/${linkedBianualPlan.id}/editar`}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 shadow-xs flex items-center gap-1.5 transition-all"
+                title="La generación con IA usará los objetivos y metas de este Plan Estratégico Bianual como contexto"
+              >
+                <span>🔗</span>
+                <span>Plan Bianual {linkedBianualPlan.period_text} vinculado</span>
+              </Link>
+            ) : (
+              <Link
+                href="/plan-estrategico-bianual/nuevo"
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 shadow-xs flex items-center gap-1.5 transition-all"
+                title="El Plan de Acción Anual se desprende del Plan Estratégico Bianual. Aún no tienes uno registrado (es opcional)."
+              >
+                <span>🧭</span>
+                <span>Sin Plan Bianual · crear uno</span>
+              </Link>
+            )}
             <button
               type="button"
               onClick={() => setIsAutonomousModalOpen(true)}
@@ -694,6 +720,48 @@ export default function ActionPlanForm({
               <span>Plan Autónomo con IA (044-A)</span>
             </button>
           </div>
+        </div>
+
+        {/* Vínculo con el Plan Estratégico Bianual */}
+        <div
+          className={`p-3 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+            linkedBianualPlan
+              ? "bg-emerald-50/70 border-emerald-200 text-emerald-900"
+              : "bg-amber-50/70 border-amber-200 text-amber-900"
+          }`}
+        >
+          <div className="flex items-start gap-2.5">
+            <span className="text-base shrink-0">{linkedBianualPlan ? "🔗" : "💡"}</span>
+            <p className="text-[11px] leading-relaxed">
+              {linkedBianualPlan ? (
+                <>
+                  Este POA se desprende del <strong>Plan Estratégico Bianual{" "}
+                  {linkedBianualPlan.period_text}</strong>. La generación autónoma con IA
+                  tomará su objetivo general, sus objetivos específicos y las metas de cada
+                  eje como contexto obligatorio.
+                </>
+              ) : (
+                <>
+                  Todavía no hay un <strong>Plan Estratégico Bianual</strong> registrado en
+                  la institución. El POA puede generarse igual, pero si creas el plan
+                  bianual primero, la IA alineará cada actividad anual a sus metas
+                  estratégicas.
+                </>
+              )}
+            </p>
+          </div>
+          <Link
+            href={
+              linkedBianualPlan
+                ? `/plan-estrategico-bianual/${linkedBianualPlan.id}/imprimir`
+                : "/plan-estrategico-bianual"
+            }
+            prefetch={false}
+            className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5 shrink-0 self-start sm:self-auto"
+          >
+            <span>🧭</span>
+            <span>{linkedBianualPlan ? "Ver plan bianual" : "Ir al Plan Bianual"}</span>
+          </Link>
         </div>
 
         {/* Selector de Pestañas de Dimensión */}

@@ -5,6 +5,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { listSchoolYears, getSelectedSchoolYear, ensureDefaultSchoolYear } from "@/lib/schoolYear";
 import { getDefaultActionPlanItems } from "@/lib/actionPlan";
 import { getSignatureDefaults } from "@/lib/caseDocumentDefaults";
+import { getLinkedBianualPlanRef } from "@/lib/strategicPlanBianualDb";
 import ActionPlanForm from "../ActionPlanForm";
 
 export default async function NuevoPlanAccionPage() {
@@ -68,6 +69,9 @@ export default async function NuevoPlanAccionPage() {
   // Actividades oficiales del plan (sin asignación automática: el usuario escoge si es TODOS o un profesional)
   const defaultItems = getDefaultActionPlanItems();
 
+  // El POA se desprende del Plan Estratégico Bianual vigente, si existe.
+  const linkedBianualPlan = getLinkedBianualPlanRef(effectiveInstId);
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
       <ActionPlanForm
@@ -83,6 +87,7 @@ export default async function NuevoPlanAccionPage() {
         defaultItems={defaultItems}
         defaultDeceResponsibleName={deceResponsibleName}
         deceStaffNames={deceStaffNames}
+        linkedBianualPlan={linkedBianualPlan}
         isEditing={false}
       />
     </div>

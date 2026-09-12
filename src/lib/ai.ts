@@ -1,7 +1,17 @@
 import { GoogleGenAI } from "@google/genai";
 import { pseudonymize } from "./aiPrivacy";
 import { REPRESENTATIVE_AWARENESS_NOTE } from "./interviewDefaults";
-import type { ActionPlanItem } from "./types";
+import {
+  DECE_QUALITY_STANDARDS,
+  PREVENTION_AXIS_THEMES,
+  preventionThemesPromptList,
+} from "./actionPlan";
+import {
+  STRATEGIC_BIANUAL_AXES,
+  detectPreventionThemes,
+  getPreventionSeedRowForTheme,
+} from "./strategicPlanBianual";
+import type { ActionPlanItem, StrategicBianualAxisItem } from "./types";
 
 // Asistente de redacción con IA para los documentos técnicos del DECE.
 // Usa Groq (modelos Llama 70B, gratis) como proveedor de IA principal,
@@ -899,6 +909,14 @@ export async function draftAutonomousActionPlan(opts: {
   availableResources: string;
   targetScope: "PREVENCION" | "TODO";
   currentItems: ActionPlanItem[];
+  /**
+   * Contexto del Plan Estratégico Bianual vigente de la institución (objetivo
+   * general, objetivos específicos y metas por eje). El Plan de Acción Anual se
+   * desprende del plan bianual, así que cuando existe se inyecta al prompt para
+   * que las actividades operativicen esas metas. Opcional: las instituciones
+   * que aún no usan el módulo bianual generan su POA igual que antes.
+   */
+  bianualContext?: string;
 }): Promise<AutonomousActionPlanResult | { error: string }> {
   const profCount = Math.max(1, opts.professionalsList.length);
   const students = opts.studentsCount > 0 ? opts.studentsCount : 600;
@@ -1018,16 +1036,17 @@ export async function draftAutonomousActionPlan(opts: {
       const prompt = `Eres un especialista experto del Departamento de Consejería Estudiantil (DECE) del Ministerio de Educación de Ecuador.
 Tu labor es estructurar de manera AUTÓNOMA las actividades del PLAN DE ACCIÓN ANUAL (POA) DECE para el año lectivo ${opts.schoolYear}.
 
-PARÁMETROS OBLIGATORIOS SEGÚN EL ACUERDO MINISTERIAL MINEDUC-044-A:
-1. Debes integrar las temáticas oficiales de prevención de riesgos psicosociales:
-   - Prevención de Violencias (física, psicológica y sexual).
-   - Prevención del Acoso Escolar (bullying) y Ciberacoso.
-   - Prevención del Uso y Consumo de Drogas (alcohol, tabaco y estupefacientes).
-   - Prevención del Suicidio y Conductas Autolíticas / Promoción de la Salud Mental.
-   - Educación Integral en Sexualidad (ENEIS) y Prevención del Embarazo Adolescente.
-   - Convivencia Pacífica, Prácticas y Círculos Restaurativos.
-   - Fortalecimiento del Vínculo Familiar (Escuela para Familias).
-   - Alertas Tempranas por Ausentismo y Prevención de la Deserción.
+${
+        opts.bianualContext?.trim()
+          ? `CONTEXTO DEL PLAN ESTRATÉGICO BIANUAL VIGENTE (el Plan de Acción debe desprenderse de este):
+${opts.bianualContext.trim()}
+Cada actividad anual que propongas debe operativizar, para este año lectivo, al menos una de las metas bianuales listadas arriba, sin contradecir el objetivo general ni los objetivos específicos del plan estratégico.
+
+`
+          : ""
+      }PARÁMETROS OBLIGATORIOS SEGÚN EL ACUERDO MINISTERIAL MINEDUC-044-A:
+1. Debes integrar TODAS las temáticas oficiales del eje de estrategias de prevención de riesgos psicosociales, sin omitir ninguna:
+${preventionThemesPromptList()}
 2. VIABILIDAD OPERATIVA Y CARGA REAL:
    - Institución: ${opts.institutionName}
    - Estudiantes matriculados: ${students}
@@ -1157,6 +1176,358 @@ Responde ÚNICAMENTE con un arreglo JSON de objetos para los siguientes identifi
   };
 }
 
+
+/**
+ * Asistente de redacción de UNA fila de la matriz del Plan Estratégico Bianual.
+ * Análogo a `draftActionPlanItem` (POA), pero con las columnas del formato
+ * bianual: Acciones / Responsables / Indicador de evaluación / Plazos, a partir
+ * de la Meta y el eje de acción de la fila.
+ */
+export async function draftBianualPlanRow(opts: {
+  axis: string;
+  goal: string;
+  institutionName: string;
+  periodText: string;
+  studentsCount: number;
+  professionalsList: string[];
+  availableResources: string;
+  socioeconomicCondition: string;
+  currentActions?: string;
+  currentResponsible?: string;
+  currentIndicator?: string;
+  currentExecutionTerm?: string;
+}): Promise<
+  | {
+      goal: string;
+      actions: string;
+      responsible: string;
+      evaluation_indicator: string;
+      execution_term: string;
+    }
+  | { error: string }
+> {
+  const standardsList = DECE_QUALITY_STANDARDS.map(
+    (s) => `   - ${s.code} (${s.name}): ${s.description}`
+  ).join("\n");
+
+  const prompt = `Eres un especialista técnico del Departamento de Consejería Estudiantil (DECE) del Ministerio de Educación de Ecuador.
+Debes redactar UNA fila de la matriz del PLAN ESTRATÉGICO BIANUAL del DECE, que es el documento marco de dos años del que luego se desprenden los Planes de Acción Anuales (POA).
+
+REALIDAD INSTITUCIONAL (condiciona la viabilidad de lo que propongas):
+- Institución Educativa: ${opts.institutionName || "UNIDAD EDUCATIVA"}
+- Periodo bianual: ${opts.periodText || "periodo bianual vigente"}
+- Población estudiantil total: ${opts.studentsCount || 0} estudiantes
+- Profesionales DECE disponibles: ${opts.professionalsList.length > 0 ? opts.professionalsList.join(", ") : "Equipo DECE institucional"} (${Math.max(1, opts.professionalsList.length)} profesionales)
+- Recursos institucionales disponibles: ${opts.availableResources?.trim() || "Papelería institucional, proyectores, formularios DECE y matrices digitales"}
+- Condición socioeconómica de la institución y su comunidad: ${opts.socioeconomicCondition?.trim() || "No reportada; asume un contexto de recursos limitados y propone acciones de bajo costo"}
+
+DATOS DE LA FILA A COMPLETAR:
+- Eje de acción: ${opts.axis}
+- Meta bianual: ${opts.goal || "(redáctala tú, coherente con el eje de acción)"}
+${opts.currentActions ? `\nAcciones previas registradas:\n${opts.currentActions}` : ""}
+${opts.currentIndicator ? `\nIndicador previo registrado:\n${opts.currentIndicator}` : ""}
+
+ESTÁNDARES DE CALIDAD DE LA GESTIÓN DECE a los que debes anexar el indicador (cita el código que corresponda):
+${standardsList}
+
+TEMÁTICAS DEL EJE DE ESTRATEGIAS DE PREVENCIÓN (Acuerdo Ministerial MINEDUC-044-A) que enmarcan las acciones preventivas:
+${preventionThemesPromptList()}
+
+DIRECTRICES TÉCNICAS OBLIGATORIAS:
+1. OBJETIVOS REALES Y CUMPLIBLES: la meta y las acciones deben ser alcanzables con ${Math.max(1, opts.professionalsList.length)} profesional(es) para ${opts.studentsCount || 0} estudiantes, con los recursos y la condición socioeconómica descritos. No propongas actividades costosas, materiales inaccesibles ni atención individual masiva.
+2. La meta debe ser medible y estar formulada a DOS AÑOS (el bianio completo), no a un solo año lectivo.
+3. Las acciones deben ser una lista numerada de pasos concretos y verificables.
+4. El indicador de evaluación debe ser cuantificable y citar el código del Estándar de Calidad DECE correspondiente (ej. "E.D2.C2.DE9.c.").
+5. Los plazos de ejecución deben abarcar los DOS años lectivos del periodo ${opts.periodText || "bianual"} (ej. "Primer quimestre de cada año lectivo del bianio", "Hasta junio del primer año y octubre del segundo año").
+6. Los responsables deben escogerse entre: ${opts.professionalsList.join(", ") || "Equipo DECE"}. Si la labor es compartida, indica "Equipo DECE" y las instancias articuladas.
+
+Responde ÚNICAMENTE con un objeto JSON válido (sin markdown ni texto envolvente) con esta estructura exacta:
+{
+  "goal": "Meta bianual medible...",
+  "actions": "1. ...\\n2. ...",
+  "responsible": "Nombre del profesional o Equipo DECE",
+  "evaluation_indicator": "E.Dx.Cx.DEx.x. Indicador cuantificable...",
+  "execution_term": "Plazos que abarcan los dos años lectivos..."
+}`;
+
+  const res = await generateWithFallback({ prompt });
+  if ("error" in res) {
+    return { error: res.error };
+  }
+  const jsonMatch = res.text.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        goal: String(parsed.goal || opts.goal || ""),
+        actions: String(parsed.actions || ""),
+        responsible: String(parsed.responsible || ""),
+        evaluation_indicator: String(parsed.evaluation_indicator || ""),
+        execution_term: String(parsed.execution_term || ""),
+      };
+    } catch {}
+  }
+
+  return { error: "No se pudo generar la propuesta para esta fila del plan bianual." };
+}
+
+export interface AutonomousBianualPlanResult {
+  updatedItems: StrategicBianualAxisItem[];
+  appliedCount: number;
+  addedCount: number;
+  rationale: string;
+}
+
+/**
+ * Generador Autónomo del PLAN ESTRATÉGICO BIANUAL del DECE.
+ *
+ * Misma estructura de dos niveles que `draftAutonomousActionPlan` (IA con
+ * respaldo determinístico garantizado) y mismo catálogo temático compartido
+ * (`PREVENTION_AXIS_THEMES`), de modo que el plan bianual y el POA anual cubran
+ * exactamente las mismas 8 temáticas del Acuerdo 044-A sin deriva entre ambos.
+ *
+ * La generación se calibra con la realidad institucional completa: recursos,
+ * número de estudiantes, número de profesionales y condición socioeconómica,
+ * para producir objetivos reales que puedan cumplirse.
+ */
+export async function draftAutonomousBianualPlan(opts: {
+  institutionName: string;
+  periodText: string;
+  periodStartYear?: string;
+  periodEndYear?: string;
+  studentsCount: number;
+  professionalsList: string[];
+  availableResources: string;
+  socioeconomicCondition: string;
+  targetScope?: "PREVENCION" | "TODO";
+  currentItems: StrategicBianualAxisItem[];
+}): Promise<AutonomousBianualPlanResult | { error: string }> {
+  const profCount = Math.max(1, opts.professionalsList.length);
+  const students = opts.studentsCount > 0 ? opts.studentsCount : 600;
+  const ratio = Math.round(students / profCount);
+  const staff = opts.professionalsList.length > 0 ? opts.professionalsList : ["Analista DECE"];
+  const scope = opts.targetScope || "TODO";
+  const preventionAxis = "EJE DE ACCIÓN: PROMOCIÓN Y PREVENCIÓN";
+
+  const getResp = (index: number) => (staff.length === 1 ? staff[0] : staff[index % staff.length]);
+  const getSharedResp = () =>
+    staff.length <= 2 ? staff.join(" y ") : "Equipo DECE (Coordinación y Analistas)";
+
+  const isInScope = (item: StrategicBianualAxisItem) =>
+    scope === "TODO" || item.axis === preventionAxis;
+
+  const defaultTerm = `Ejecución distribuida en los dos años lectivos del periodo ${opts.periodText || "bianual"}, con cortes de verificación al cierre de cada quimestre.`;
+
+  // ── Nivel 1: enriquecimiento contextual con IA ──
+  if (isAiConfigured()) {
+    try {
+      const standardsList = DECE_QUALITY_STANDARDS.map(
+        (s) => `   - ${s.code} (${s.name}): ${s.description}`
+      ).join("\n");
+
+      const rowsToDraft = opts.currentItems
+        .filter(isInScope)
+        .map((it) => `{ "id": "${it.id}", "axis": "${it.axis}", "meta_actual": "${(it.goal || "").replace(/"/g, "'").slice(0, 240)}" }`)
+        .join(",\n  ");
+
+      const prompt = `Eres un especialista experto del Departamento de Consejería Estudiantil (DECE) del Ministerio de Educación de Ecuador.
+Tu labor es estructurar de manera AUTÓNOMA el PLAN ESTRATÉGICO BIANUAL del DECE para el periodo ${opts.periodText}, documento marco de DOS AÑOS del que luego se desprenden los Planes de Acción Anuales (POA).
+
+EJES DE ACCIÓN DEL PLAN (los mismos 4 ejes del DECE, para que el POA anual se alinee fila por fila):
+${STRATEGIC_BIANUAL_AXES.map((a, i) => `   ${i + 1}. ${a}`).join("\n")}
+
+1. COBERTURA TEMÁTICA OBLIGATORIA — ACUERDO MINISTERIAL MINEDUC-044-A:
+Debes cubrir TODAS y cada una de las siguientes ${PREVENTION_AXIS_THEMES.length} temáticas del eje de estrategias de prevención. NO OMITAS NINGUNA: cada temática debe aparecer en al menos una meta del eje de PROMOCIÓN Y PREVENCIÓN.
+${preventionThemesPromptList()}
+
+2. ALINEACIÓN A LOS ESTÁNDARES DE CALIDAD DECE:
+Cada "indicador de evaluación" debe ser cuantificable y citar el código del Estándar de Calidad que le corresponde, de este catálogo oficial de ${DECE_QUALITY_STANDARDS.length} estándares:
+${standardsList}
+
+3. VIABILIDAD OPERATIVA Y CARGA REAL (produce OBJETIVOS REALES QUE SE PUEDAN CUMPLIR):
+   - Institución: ${opts.institutionName}
+   - Periodo bianual: ${opts.periodText}
+   - Estudiantes matriculados: ${students}
+   - Equipo DECE: ${staff.join(", ")} (${profCount} profesionales, ratio ~${ratio} estudiantes por profesional).
+   - Recursos institucionales disponibles: ${opts.availableResources || "Papelería, proyectores, formularios DECE"}.
+   - CONDICIÓN SOCIOECONÓMICA DE LA INSTITUCIÓN Y SU COMUNIDAD: ${opts.socioeconomicCondition?.trim() || "No reportada; asume un contexto de recursos limitados y propone acciones de bajo costo y alta cobertura"}.
+   - CRITERIO DE REALIDAD: las metas deben ser alcanzables con ese número de profesionales, esos recursos y esa condición socioeconómica. No propongas materiales costosos, contrataciones externas ni atención individual masiva. Privilegia metodologías grupales, trabajo por subniveles, capacitación en cascada a docentes tutores, minutos cívicos y articulación con la red interinstitucional pública (MSP, JCPD, DINAPEN, UDAI).
+   - Si la condición socioeconómica es baja o el sector es rural o de alta vulnerabilidad, prioriza metas de permanencia escolar, vínculo familiar, alertas tempranas y gestión de redes de apoyo gratuitas.
+
+4. NATURALEZA BIANUAL:
+   - Cada META debe estar formulada a dos años y ser medible.
+   - Cada PLAZO DE EJECUCIÓN debe abarcar los DOS años lectivos del periodo ${opts.periodText} (ej. "Hasta junio del primer año lectivo y octubre del segundo", "Primer quimestre de cada año lectivo del bianio").
+   - Asigna los responsables de forma nominativa entre: ${staff.join(", ")}.
+
+Filas a completar:
+[
+  ${rowsToDraft}
+]
+
+Responde ÚNICAMENTE con un arreglo JSON de objetos, uno por cada "id" recibido, con esta estructura exacta:
+[
+  {
+    "id": "...",
+    "goal": "Meta bianual medible...",
+    "actions": "1. ...\\n2. ...",
+    "responsible": "...",
+    "evaluation_indicator": "E.Dx.Cx.DEx.x. Indicador cuantificable...",
+    "execution_term": "Plazos que abarcan los dos años lectivos..."
+  }
+]`;
+
+      const res = await generateWithFallback({
+        prompt,
+        systemInstruction:
+          "Eres un consultor senior DECE del Ministerio de Educación de Ecuador. Tu especialidad es la planificación estratégica bianual viable y el cumplimiento íntegro del Acuerdo Ministerial 044-A y de los Estándares de Calidad DECE.",
+        temperature: 0.2,
+        maxOutputTokens: 8192,
+      });
+
+      if ("text" in res && res.text) {
+        const jsonMatch = res.text.match(/\[\s*\{[\s\S]*\}\s*\]/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const updatedMap = new Map<string, Partial<StrategicBianualAxisItem>>();
+            for (const p of parsed) {
+              if (p && p.id && typeof p.id === "string") {
+                updatedMap.set(p.id, {
+                  goal: String(p.goal || "").trim(),
+                  actions: String(p.actions || "").trim(),
+                  responsible: String(p.responsible || "").trim(),
+                  evaluation_indicator: String(p.evaluation_indicator || "").trim(),
+                  execution_term: String(p.execution_term || "").trim(),
+                });
+              }
+            }
+
+            let applied = 0;
+            const merged = opts.currentItems.map((it, idx) => {
+              const aiData = updatedMap.get(it.id);
+              if (!aiData || !isInScope(it)) {
+                return isInScope(it)
+                  ? { ...it, responsible: it.responsible || getResp(idx) }
+                  : it;
+              }
+              applied++;
+              return {
+                ...it,
+                goal: aiData.goal || it.goal,
+                actions: aiData.actions || it.actions,
+                responsible: aiData.responsible || it.responsible || getResp(idx),
+                evaluation_indicator: aiData.evaluation_indicator || it.evaluation_indicator,
+                execution_term: aiData.execution_term || it.execution_term || defaultTerm,
+              };
+            });
+
+            const { items: withAllThemes, addedCount } = ensureAllPreventionThemes(
+              merged,
+              opts.periodStartYear,
+              opts.periodEndYear,
+              getSharedResp()
+            );
+
+            return {
+              updatedItems: withAllThemes,
+              appliedCount: applied,
+              addedCount,
+              rationale: `Plan bianual generado por IA para ${opts.periodText}: ${students} estudiantes, ${profCount} profesional(es) DECE (~${ratio} est/prof), recursos institucionales y condición socioeconómica reportadas. Cubre las ${PREVENTION_AXIS_THEMES.length} temáticas del Acuerdo 044-A y anexa los indicadores a los ${DECE_QUALITY_STANDARDS.length} Estándares de Calidad DECE.`,
+            };
+          }
+        }
+      }
+    } catch {
+      // Respaldo determinístico abajo si hay error de parseo o conectividad.
+    }
+  }
+
+  // ── Nivel 2: respaldo determinístico garantizado ──
+  let applied = 0;
+  const calibrated = opts.currentItems.map((it, idx) => {
+    if (!isInScope(it)) return it;
+    applied++;
+    const sharedAxes = [preventionAxis, "EJE DE ACCIÓN: INCLUSIÓN SOCIOEDUCATIVA"];
+    return {
+      ...it,
+      responsible:
+        it.responsible || (sharedAxes.includes(it.axis) ? getSharedResp() : getResp(idx)),
+      execution_term: it.execution_term || defaultTerm,
+      evaluation_indicator:
+        it.evaluation_indicator ||
+        `E.D1.C3.DE5. Porcentaje de cumplimiento de la meta bianual verificado con informe técnico al cierre de cada año lectivo del periodo ${opts.periodText}.`,
+    };
+  });
+
+  const { items: updatedItems, addedCount } = ensureAllPreventionThemes(
+    calibrated,
+    opts.periodStartYear,
+    opts.periodEndYear,
+    getSharedResp()
+  );
+
+  return {
+    updatedItems,
+    appliedCount: applied,
+    addedCount,
+    rationale: `Plan bianual estructurado automáticamente con la plantilla oficial del Acuerdo 044-A para el periodo ${opts.periodText}. Carga calibrada para ${profCount} profesional(es) DECE con ratio de ~${ratio} estudiantes por analista, según los recursos institucionales y la condición socioeconómica reportada. Cobertura verificada de las ${PREVENTION_AXIS_THEMES.length} temáticas de prevención y anexo a los Estándares de Calidad DECE.`,
+  };
+}
+
+/**
+ * Garantiza de forma determinística que la matriz cubra las 8 temáticas del
+ * eje de prevención del Acuerdo 044-A: agrega la fila semilla de cada temática
+ * que no esté representada en ninguna meta, acción o indicador.
+ */
+function ensureAllPreventionThemes(
+  items: StrategicBianualAxisItem[],
+  startYear: string | undefined,
+  endYear: string | undefined,
+  sharedResponsible: string
+): { items: StrategicBianualAxisItem[]; addedCount: number } {
+  const covered = new Set<string>();
+  for (const it of items) {
+    for (const theme of detectPreventionThemes(
+      it.goal,
+      it.actions,
+      it.evaluation_indicator
+    )) {
+      covered.add(theme.code);
+    }
+  }
+
+  const additions: StrategicBianualAxisItem[] = [];
+  for (const theme of PREVENTION_AXIS_THEMES) {
+    if (covered.has(theme.code)) continue;
+    const seed = getPreventionSeedRowForTheme(theme.code, startYear, endYear);
+    if (seed) {
+      additions.push({ ...seed, responsible: seed.responsible || sharedResponsible });
+    }
+  }
+
+  if (additions.length === 0) return { items, addedCount: 0 };
+
+  // Las filas nuevas se insertan junto al bloque del eje de prevención para
+  // conservar el agrupamiento por eje que renderiza el formulario y el Word.
+  const preventionAxis = "EJE DE ACCIÓN: PROMOCIÓN Y PREVENCIÓN";
+  const lastPreventionIdx = items.reduce(
+    (acc, it, i) => (it.axis === preventionAxis ? i : acc),
+    -1
+  );
+
+  if (lastPreventionIdx === -1) {
+    return { items: [...items, ...additions], addedCount: additions.length };
+  }
+
+  return {
+    items: [
+      ...items.slice(0, lastPreventionIdx + 1),
+      ...additions,
+      ...items.slice(lastPreventionIdx + 1),
+    ],
+    addedCount: additions.length,
+  };
+}
 
 /**
  * Respuesta del Asistente Virtual DECE para el canal de chat integrado.

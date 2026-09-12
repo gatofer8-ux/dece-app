@@ -123,6 +123,7 @@ export async function deleteInstitutionSecure(data: {
       db.prepare("DELETE FROM annual_management_reports WHERE institution_id = ?").run(institutionId);
       db.prepare("DELETE FROM bimonthly_reports WHERE institution_id = ?").run(institutionId);
       db.prepare("DELETE FROM action_plans WHERE institution_id = ?").run(institutionId);
+      db.prepare("DELETE FROM strategic_plans_bianual WHERE institution_id = ?").run(institutionId);
       db.prepare("DELETE FROM case_corresponsibility_acts WHERE institution_id = ?").run(institutionId);
       db.prepare("DELETE FROM dece_distributivo_assignments WHERE distributivo_id IN (SELECT id FROM dece_distributivos WHERE institution_id = ?)").run(institutionId);
       db.prepare("DELETE FROM dece_distributivos WHERE institution_id = ?").run(institutionId);
