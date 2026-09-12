@@ -204,6 +204,16 @@ function createConnection(): Database.Database {
   
   safeAddColumn("case_actions", "observations TEXT");
 
+  safeAddColumn("case_corresponsibility_acts", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("case_corresponsibility_acts", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("case_corresponsibility_acts", "physical_file_ref TEXT");
+  safeAddColumn("case_corresponsibility_acts", "physical_evidence_url TEXT");
+
+  safeAddColumn("restorative_circle_consents", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("restorative_circle_consents", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("restorative_circle_consents", "physical_file_ref TEXT");
+  safeAddColumn("restorative_circle_consents", "physical_evidence_url TEXT");
+
   safeAddColumn("referrals", "destination_detail TEXT");
   safeAddColumn("referrals", "background_summary TEXT");
   safeAddColumn("referrals", "actions_taken TEXT");

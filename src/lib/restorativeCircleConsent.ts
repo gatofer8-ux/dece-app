@@ -76,6 +76,11 @@ export async function createCircleConsentAction(formData: FormData) {
   const deceName = (formData.get("dece_name") as string)?.trim() || session.user.name || "Profesional DECE";
   const deceRole = (formData.get("dece_role") as string)?.trim() || "Profesional DECE";
 
+  const signaturesJson = (formData.get("signatures_json") as string)?.trim() || "[]";
+  const signatureType = (formData.get("signature_type") as string)?.trim() || "PENDIENTE";
+  const physicalFileRef = (formData.get("physical_file_ref") as string)?.trim() || null;
+  const physicalEvidenceUrl = (formData.get("physical_evidence_url") as string)?.trim() || null;
+
   db.prepare(`
     INSERT INTO restorative_circle_consents (
       id, institution_id, school_year_id, case_file_id, student_id,
@@ -83,6 +88,7 @@ export async function createCircleConsentAction(formData: FormData) {
       shift, representative_phone, consent_date,
       representative_name, representative_ci,
       dece_user_id, dece_name, dece_role,
+      signatures_json, signature_type, physical_file_ref, physical_evidence_url,
       created_by, created_at, updated_at
     ) VALUES (
       ?, ?, ?, ?, ?,
@@ -90,6 +96,7 @@ export async function createCircleConsentAction(formData: FormData) {
       ?, ?, ?,
       ?, ?,
       ?, ?, ?,
+      ?, ?, ?, ?,
       ?, datetime('now'), datetime('now')
     )
   `).run(
@@ -98,6 +105,7 @@ export async function createCircleConsentAction(formData: FormData) {
     shift, representativePhone, consentDate,
     representativeName, representativeCi,
     deceUserId, deceName, deceRole,
+    signaturesJson, signatureType, physicalFileRef, physicalEvidenceUrl,
     session.user.id
   );
 
@@ -158,6 +166,11 @@ export async function updateCircleConsentAction(id: string, formData: FormData) 
   const deceName = (formData.get("dece_name") as string)?.trim() || existing.dece_name;
   const deceRole = (formData.get("dece_role") as string)?.trim() || existing.dece_role;
 
+  const signaturesJson = (formData.get("signatures_json") as string)?.trim() || existing.signatures_json || "[]";
+  const signatureType = (formData.get("signature_type") as string)?.trim() || existing.signature_type || "PENDIENTE";
+  const physicalFileRef = formData.has("physical_file_ref") ? ((formData.get("physical_file_ref") as string)?.trim() || null) : existing.physical_file_ref;
+  const physicalEvidenceUrl = formData.has("physical_evidence_url") ? ((formData.get("physical_evidence_url") as string)?.trim() || null) : existing.physical_evidence_url;
+
   db.prepare(`
     UPDATE restorative_circle_consents SET
       student_name = ?,
@@ -171,6 +184,10 @@ export async function updateCircleConsentAction(id: string, formData: FormData) 
       representative_ci = ?,
       dece_name = ?,
       dece_role = ?,
+      signatures_json = ?,
+      signature_type = ?,
+      physical_file_ref = ?,
+      physical_evidence_url = ?,
       updated_at = datetime('now')
     WHERE id = ? AND institution_id = ?
   `).run(
@@ -178,6 +195,7 @@ export async function updateCircleConsentAction(id: string, formData: FormData) 
     shift, representativePhone, consentDate,
     representativeName, representativeCi,
     deceName, deceRole,
+    signaturesJson, signatureType, physicalFileRef, physicalEvidenceUrl,
     id, institutionId
   );
 

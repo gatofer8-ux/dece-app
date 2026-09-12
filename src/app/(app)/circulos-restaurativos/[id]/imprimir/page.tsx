@@ -15,6 +15,23 @@ export default async function ImprimirCirculoConsentPage({
   const consent = await getCircleConsentById(params.id, institutionId);
   if (!consent) notFound();
 
+  let signaturesData: {
+    rep?: any;
+    dece?: any;
+  } = {};
+  if (consent.signatures_json) {
+    try {
+      const parsed = JSON.parse(consent.signatures_json);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        signaturesData = parsed;
+      } else if (Array.isArray(parsed)) {
+        for (const item of parsed) {
+          if (item?.roleKey) signaturesData[item.roleKey as "rep" | "dece"] = item;
+        }
+      }
+    } catch {}
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 py-6 px-4 print:p-0 print:bg-white text-slate-900">
       {/* Barra de herramientas no imprimible */}
@@ -284,11 +301,55 @@ export default async function ImprimirCirculoConsentPage({
 
             {/* Fila 9: Espacio de firmas */}
             <tr>
-              <td className="border border-black w-1/2 pt-14 pb-2 px-3 text-center">
-                <div className="font-bold">Profesional DECE</div>
+              <td className="border border-black w-1/2 pt-4 pb-2 px-3 text-center align-bottom min-h-[90px]">
+                {signaturesData.dece?.tipo === "digital" && signaturesData.dece.firma_data_url ? (
+                  <div className="flex flex-col items-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={signaturesData.dece.firma_data_url}
+                      alt="Firma Digital DECE"
+                      className="h-14 max-w-[170px] object-contain mb-1"
+                    />
+                    <span className="text-[10px] text-emerald-800 font-mono">
+                      ✓ FIRMADO DIGITALMENTE
+                    </span>
+                  </div>
+                ) : signaturesData.dece?.tipo === "fisica" ? (
+                  <div className="pt-6 text-center">
+                    <div className="border-b border-dashed border-black w-3/4 mx-auto mb-1"></div>
+                    <span className="text-[10px] text-slate-700 italic block">
+                      Firma física / Manuscrita {signaturesData.dece.referencia_fisica ? `· ${signaturesData.dece.referencia_fisica}` : ""}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="pt-10"></div>
+                )}
+                <div className="font-bold mt-1">Profesional DECE</div>
               </td>
-              <td className="border border-black w-1/2 pt-14 pb-2 px-3 text-center">
-                <div className="font-bold">Padre/madre/representante legal</div>
+              <td className="border border-black w-1/2 pt-4 pb-2 px-3 text-center align-bottom min-h-[90px]">
+                {signaturesData.rep?.tipo === "digital" && signaturesData.rep.firma_data_url ? (
+                  <div className="flex flex-col items-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={signaturesData.rep.firma_data_url}
+                      alt="Firma Digital Representante"
+                      className="h-14 max-w-[170px] object-contain mb-1"
+                    />
+                    <span className="text-[10px] text-emerald-800 font-mono">
+                      ✓ FIRMADO DIGITALMENTE
+                    </span>
+                  </div>
+                ) : signaturesData.rep?.tipo === "fisica" ? (
+                  <div className="pt-6 text-center">
+                    <div className="border-b border-dashed border-black w-3/4 mx-auto mb-1"></div>
+                    <span className="text-[10px] text-slate-700 italic block">
+                      Firma física / Manuscrita {signaturesData.rep.referencia_fisica ? `· ${signaturesData.rep.referencia_fisica}` : ""}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="pt-10"></div>
+                )}
+                <div className="font-bold mt-1">Padre/madre/representante legal</div>
               </td>
             </tr>
 
@@ -315,6 +376,53 @@ export default async function ImprimirCirculoConsentPage({
           </tbody>
         </table>
       </div>
+
+      {/* Anexo de Auditoría Distrital si existe respaldo físico escaneado o referencia */}
+      {(consent.physical_evidence_url || consent.physical_file_ref) && (
+        <div className="print:break-before-page p-6 sm:p-8 bg-white border-2 border-dashed border-slate-300 print:border-slate-400 mt-6 max-w-[210mm] mx-auto w-full shadow-sm print:shadow-none">
+          <div className="text-center pb-3 border-b border-slate-300">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+              ANEXO DE AUDITORÍA DISTRITAL: RESPALDO DE CONSENTIMIENTO FÍSICO
+            </h3>
+            <p className="text-xs text-slate-600 mt-0.5">
+              Constancia oficial de respaldo documental físico según normativa de archivo y gestión DECE
+            </p>
+          </div>
+
+          <div className="my-4 p-3 bg-slate-50 border border-slate-200 rounded text-xs space-y-1">
+            <p><span className="font-semibold text-slate-700">Ubicación en Archivo Físico:</span> {consent.physical_file_ref || "Carpeta DECE Institucional"}</p>
+            <p><span className="font-semibold text-slate-700">Modalidad de Suscripción:</span> {consent.signature_type || "FÍSICA"}</p>
+            <p><span className="font-semibold text-slate-700">Estudiante:</span> {consent.student_name} &bull; <span className="font-semibold text-slate-700">Representante:</span> {consent.representative_name}</p>
+          </div>
+
+          {consent.physical_evidence_url && (
+            <div className="mt-4 flex flex-col items-center">
+              <p className="text-xs text-slate-500 mb-2 font-medium">Documento Físico Firmado y Digitalizado:</p>
+              {consent.physical_evidence_url.startsWith("data:image/") || consent.physical_evidence_url.match(/\.(png|jpg|jpeg|webp)$/i) ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={consent.physical_evidence_url}
+                  alt="Consentimiento Físico Digitalizado"
+                  className="max-w-full max-h-[820px] object-contain border border-slate-300 rounded shadow-xs"
+                />
+              ) : (
+                <div className="p-6 border-2 border-dashed border-slate-300 rounded text-center w-full">
+                  <span className="text-3xl block mb-2">📄</span>
+                  <p className="text-xs font-semibold text-slate-700">Archivo digital adjunto (PDF / Documento)</p>
+                  <a
+                    href={consent.physical_evidence_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-brand-600 underline font-medium mt-1 inline-block"
+                  >
+                    Ver archivo original adjunto
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

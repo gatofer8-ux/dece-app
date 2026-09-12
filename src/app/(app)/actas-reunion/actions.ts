@@ -27,6 +27,28 @@ function collectAttendees(fd: FormData) {
   return JSON.stringify(out);
 }
 function collectSignatories(fd: FormData) {
+  const jsonPayload = fd.get("signatories_json_payload") as string | null;
+  if (jsonPayload) {
+    try {
+      const parsed = JSON.parse(jsonPayload);
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed
+          .map((s: any) => ({
+            nombre: String(s.nombre || "").trim(),
+            tipo: s.tipo === "fisica" ? "fisica" : s.firma_data_url ? "digital" : undefined,
+            firma_data_url: s.firma_data_url || undefined,
+            referencia_fisica: s.referencia_fisica?.trim() || undefined,
+            fecha_firma: s.fecha_firma || undefined,
+            respaldo_archivo_url: s.respaldo_archivo_url || undefined,
+            respaldo_nombre: s.respaldo_nombre || undefined,
+            observacion_firma: s.observacion_firma?.trim() || undefined,
+          }))
+          .filter((s) => s.nombre || s.firma_data_url || s.tipo === "fisica");
+        return JSON.stringify(cleaned);
+      }
+    } catch {}
+  }
+
   const nombres = getAllStr(fd, "sig_nombre");
   const firmas = getAllStr(fd, "sig_firma");
   const out = nombres

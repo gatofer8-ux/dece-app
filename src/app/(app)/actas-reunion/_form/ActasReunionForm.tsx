@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
-import SignaturePadModal from "@/components/SignaturePadModal";
+import DualSignatureModal, { type DualSignatureData } from "@/components/DualSignatureModal";
 import { createMeetingMinutes, updateMeetingMinutes, draftMeetingField } from "../actions";
 import {
   parseAttendees,
@@ -266,21 +266,23 @@ export default function ActasReunionForm({
                 />
                 <input type="hidden" name="sig_firma" value={s.firma_data_url || ""} />
 
-                {s.firma_data_url ? (
-                  <div className="flex items-center gap-2 pt-1">
-                    <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded flex items-center gap-1">
-                      <span>✓</span> Firma digital capturada
+                {s.tipo === "digital" || s.firma_data_url ? (
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.5 rounded flex items-center gap-1 border border-emerald-300 dark:border-emerald-800">
+                      <span>✓</span> Firma digital en pantalla
                     </span>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={s.firma_data_url}
-                      alt={`Firma de ${s.nombre}`}
-                      className="h-7 max-w-[100px] object-contain border border-slate-200 bg-white rounded px-1"
-                    />
+                    {s.firma_data_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={s.firma_data_url}
+                        alt={`Firma de ${s.nombre}`}
+                        className="h-7 max-w-[100px] object-contain border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded px-1"
+                      />
+                    )}
                     <button
                       type="button"
                       onClick={() => setActiveSigningIndex(i)}
-                      className="text-xs text-brand-600 hover:underline"
+                      className="text-xs text-brand-600 dark:text-cyan-400 hover:underline cursor-pointer"
                     >
                       Modificar
                     </button>
@@ -288,12 +290,54 @@ export default function ActasReunionForm({
                       type="button"
                       onClick={() => {
                         setSignatories((arr) =>
-                          arr.map((item, idx) => (idx === i ? { ...item, firma_data_url: undefined } : item))
+                          arr.map((item, idx) =>
+                            idx === i
+                              ? { ...item, tipo: undefined, firma_data_url: undefined, referencia_fisica: undefined, respaldo_archivo_url: undefined }
+                              : item
+                          )
                         );
                       }}
-                      className="text-xs text-rose-600 hover:underline"
+                      className="text-xs text-rose-600 hover:underline cursor-pointer"
                     >
-                      Borrar firma
+                      Borrar
+                    </button>
+                  </div>
+                ) : s.tipo === "fisica" ? (
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <span className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded flex items-center gap-1 border border-amber-300 dark:border-amber-800">
+                      <span>📄</span> Firma física (Papel)
+                    </span>
+                    {s.referencia_fisica && (
+                      <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium truncate max-w-[160px]">
+                        📁 {s.referencia_fisica}
+                      </span>
+                    )}
+                    {s.respaldo_archivo_url && (
+                      <span className="text-[11px] text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                        <span>📎</span> Respaldo adjunto
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setActiveSigningIndex(i)}
+                      className="text-xs text-brand-600 dark:text-cyan-400 hover:underline cursor-pointer"
+                    >
+                      Modificar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSignatories((arr) =>
+                          arr.map((item, idx) =>
+                            idx === i
+                              ? { ...item, tipo: undefined, firma_data_url: undefined, referencia_fisica: undefined, respaldo_archivo_url: undefined }
+                              : item
+                          )
+                        );
+                      }}
+                      className="text-xs text-rose-600 hover:underline cursor-pointer"
+                    >
+                      Borrar
                     </button>
                   </div>
                 ) : (
@@ -301,9 +345,10 @@ export default function ActasReunionForm({
                     <button
                       type="button"
                       onClick={() => setActiveSigningIndex(i)}
-                      className="btn-secondary text-xs px-2.5 py-1 flex items-center gap-1 text-slate-700 hover:bg-brand-50 hover:text-brand-700 border-dashed"
+                      className="btn-secondary text-xs px-2.5 py-1 flex items-center gap-1.5 text-slate-700 dark:text-slate-300 hover:bg-brand-50 hover:text-brand-700 border-dashed cursor-pointer"
                     >
-                      <span>✍️</span> Firmar en pantalla
+                      <span>✍️/📄</span>
+                      <span>Registrar Firma (Digital o Física)</span>
                     </button>
                   </div>
                 )}
@@ -312,13 +357,15 @@ export default function ActasReunionForm({
               <button
                 type="button"
                 onClick={() => setSignatories((arr) => arr.filter((_, j) => j !== i))}
-                className="text-rose-600 hover:bg-rose-50 text-xs px-2 py-1 rounded self-end sm:self-center transition-colors"
+                className="text-rose-600 hover:bg-rose-50 text-xs px-2 py-1 rounded self-end sm:self-center transition-colors cursor-pointer"
                 title="Quitar firmante"
               >
                 🗑️ Quitar
               </button>
             </div>
           ))}
+          {/* Payload JSON enriquecido con dual metadata */}
+          <input type="hidden" name="signatories_json_payload" value={JSON.stringify(signatories)} />
           {signatories.length === 0 && (
             <p className="text-xs text-slate-400">
               Sin firmantes. El acta reservará filas en blanco para firmar a mano.
@@ -348,13 +395,27 @@ export default function ActasReunionForm({
       </div>
 
       {activeSigningIndex !== null && (
-        <SignaturePadModal
+        <DualSignatureModal
           isOpen={true}
           signatoryName={signatories[activeSigningIndex]?.nombre || `Participante #${activeSigningIndex + 1}`}
+          initialData={signatories[activeSigningIndex]}
           onClose={() => setActiveSigningIndex(null)}
-          onSave={(dataUrl) => {
+          onSave={(data) => {
             setSignatories((arr) =>
-              arr.map((item, idx) => (idx === activeSigningIndex ? { ...item, firma_data_url: dataUrl } : item))
+              arr.map((item, idx) =>
+                idx === activeSigningIndex
+                  ? {
+                      ...item,
+                      tipo: data.tipo,
+                      firma_data_url: data.firma_data_url,
+                      referencia_fisica: data.referencia_fisica,
+                      fecha_firma: data.fecha_firma,
+                      respaldo_archivo_url: data.respaldo_archivo_url,
+                      respaldo_nombre: data.respaldo_nombre,
+                      observacion_firma: data.observacion_firma,
+                    }
+                  : item
+              )
             );
             setActiveSigningIndex(null);
           }}

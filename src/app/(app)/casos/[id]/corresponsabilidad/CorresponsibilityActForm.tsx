@@ -11,6 +11,39 @@ import {
 } from "../ai-actions";
 import type { CaseCorresponsibilityActRow } from "@/lib/types";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
+import DualSignatureModal from "@/components/DualSignatureModal";
+
+interface SignerData {
+  tipo?: "digital" | "fisica";
+  firma_data_url?: string;
+  referencia_fisica?: string;
+  fecha_firma?: string;
+  respaldo_archivo_url?: string;
+  respaldo_nombre?: string;
+  observacion_firma?: string;
+}
+
+function parseSignaturesJson(json?: string | null): {
+  rep?: SignerData;
+  dece?: SignerData;
+  tutor?: SignerData;
+} {
+  if (!json) return {};
+  try {
+    const parsed = JSON.parse(json);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed;
+    }
+    if (Array.isArray(parsed)) {
+      const res: Record<string, SignerData> = {};
+      for (const item of parsed) {
+        if (item && item.roleKey) res[item.roleKey] = item;
+      }
+      return res;
+    }
+  } catch {}
+  return {};
+}
 
 const initialState: ActionState = { error: null };
 
@@ -102,6 +135,36 @@ export default function CorresponsibilityActForm({
   const [tutorAuthName, setTutorAuthName] = useState(initialData?.tutor_authority_name || "");
   const [tutorAuthRole, setTutorAuthRole] = useState(initialData?.tutor_authority_role || "Docente Tutor / Autoridad");
 
+  // Firmas y Respaldo Físico Dual
+  const initialSignatures = parseSignaturesJson(initialData?.signatures_json);
+  const [repSig, setRepSig] = useState<SignerData | null>(initialSignatures.rep || null);
+  const [deceSig, setDeceSig] = useState<SignerData | null>(initialSignatures.dece || null);
+  const [tutorSig, setTutorSig] = useState<SignerData | null>(initialSignatures.tutor || null);
+
+  const [physicalFileRef, setPhysicalFileRef] = useState(initialData?.physical_file_ref || "");
+  const [physicalEvidenceUrl, setPhysicalEvidenceUrl] = useState(initialData?.physical_evidence_url || "");
+  const [physicalEvidenceName, setPhysicalEvidenceName] = useState("");
+
+  const [activeSignerModal, setActiveSignerModal] = useState<"rep" | "dece" | "tutor" | null>(null);
+
+  const signaturesPayload = JSON.stringify({
+    rep: repSig ? { ...repSig, roleKey: "rep", nombre: repName, cargo: `Representante Legal (${repRel})`, ci: repIdNum } : null,
+    dece: deceSig ? { ...deceSig, roleKey: "dece", nombre: deceProfName, cargo: "Profesional DECE" } : null,
+    tutor: tutorSig ? { ...tutorSig, roleKey: "tutor", nombre: tutorAuthName, cargo: tutorAuthRole } : null,
+  });
+
+  let overallSignatureType = "PENDIENTE";
+  const activeSigs = [repSig, deceSig, tutorSig].filter(Boolean);
+  if (activeSigs.length > 0) {
+    const hasDig = activeSigs.some((s) => s?.tipo === "digital");
+    const hasFis = activeSigs.some((s) => s?.tipo === "fisica") || Boolean(physicalFileRef || physicalEvidenceUrl);
+    if (hasDig && hasFis) overallSignatureType = "MIXTA";
+    else if (hasDig) overallSignatureType = "DIGITAL";
+    else if (hasFis) overallSignatureType = "FISICA";
+  } else if (physicalFileRef || physicalEvidenceUrl) {
+    overallSignatureType = "FISICA";
+  }
+
   // Campos de Redacción Libre (con Voz e IA)
   const [detectedDifficulty, setDetectedDifficulty] = useState(initialData?.detected_difficulty || "");
   const [agreementsAndCommitments, setAgreementsAndCommitments] = useState(
@@ -171,6 +234,21 @@ export default function CorresponsibilityActForm({
     } finally {
       setLoadingAiCommitments(false);
     }
+  }
+
+  function handleGeneralEvidenceUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 15 * 1024 * 1024) {
+      alert("El archivo no debe exceder los 15 MB.");
+      return;
+    }
+    setPhysicalEvidenceName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setPhysicalEvidenceUrl((ev.target?.result as string) || "");
+    };
+    reader.readAsDataURL(file);
   }
 
   return (
@@ -476,81 +554,424 @@ export default function CorresponsibilityActForm({
           <input type="hidden" name="commitments_representative" value={agreementsAndCommitments} />
         </div>
 
-        {/* SECCIÓN 4: FIRMAS Y AUTORIDADES */}
-        <div className="space-y-4 pt-4 border-t border-slate-200">
-          <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-brand-100 text-brand-800 text-xs font-bold">4</span>
-            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
-              Bloque de Firmas Institucionales (2 Columnas)
-            </h2>
+        {/* SECCIÓN 4: FIRMAS INSTITUCIONALES Y RESPALDO FÍSICO */}
+        <div className="space-y-5 pt-4 border-t border-slate-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-brand-100 text-brand-800 text-xs font-bold">4</span>
+              <div>
+                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+                  Suscripción de Compromisos (Firma Digital / Física)
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Todo documento DECE permite firma digital en pantalla o constancia de firma manuscrita con referencia de archivo físico y respaldo escaneado.
+                </p>
+              </div>
+            </div>
           </div>
 
+          {/* Hidden inputs para el servidor */}
+          <input type="hidden" name="signatures_json" value={signaturesPayload} />
+          <input type="hidden" name="signature_type" value={overallSignatureType} />
+          <input type="hidden" name="physical_file_ref" value={physicalFileRef} />
+          <input type="hidden" name="physical_evidence_url" value={physicalEvidenceUrl} />
+
+          {/* Bloque de Firmas: 2 Columnas */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
             {/* Columna Izquierda: DECE y Autoridad */}
-            <div className="space-y-3">
+            <div className="space-y-4">
               <span className="text-xs font-bold text-slate-800 block border-b border-slate-200 pb-1">
-                Columna Izquierda (DECE y Tutor/Autoridad)
+                Autoridades Institucionales y DECE
               </span>
-              <div>
-                <label className="block text-[11px] font-medium text-slate-600 mb-1">Nombre del Profesional DECE</label>
-                <input
-                  type="text"
-                  name="dece_professional_name"
-                  value={deceProfName}
-                  onChange={(e) => setDeceProfName(e.target.value)}
-                  placeholder="Nombre del profesional a cargo"
-                  className="w-full text-xs rounded-lg border border-slate-300 px-3 py-2 uppercase"
-                />
+
+              {/* Profesional DECE */}
+              <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-2.5 shadow-2xs">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Profesional DECE Responsable</label>
+                  <input
+                    type="text"
+                    name="dece_professional_name"
+                    value={deceProfName}
+                    onChange={(e) => setDeceProfName(e.target.value)}
+                    placeholder="Nombre del profesional a cargo"
+                    className="w-full text-xs rounded-lg border border-slate-300 px-3 py-1.5 uppercase font-medium"
+                  />
+                </div>
+
+                {/* Estado de Firma DECE */}
+                <div className="pt-1 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100">
+                  {deceSig?.tipo === "digital" || deceSig?.firma_data_url ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded flex items-center gap-1">
+                        <span>✓</span> Firma digital
+                      </span>
+                      {deceSig.firma_data_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={deceSig.firma_data_url}
+                          alt="Firma DECE"
+                          className="h-6 max-w-[80px] object-contain border border-slate-200 rounded px-1 bg-white"
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setActiveSignerModal("dece")}
+                        className="text-xs text-brand-700 hover:underline"
+                      >
+                        Cambiar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeceSig(null)}
+                        className="text-xs text-rose-600 hover:underline"
+                      >
+                        Borrar
+                      </button>
+                    </div>
+                  ) : deceSig?.tipo === "fisica" ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded flex items-center gap-1">
+                        <span>📄</span> Firma física (Papel)
+                      </span>
+                      {deceSig.referencia_fisica && (
+                        <span className="text-[11px] text-slate-600 truncate max-w-[130px]">
+                          📁 {deceSig.referencia_fisica}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setActiveSignerModal("dece")}
+                        className="text-xs text-brand-700 hover:underline"
+                      >
+                        Cambiar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeceSig(null)}
+                        className="text-xs text-rose-600 hover:underline"
+                      >
+                        Borrar
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setActiveSignerModal("dece")}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-md transition-colors"
+                    >
+                      <span>✍️</span> Registrar Firma (Digital o Física)
+                    </button>
+                  )}
+                </div>
               </div>
-              <div>
-                <label className="block text-[11px] font-medium text-slate-600 mb-1">Nombre de Tutor o Autoridad</label>
-                <input
-                  type="text"
-                  name="tutor_authority_name"
-                  value={tutorAuthName}
-                  onChange={(e) => setTutorAuthName(e.target.value)}
-                  placeholder="Ej. LIC. MARCO PÉREZ"
-                  className="w-full text-xs rounded-lg border border-slate-300 px-3 py-2 uppercase"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-medium text-slate-600 mb-1">Cargo / Rol</label>
-                <input
-                  type="text"
-                  name="tutor_authority_role"
-                  value={tutorAuthRole}
-                  onChange={(e) => setTutorAuthRole(e.target.value)}
-                  placeholder="Docente Tutor / Inspector / Rector"
-                  className="w-full text-xs rounded-lg border border-slate-300 px-3 py-2"
-                />
+
+              {/* Docente Tutor o Autoridad */}
+              <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-2.5 shadow-2xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Nombre Tutor o Autoridad</label>
+                    <input
+                      type="text"
+                      name="tutor_authority_name"
+                      value={tutorAuthName}
+                      onChange={(e) => setTutorAuthName(e.target.value)}
+                      placeholder="Ej. LIC. MARCO PÉREZ"
+                      className="w-full text-xs rounded-lg border border-slate-300 px-3 py-1.5 uppercase font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Cargo / Rol</label>
+                    <input
+                      type="text"
+                      name="tutor_authority_role"
+                      value={tutorAuthRole}
+                      onChange={(e) => setTutorAuthRole(e.target.value)}
+                      placeholder="Docente Tutor / Rector"
+                      className="w-full text-xs rounded-lg border border-slate-300 px-3 py-1.5"
+                    />
+                  </div>
+                </div>
+
+                {/* Estado de Firma Tutor/Autoridad */}
+                <div className="pt-1 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100">
+                  {tutorSig?.tipo === "digital" || tutorSig?.firma_data_url ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded flex items-center gap-1">
+                        <span>✓</span> Firma digital
+                      </span>
+                      {tutorSig.firma_data_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={tutorSig.firma_data_url}
+                          alt="Firma Tutor"
+                          className="h-6 max-w-[80px] object-contain border border-slate-200 rounded px-1 bg-white"
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setActiveSignerModal("tutor")}
+                        className="text-xs text-brand-700 hover:underline"
+                      >
+                        Cambiar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTutorSig(null)}
+                        className="text-xs text-rose-600 hover:underline"
+                      >
+                        Borrar
+                      </button>
+                    </div>
+                  ) : tutorSig?.tipo === "fisica" ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded flex items-center gap-1">
+                        <span>📄</span> Firma física (Papel)
+                      </span>
+                      {tutorSig.referencia_fisica && (
+                        <span className="text-[11px] text-slate-600 truncate max-w-[130px]">
+                          📁 {tutorSig.referencia_fisica}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setActiveSignerModal("tutor")}
+                        className="text-xs text-brand-700 hover:underline"
+                      >
+                        Cambiar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTutorSig(null)}
+                        className="text-xs text-rose-600 hover:underline"
+                      >
+                        Borrar
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setActiveSignerModal("tutor")}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-md transition-colors"
+                    >
+                      <span>✍️</span> Registrar Firma (Digital o Física)
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Columna Derecha: Representante Legal */}
-            <div className="space-y-3">
+            <div className="space-y-4">
               <span className="text-xs font-bold text-slate-800 block border-b border-slate-200 pb-1">
-                Columna Derecha (Representante Legal)
+                Representante Legal o Padre/Madre
               </span>
-              <div className="p-3 bg-white rounded-lg border border-slate-200 text-xs space-y-1.5">
-                <p className="font-semibold text-slate-800 text-center pb-1 border-b border-dashed border-slate-200">
-                  REPRESENTANTE LEGAL
-                </p>
-                <p className="text-slate-600">
-                  <span className="font-medium">Nombres completos:</span> {repName || "—"}
-                </p>
-                <p className="text-slate-600">
-                  <span className="font-medium">Cédula:</span> {repIdNum || "—"}
-                </p>
-                <p className="text-slate-600">
-                  <span className="font-medium">Teléfono:</span> {repPhone || "—"}
-                </p>
-                <p className="text-[11px] text-slate-400 mt-2 italic">
-                  * Estos datos se sincronizan automáticamente con la comparecencia de la sección 1.
-                </p>
+
+              <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-2.5 shadow-2xs">
+                <div className="text-xs space-y-1">
+                  <p className="font-semibold text-slate-800 border-b border-dashed border-slate-200 pb-1">
+                    REPRESENTANTE LEGAL
+                  </p>
+                  <p className="text-slate-600">
+                    <span className="font-medium">Nombres:</span> {repName || "—"}
+                  </p>
+                  <p className="text-slate-600">
+                    <span className="font-medium">Cédula:</span> {repIdNum || "—"}
+                  </p>
+                  <p className="text-slate-600">
+                    <span className="font-medium">Parentesco:</span> {repRel || "—"}
+                  </p>
+                  <p className="text-slate-600">
+                    <span className="font-medium">Teléfono:</span> {repPhone || "—"}
+                  </p>
+                </div>
+
+                {/* Estado de Firma Representante */}
+                <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100">
+                  {repSig?.tipo === "digital" || repSig?.firma_data_url ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded flex items-center gap-1">
+                        <span>✓</span> Firma digital
+                      </span>
+                      {repSig.firma_data_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={repSig.firma_data_url}
+                          alt="Firma Representante"
+                          className="h-6 max-w-[80px] object-contain border border-slate-200 rounded px-1 bg-white"
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setActiveSignerModal("rep")}
+                        className="text-xs text-brand-700 hover:underline"
+                      >
+                        Cambiar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRepSig(null)}
+                        className="text-xs text-rose-600 hover:underline"
+                      >
+                        Borrar
+                      </button>
+                    </div>
+                  ) : repSig?.tipo === "fisica" ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded flex items-center gap-1">
+                        <span>📄</span> Firma física (Papel)
+                      </span>
+                      {repSig.referencia_fisica && (
+                        <span className="text-[11px] text-slate-600 truncate max-w-[130px]">
+                          📁 {repSig.referencia_fisica}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setActiveSignerModal("rep")}
+                        className="text-xs text-brand-700 hover:underline"
+                      >
+                        Cambiar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRepSig(null)}
+                        className="text-xs text-rose-600 hover:underline"
+                      >
+                        Borrar
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setActiveSignerModal("rep")}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-md transition-colors"
+                    >
+                      <span>✍️</span> Registrar Firma (Digital o Física)
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Sección de Respaldo Físico General DECE y Auditoría */}
+          <div className="p-4 bg-amber-50/60 rounded-xl border border-amber-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                <span>📁</span> Respaldo Físico DECE y Evidencia de Auditoría Distrital
+              </span>
+              <span className="text-[11px] text-amber-700 bg-amber-100/70 border border-amber-300 px-2 py-0.5 rounded-full font-medium">
+                Normativa Ministerial DECE
+              </span>
+            </div>
+            <p className="text-xs text-amber-800/90 leading-relaxed">
+              Para cumplir con las auditorías distritales del Ministerio de Educación, deja constancia de la carpeta o archivador físico institucional donde reposa el documento original impreso, y opcionalmente adjunta el escaneo o fotografía del acta firmada y sellada.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+                  Ubicación en Archivo Físico Institucional
+                </label>
+                <input
+                  type="text"
+                  value={physicalFileRef}
+                  onChange={(e) => setPhysicalFileRef(e.target.value)}
+                  placeholder="Ej. Carpeta DECE 2026 / Ficha C-14 / Estante 2"
+                  className="w-full text-xs rounded-lg border border-amber-300 bg-white px-3 py-2 text-slate-800 placeholder-slate-400 focus:ring-1 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+                  Adjuntar Escaneo o Foto del Acta Física (PDF o Imagen)
+                </label>
+                {physicalEvidenceUrl ? (
+                  <div className="flex items-center justify-between p-2 bg-white rounded-lg border border-amber-300">
+                    <span className="text-xs text-emerald-800 font-medium flex items-center gap-1.5 truncate max-w-[200px]">
+                      <span>📎</span> {physicalEvidenceName || "Acta_Fisica_Escaneada"}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={physicalEvidenceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:underline"
+                      >
+                        Ver
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPhysicalEvidenceUrl("");
+                          setPhysicalEvidenceName("");
+                        }}
+                        className="text-xs text-rose-600 hover:underline"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <input
+                    type="file"
+                    accept="application/pdf,image/png,image/jpeg,image/webp"
+                    onChange={handleGeneralEvidenceUpload}
+                    className="w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 cursor-pointer"
+                  />
+                )}
               </div>
             </div>
           </div>
         </div>
+
+        {/* Modal de Firma Dual para el firmante activo */}
+        <DualSignatureModal
+          isOpen={activeSignerModal !== null}
+          title={
+            activeSignerModal === "rep"
+              ? "Firma del Representante Legal"
+              : activeSignerModal === "dece"
+              ? "Firma del Profesional DECE"
+              : "Firma del Tutor o Autoridad"
+          }
+          signatoryName={
+            activeSignerModal === "rep"
+              ? repName || "Representante Legal"
+              : activeSignerModal === "dece"
+              ? deceProfName || "Profesional DECE"
+              : tutorAuthName || "Docente Tutor / Autoridad"
+          }
+          signatoryRole={
+            activeSignerModal === "rep"
+              ? `Representante Legal (${repRel})`
+              : activeSignerModal === "dece"
+              ? "Profesional DECE"
+              : tutorAuthRole || "Tutor / Autoridad"
+          }
+          initialData={
+            (activeSignerModal === "rep"
+              ? repSig
+              : activeSignerModal === "dece"
+              ? deceSig
+              : tutorSig) || undefined
+          }
+          onSave={(data) => {
+            if (activeSignerModal === "rep") setRepSig(data);
+            else if (activeSignerModal === "dece") setDeceSig(data);
+            else if (activeSignerModal === "tutor") setTutorSig(data);
+            // Si registró referencia física y el campo general está vacío, auto-rellenar
+            if (data.referencia_fisica && !physicalFileRef) {
+              setPhysicalFileRef(data.referencia_fisica);
+            }
+            if (data.respaldo_archivo_url && !physicalEvidenceUrl) {
+              setPhysicalEvidenceUrl(data.respaldo_archivo_url);
+              if (data.respaldo_nombre) setPhysicalEvidenceName(data.respaldo_nombre);
+            }
+            setActiveSignerModal(null);
+          }}
+          onClose={() => setActiveSignerModal(null)}
+        />
 
         {/* Barra inferior fija de acciones */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6 border-t border-slate-200">

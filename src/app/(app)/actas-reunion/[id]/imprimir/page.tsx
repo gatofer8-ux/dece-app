@@ -161,8 +161,30 @@ export default async function ImprimirActaReunionPage({ params }: { params: { id
             {sigRows.map((s, i) => (
               <tr key={i}>
                 <td className={cell}>{s.nombre || " "}</td>
-                <td className={cell} style={{ height: 38, verticalAlign: "middle" }}>
-                  {s.firma_data_url ? (
+                <td className={cell} style={{ height: 42, verticalAlign: "middle" }}>
+                  {s.tipo === "digital" && s.firma_data_url ? (
+                    <div className="text-center py-0.5">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={s.firma_data_url}
+                        alt={`Firma digital de ${s.nombre}`}
+                        className="h-8 max-w-[130px] object-contain mx-auto"
+                      />
+                      <span className="text-[6.5pt] text-slate-500 block">Firma digitalizada SADEX</span>
+                    </div>
+                  ) : s.tipo === "fisica" ? (
+                    <div className="text-center py-1">
+                      <div className="border-b border-dashed border-slate-400 w-36 mx-auto mb-0.5"></div>
+                      <span className="text-[7.5pt] font-semibold text-slate-700 block uppercase">
+                        Firma física / Manuscrita
+                      </span>
+                      {s.referencia_fisica && (
+                        <span className="text-[6.5pt] text-slate-500 block">
+                          Ref: {s.referencia_fisica}
+                        </span>
+                      )}
+                    </div>
+                  ) : s.firma_data_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={s.firma_data_url}
@@ -170,7 +192,10 @@ export default async function ImprimirActaReunionPage({ params }: { params: { id
                       className="h-8 max-w-[130px] object-contain mx-auto"
                     />
                   ) : (
-                    <span className="block h-7">&nbsp;</span>
+                    <div className="text-center py-1">
+                      <div className="border-b border-dashed border-slate-300 w-32 mx-auto mb-0.5"></div>
+                      <span className="text-[7pt] text-slate-400 block">Firma manuscrita</span>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -189,6 +214,48 @@ export default async function ImprimirActaReunionPage({ params }: { params: { id
             </tr>
           </tbody>
         </table>
+
+        {/* ANEXO: RESPALDOS FÍSICOS DIGITALIZADOS (SI EXISTEN) */}
+        {sigRows.some((s) => s.respaldo_archivo_url) && (
+          <div className="mt-4 pt-3 border-t-2 border-dashed border-slate-300">
+            <div className="bg-[#1F3864] text-white px-2 py-1 text-[8pt] font-bold uppercase mb-2">
+              ANEXO DE AUDITORÍA: RESPALDOS FÍSICOS DIGITALIZADOS (CONSTANCIA DE FIRMA EN PAPEL)
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {sigRows
+                .filter((s) => s.respaldo_archivo_url)
+                .map((s, idx) => (
+                  <div key={idx} className="border border-slate-300 p-2 rounded text-center bg-slate-50/50">
+                    <p className="text-[8pt] font-bold text-slate-800 mb-1">
+                      Constancia Física: {s.nombre}
+                    </p>
+                    {s.referencia_fisica && (
+                      <p className="text-[7pt] text-slate-500 mb-1">
+                        Ubicación: {s.referencia_fisica}
+                      </p>
+                    )}
+                    {s.respaldo_archivo_url?.startsWith("data:image") ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={s.respaldo_archivo_url}
+                        alt={`Respaldo físico de ${s.nombre}`}
+                        className="max-h-56 mx-auto object-contain border border-slate-200 bg-white"
+                      />
+                    ) : (
+                      <a
+                        href={s.respaldo_archivo_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[8pt] text-blue-700 underline block p-3 bg-white border border-slate-200 rounded"
+                      >
+                        📄 Ver archivo escaneado adjunto ({s.respaldo_nombre || "Documento PDF"})
+                      </a>
+                    )}
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
