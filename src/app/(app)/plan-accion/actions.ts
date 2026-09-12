@@ -41,6 +41,10 @@ export async function createActionPlan(prevState: ActionState, formData: FormDat
   const elaboratedBy = str(formData, "elaborated_by") || "[]";
   const reviewedBy = str(formData, "reviewed_by") || "";
   const approvedBy = str(formData, "approved_by") || "";
+  const signaturesJson = str(formData, "signatures_json") || "[]";
+  const signatureType = str(formData, "signature_type") || null;
+  const physicalFileRef = str(formData, "physical_file_ref") || null;
+  const physicalEvidenceUrl = str(formData, "physical_evidence_url") || null;
 
   if (!schoolYearId) {
     try {
@@ -68,11 +72,13 @@ export async function createActionPlan(prevState: ActionState, formData: FormDat
         id, institution_id, school_year_id, school_year_text, students_count,
         coordinator_name, analysts_data, available_resources, items_data,
         evaluation_notes, elaborated_by, reviewed_by, approved_by,
+        signatures_json, signature_type, physical_file_ref, physical_evidence_url,
         created_by, created_at, updated_at
       ) VALUES (
         @id, @institution_id, @school_year_id, @school_year_text, @students_count,
         @coordinator_name, @analysts_data, @available_resources, @items_data,
         @evaluation_notes, @elaborated_by, @reviewed_by, @approved_by,
+        @signatures_json, @signature_type, @physical_file_ref, @physical_evidence_url,
         @created_by, datetime('now'), datetime('now')
       )`
     ).run({
@@ -89,6 +95,10 @@ export async function createActionPlan(prevState: ActionState, formData: FormDat
       elaborated_by: elaboratedBy,
       reviewed_by: reviewedBy,
       approved_by: approvedBy,
+      signatures_json: signaturesJson,
+      signature_type: signatureType,
+      physical_file_ref: physicalFileRef,
+      physical_evidence_url: physicalEvidenceUrl,
       created_by: session.user.id,
     });
 

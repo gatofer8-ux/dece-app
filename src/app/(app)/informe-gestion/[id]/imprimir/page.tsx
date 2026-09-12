@@ -572,7 +572,21 @@ export default async function PrintAnnualReportPage({
                             <span className="text-slate-600 uppercase text-[8px]">{s.cargo}</span>
                           </td>
                           <td className="p-1.5 border-r border-black align-bottom text-center">
-                            <div className="w-32 mx-auto border-b border-black mb-1"></div>
+                            {s.signature_type === "digital" && s.firma_data_url ? (
+                              <div className="flex flex-col items-center">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={s.firma_data_url} alt="Firma digital" className="max-h-12 max-w-[130px] object-contain" />
+                                <span className="text-[7.5px] text-emerald-800 font-bold uppercase mt-0.5">Firma Digital Registrada</span>
+                              </div>
+                            ) : s.signature_type === "fisica" ? (
+                              <div className="text-[8.5px] text-slate-500 italic">
+                                <div className="w-32 mx-auto border-b border-black mb-1"></div>
+                                <div className="text-[7.5px] text-amber-800 font-semibold">[Firma física manuscrita]</div>
+                                {s.observacion && <div className="text-[7px] text-slate-500">{s.observacion}</div>}
+                              </div>
+                            ) : (
+                              <div className="w-32 mx-auto border-b border-black mb-1"></div>
+                            )}
                           </td>
                           <td className="p-1.5 align-bottom text-center">
                             {formatDate(s.date || report.report_date)}
@@ -599,7 +613,7 @@ export default async function PrintAnnualReportPage({
                     <tbody>
                       {(aprobacionSignatures.length > 0
                         ? aprobacionSignatures
-                        : [{ name: "", cargo: "RECTOR / RECTORA DE LA IE", date: report.report_date }]
+                        : [{ name: "", cargo: "RECTOR / RECTORA DE LA IE", date: report.report_date }] as ManagementReportSignatureItem[]
                       ).map((s, idx) => (
                         <tr key={idx} className="border-b border-black last:border-b-0 h-16">
                           <td className="p-1.5 border-r border-black align-bottom">
@@ -607,7 +621,21 @@ export default async function PrintAnnualReportPage({
                             <span className="text-slate-600 uppercase text-[8px]">{s.cargo}</span>
                           </td>
                           <td className="p-1.5 border-r border-black align-bottom text-center">
-                            <div className="w-32 mx-auto border-b border-black mb-1"></div>
+                            {s.signature_type === "digital" && s.firma_data_url ? (
+                              <div className="flex flex-col items-center">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={s.firma_data_url} alt="Firma digital" className="max-h-12 max-w-[130px] object-contain" />
+                                <span className="text-[7.5px] text-emerald-800 font-bold uppercase mt-0.5">Firma Digital Registrada</span>
+                              </div>
+                            ) : s.signature_type === "fisica" ? (
+                              <div className="text-[8.5px] text-slate-500 italic">
+                                <div className="w-32 mx-auto border-b border-black mb-1"></div>
+                                <div className="text-[7.5px] text-amber-800 font-semibold">[Firma física manuscrita]</div>
+                                {s.observacion && <div className="text-[7px] text-slate-500">{s.observacion}</div>}
+                              </div>
+                            ) : (
+                              <div className="w-32 mx-auto border-b border-black mb-1"></div>
+                            )}
                           </td>
                           <td className="p-1.5 align-bottom text-center">
                             {formatDate(s.date || report.report_date)}
@@ -616,6 +644,45 @@ export default async function PrintAnnualReportPage({
                       ))}
                     </tbody>
                   </table>
+
+                  {/* Banner de Custodia de Respaldo Físico */}
+                  {report.physical_file_ref && (
+                    <div className="mt-4 p-2 bg-amber-50 border border-amber-300 rounded text-xs text-amber-900 flex items-center justify-between break-inside-avoid">
+                      <div>
+                        <span className="font-bold">📁 UBICACIÓN DE RESPALDO FÍSICO EN ARCHIVO INSTITUCIONAL: </span>
+                        <span>{report.physical_file_ref}</span>
+                      </div>
+                      <span className="text-[9px] bg-amber-200/70 border border-amber-400 px-1.5 py-0.5 rounded font-bold uppercase">
+                        Custodia DECE
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Anexo de Auditoría Distrital: Respaldo Físico Escaneado */}
+                  {report.physical_evidence_url && (
+                    <div className="mt-4 pt-4 border-t border-dashed border-slate-300 page-break-inside-avoid">
+                      <div className="text-center font-bold text-xs text-slate-800 uppercase tracking-wide bg-slate-100 py-1 border border-slate-300 rounded mb-2">
+                        ANEXO DE AUDITORÍA DISTRITAL: RESPALDO FÍSICO DIGITALIZADO
+                      </div>
+                      <div className="text-[9.5px] text-slate-600 mb-2 italic text-center">
+                        Copia digitalizada del informe anual de gestión firmado y sellado bajo custodia institucional.
+                      </div>
+                      <div className="flex justify-center border border-slate-200 p-2 bg-slate-50 rounded">
+                        {report.physical_evidence_url.startsWith("data:application/pdf") ? (
+                          <div className="text-center p-3 text-xs text-blue-700 font-semibold">
+                            <span>📄 Documento PDF de Respaldo Físico Digitalizado Adjunto</span>
+                          </div>
+                        ) : (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={report.physical_evidence_url}
+                            alt="Respaldo Físico Digitalizado"
+                            className="max-h-[350px] w-auto object-contain border border-slate-300 rounded shadow-xs"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </td>
             </tr>

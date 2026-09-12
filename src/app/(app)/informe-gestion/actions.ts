@@ -52,6 +52,9 @@ export async function saveAnnualReportAction(formData: {
   annexes_notes: string;
   annex_photos_json: string;
   signatures_json: string;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
 }) {
   const session = await getSession();
   if (!session || !session.user) {
@@ -93,7 +96,7 @@ export async function saveAnnualReportAction(formData: {
           achievements, critical_knots, conclusions_counseling,
           conclusions_prevention, conclusions_psychosocial, conclusions_inclusion,
           recommendations_institutional, recommendations_district, annexes_notes,
-          annex_photos_json, signatures_json
+          annex_photos_json, signatures_json, signature_type, physical_file_ref, physical_evidence_url
         ) VALUES (
           ?, ?, ?, ?,
           ?, ?, ?, ?,
@@ -105,7 +108,7 @@ export async function saveAnnualReportAction(formData: {
           ?, ?, ?,
           ?, ?, ?,
           ?, ?, ?,
-          ?, ?
+          ?, ?, ?, ?, ?
         )
       `).run(
         reportId,
@@ -142,7 +145,10 @@ export async function saveAnnualReportAction(formData: {
         formData.recommendations_district || "",
         formData.annexes_notes || "",
         formData.annex_photos_json || "[]",
-        formData.signatures_json || "[]"
+        formData.signatures_json || "[]",
+        formData.signature_type || null,
+        formData.physical_file_ref || null,
+        formData.physical_evidence_url || null
       );
     } else {
       db.prepare(`
@@ -177,6 +183,9 @@ export async function saveAnnualReportAction(formData: {
           annexes_notes = ?,
           annex_photos_json = ?,
           signatures_json = ?,
+          signature_type = ?,
+          physical_file_ref = ?,
+          physical_evidence_url = ?,
           updated_at = datetime('now')
         WHERE id = ? AND institution_id = ?
       `).run(
@@ -210,6 +219,9 @@ export async function saveAnnualReportAction(formData: {
         formData.annexes_notes || "",
         formData.annex_photos_json || "[]",
         formData.signatures_json || "[]",
+        formData.signature_type || null,
+        formData.physical_file_ref || null,
+        formData.physical_evidence_url || null,
         reportId,
         institutionId
       );

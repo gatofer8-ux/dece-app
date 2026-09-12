@@ -93,6 +93,10 @@ export default async function EditarPlanAccionPage({ params }: { params: { id: s
         defaultElaboratedBy={elaborated}
         defaultReviewedBy={parseSignatorySafe(plan.reviewed_by, sig.deceCoordinator.fullName ? { name: sig.deceCoordinator.fullName, role: "Coordinador(a) DECE" } : undefined)}
         defaultApprovedBy={parseSignatorySafe(plan.approved_by, sig.authority.fullName ? { name: sig.authority.fullName, role: sig.authority.role } : undefined)}
+        defaultSignaturesJson={plan.signatures_json || undefined}
+        defaultSignatureType={plan.signature_type || undefined}
+        defaultPhysicalFileRef={plan.physical_file_ref || undefined}
+        defaultPhysicalEvidenceUrl={plan.physical_evidence_url || undefined}
         deceStaffNames={deceStaffNames}
         linkedBianualPlan={linkedBianualPlan}
         isEditing={true}

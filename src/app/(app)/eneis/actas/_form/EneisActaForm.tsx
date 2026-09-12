@@ -10,6 +10,7 @@ import {
   type EneisActaCompromiso,
 } from "@/lib/eneis/eneisActas";
 import type { EneisActaRow } from "@/lib/types";
+import DualSignatureModal, { type DualSignatureData } from "@/components/DualSignatureModal";
 
 type Prefill = Record<string, string>;
 
@@ -34,6 +35,44 @@ export default function EneisActaForm({
   const [participants, setParticipants] = useState<EneisActaParticipant[]>(
     initialData ? parseEneisActaParticipants(initialData.participants_json) : []
   );
+  // Estados de firmas duales y respaldo físico
+  const initialSignaturesList: DualSignatureData[] = (() => {
+    try {
+      return initialData?.signatures_json ? JSON.parse(initialData.signatures_json) : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  const [dualSignatures, setDualSignatures] = useState<DualSignatureData[]>(initialSignaturesList);
+  const [activeSignerIdx, setActiveSignerIdx] = useState<number | null>(null);
+
+  const [physicalFileRef, setPhysicalFileRef] = useState(initialData?.physical_file_ref || "");
+  const [physicalEvidenceUrl, setPhysicalEvidenceUrl] = useState(initialData?.physical_evidence_url || "");
+  const [physicalEvidenceName, setPhysicalEvidenceName] = useState("");
+
+  const handleEvidenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhysicalEvidenceName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setPhysicalEvidenceUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const overallSignatureType =
+    dualSignatures.length === 0
+      ? (initialData?.signature_type || "digital")
+      : dualSignatures.every((s) => s.tipo === "digital")
+      ? "digital"
+      : dualSignatures.every((s) => s.tipo === "fisica")
+      ? "fisica"
+      : "mixta";
+
   const [compromisos, setCompromisos] = useState<EneisActaCompromiso[]>(
     initialData ? parseEneisActaCompromisos(initialData.compromisos_json) : [{ compromiso: "", responsable: "", fecha: "" }]
   );
@@ -54,6 +93,10 @@ export default function EneisActaForm({
 
   return (
     <form action={action} className="card p-6 space-y-6 max-w-4xl">
+      <input type="hidden" name="signatures_json" value={JSON.stringify(dualSignatures)} />
+      <input type="hidden" name="signature_type" value={overallSignatureType} />
+      <input type="hidden" name="physical_file_ref" value={physicalFileRef} />
+      <input type="hidden" name="physical_evidence_url" value={physicalEvidenceUrl} />
       <p className="text-xs text-slate-500">
         El número del acta y el encabezado institucional se asignan automáticamente al guardar.
       </p>
@@ -87,19 +130,48 @@ export default function EneisActaForm({
           Esta misma lista se usa también en la tabla de firmas de responsabilidad del acta.
         </p>
         <div className="space-y-2">
-          {participants.map((p, i) => (
-            <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-center">
-              <input name="p_nombre" defaultValue={p.nombre} placeholder="Nombres y apellidos" className="input text-sm" />
-              <input name="p_cargo" defaultValue={p.cargo} placeholder="Cargo" className="input text-sm" />
-              <button
-                type="button"
-                onClick={() => setParticipants((arr) => arr.filter((_, j) => j !== i))}
-                className="text-red-600 text-xs px-2"
-              >
-                quitar
-              </button>
-            </div>
-          ))}
+          {participants.map((p, i) => {
+            const signerId = `p_${i}`;
+            const sig = dualSignatures.find((s) => s.signer_id === signerId);
+            return (
+              <div key={i} className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                  <input name="p_nombre" defaultValue={p.nombre} placeholder="Nombres y apellidos" className="input text-sm" />
+                  <input name="p_cargo" defaultValue={p.cargo} placeholder="Cargo" className="input text-sm" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setParticipants((arr) => arr.filter((_, j) => j !== i));
+                      setDualSignatures((arr) => arr.filter((s) => s.signer_id !== signerId));
+                    }}
+                    className="text-red-600 text-xs px-2"
+                  >
+                    quitar
+                  </button>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 text-xs">
+                  <span className="text-[11px] font-medium text-slate-500">Firma de constancia:</span>
+                  {sig?.tipo === "digital" ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 px-1.5 py-0.5 rounded">🖋️ Digital</span>
+                      <button type="button" onClick={() => setActiveSignerIdx(i)} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                      <button type="button" onClick={() => setDualSignatures(dualSignatures.filter((s) => s.signer_id !== signerId))} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                    </div>
+                  ) : sig?.tipo === "fisica" ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded">📄 Papel</span>
+                      <button type="button" onClick={() => setActiveSignerIdx(i)} className="text-[10px] text-brand-700 hover:underline">Cambiar</button>
+                      <button type="button" onClick={() => setDualSignatures(dualSignatures.filter((s) => s.signer_id !== signerId))} className="text-[10px] text-rose-600 hover:underline">✕</button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => setActiveSignerIdx(i)} className="text-[10px] font-semibold text-brand-700 hover:underline">
+                      ✍️ Registrar Firma
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
           {participants.length === 0 && (
             <p className="text-xs text-slate-400">Sin personas registradas. El acta reservará filas en blanco.</p>
           )}
@@ -170,6 +242,77 @@ export default function EneisActaForm({
           ))}
         </div>
       </section>
+
+      {/* Respaldo Físico DECE y Acta en Papel */}
+      <div className="p-4 bg-amber-50/60 rounded-xl border border-amber-200 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+            <span>📁</span> Respaldo Físico DECE y Acta en Papel (Auditoría Ministerial)
+          </span>
+          <span className="text-[11px] text-amber-700 bg-amber-100/70 border border-amber-300 px-2 py-0.5 rounded-full font-medium">
+            Custodia Institucional
+          </span>
+        </div>
+        <p className="text-xs text-amber-800/90 leading-relaxed">
+          Para garantizar la constancia legal y auditoría física, registra la ubicación física en carpeta/archivador y opcionalmente adjunta copia escaneada o foto (PDF o Imagen) del acta firmada y sellada.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div>
+            <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+              Ubicación en Archivo Físico Institucional
+            </label>
+            <input
+              type="text"
+              value={physicalFileRef}
+              onChange={(e) => setPhysicalFileRef(e.target.value)}
+              placeholder="Ej. Archivador Actas ENEIS 2026 / Carpeta Convivencia"
+              className="w-full text-xs rounded-lg border border-amber-300 bg-white px-3 py-2 text-slate-800 placeholder-slate-400 focus:ring-1 focus:ring-amber-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+              Adjuntar Acta Firmada / Sellada (PDF o Imagen)
+            </label>
+            {physicalEvidenceUrl ? (
+              <div className="flex items-center justify-between p-2 bg-white rounded-lg border border-amber-300">
+                <span className="text-xs text-emerald-800 font-medium flex items-center gap-1.5 truncate max-w-[200px]">
+                  <span>📎</span> {physicalEvidenceName || "Acta_ENEIS_Sellada"}
+                </span>
+                <div className="flex items-center gap-2">
+                  <a href={physicalEvidenceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">Ver</a>
+                  <button type="button" onClick={() => { setPhysicalEvidenceUrl(""); setPhysicalEvidenceName(""); }} className="text-xs text-rose-600 hover:underline font-medium">Quitar</button>
+                </div>
+              </div>
+            ) : (
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={handleEvidenceUpload}
+                className="w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 cursor-pointer"
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {activeSignerIdx !== null && participants[activeSignerIdx] && (
+        <DualSignatureModal
+          isOpen={true}
+          onClose={() => setActiveSignerIdx(null)}
+          signatoryName={participants[activeSignerIdx].nombre || "Convocado/a"}
+          signatoryRole={participants[activeSignerIdx].cargo || "PARTICIPANTE"}
+          initialData={dualSignatures.find((s) => s.signer_id === `p_${activeSignerIdx}`) || null}
+          onSave={(data) => {
+            const signerId = `p_${activeSignerIdx}`;
+            const next = dualSignatures.filter((s) => s.signer_id !== signerId);
+            next.push({ ...data, signer_id: signerId });
+            setDualSignatures(next);
+            setActiveSignerIdx(null);
+          }}
+        />
+      )}
 
       <div className="flex justify-end">
         <button type="submit" className="btn-primary">

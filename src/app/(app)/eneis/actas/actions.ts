@@ -8,7 +8,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { logAudit } from "@/lib/audit";
 import { str, dateStr, getAllStr } from "@/lib/formData";
 
-const TEXT_COLS = ["ciudad", "meeting_date", "tema", "hora_inicio", "hora_fin", "lugar", "desarrollo"] as const;
+const TEXT_COLS = ["ciudad", "meeting_date", "tema", "hora_inicio", "hora_fin", "lugar", "desarrollo", "signatures_json", "signature_type", "physical_file_ref", "physical_evidence_url"] as const;
 
 function collectParticipants(fd: FormData) {
   const nombres = getAllStr(fd, "p_nombre");
