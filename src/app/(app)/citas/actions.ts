@@ -58,9 +58,16 @@ export async function createAppointment(formData: FormData) {
   );
 
   if (caseId) {
+    const appointmentNotesExcerpt = (notes || "").slice(0, 140).trim();
     db.prepare(
-      `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Cita agendada', ?)`
-    ).run(randomUUID(), caseId, session.user.id, `Cita programada: ${title} para el ${date} a las ${startTime}`);
+      `INSERT INTO case_actions (id, case_file_id, author_id, type, description, observations) VALUES (?, ?, ?, 'Cita agendada', ?, ?)`
+    ).run(
+      randomUUID(),
+      caseId,
+      session.user.id,
+      `Cita programada: ${title} para el ${date} a las ${startTime}.`,
+      appointmentNotesExcerpt ? `${appointmentNotesExcerpt}${(notes || "").length > 140 ? "..." : ""}` : null
+    );
   }
 
   // Notificar al solicitante si dejó correo
@@ -166,12 +173,13 @@ export async function rescheduleAppointment(
   // Si tiene caso vinculado, registrar en la bitácora del caso
   if (appt.case_file_id) {
     db.prepare(
-      `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Cita reagendada', ?)`
+      `INSERT INTO case_actions (id, case_file_id, author_id, type, description, observations) VALUES (?, ?, ?, 'Cita reagendada', ?, ?)`
     ).run(
       randomUUID(),
       appt.case_file_id,
       session.user.id,
-      `Cita reagendada de ${oldDate} ${oldTime} al ${newDate} ${newStartTime}. Motivo: ${reason || "Ajuste de agenda"}`
+      `Cita reagendada de ${oldDate} ${oldTime} al ${newDate} ${newStartTime}.`,
+      `Motivo: ${reason || "Ajuste de agenda"}`
     );
   }
 

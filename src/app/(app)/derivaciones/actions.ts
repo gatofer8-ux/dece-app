@@ -72,9 +72,19 @@ function insertReferral(
     physicalEvidenceUrl
   );
 
+  const referralReason = str(formData, "reason") || currentSituation || "";
+  const referralReasonExcerpt = referralReason.slice(0, 140).trim();
   db.prepare(
-    `INSERT INTO case_actions (id, case_file_id, author_id, type, description) VALUES (?, ?, ?, 'Derivación', ?)`
-  ).run(randomUUID(), caseId, userId, `Derivación registrada hacia: ${str(formData, "institution")}`);
+    `INSERT INTO case_actions (id, case_file_id, author_id, type, description, observations) VALUES (?, ?, ?, 'Derivación', ?, ?)`
+  ).run(
+    randomUUID(),
+    caseId,
+    userId,
+    `Derivación registrada hacia: ${str(formData, "institution")}`,
+    referralReasonExcerpt
+      ? `${referralReasonExcerpt}${referralReason.length > 140 ? "..." : ""}`
+      : null
+  );
 
   autoMarkChecklistItems(caseId, ["ficha de derivacion"], "Ficha de derivación");
 

@@ -121,7 +121,7 @@ export async function createCircleConsentAction(formData: FormData) {
         session.user.id,
         consentDate,
         "Consentimiento informado Círculo Restaurativo",
-        `Emisión de consentimiento informado de círculo restaurativo para el estudiante ${studentName} (${courseParallelShort}). Representante: ${representativeName || "Por definir"}.`,
+        `Consentimiento informado de círculo restaurativo suscrito con ${representativeName || "el representante legal"}.`,
         "Intervención Restaurativa",
         `Jornada: ${shift}. Círculo restaurativo planificado para ${courseParallelFull}.`
       );
