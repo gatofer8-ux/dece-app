@@ -16,6 +16,7 @@ import {
 } from "docx";
 import { QUESTION_STAGES, splitLines } from "./restorativeCircleFicha";
 import type { RestorativeCircleFichaRow } from "./types";
+import { createDocxCustodyCalloutTable } from "./docxCustodyHelper";
 
 const FONT = "Times New Roman";
 const BODY = 24; // 12pt
@@ -280,6 +281,17 @@ export async function generateRestorativeCircleFichaDocx(
       children: [run("FIRMA DE RESPONSABILIDAD", { bold: true, size: 26 })],
     }),
     sigTable,
+    ...(f.physical_file_ref || f.physical_evidence_url
+      ? [
+          new Paragraph({ spacing: { before: 240, after: 100 }, children: [] }),
+          createDocxCustodyCalloutTable({
+            physicalFileRef: f.physical_file_ref,
+            physicalEvidenceUrl: f.physical_evidence_url,
+            widthDxa: USABLE,
+            font: FONT,
+          })!,
+        ]
+      : []),
   ];
 
   const doc = new Document({

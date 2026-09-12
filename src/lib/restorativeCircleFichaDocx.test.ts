@@ -40,4 +40,45 @@ describe("generateRestorativeCircleFichaDocx", () => {
     expect(buffer).toBeInstanceOf(Buffer);
     expect(buffer.length).toBeGreaterThan(1000);
   });
+
+  it("genera un buffer de Word con recuadro formal de custodia física institucional", async () => {
+    const mockFichaCustody: RestorativeCircleFichaRow = {
+      id: "f-124",
+      institution_id: "inst-1",
+      created_by_id: "user-1",
+      school_year_id: "sy-1",
+      case_file_id: null,
+      student_id: null,
+      ficha_code: "FICHA-CIRC-002",
+      center_name: "Unidad Educativa del Milenio",
+      district_name: "17D01",
+      facilitator_name: "Lic. Andrea Morales",
+      circle_type: "Círculo de Diálogo",
+      circle_modality: "Presencial",
+      participants_count: "15",
+      participant_type: "Estudiantes 9no EGB",
+      problematica: "Dificultades de convivencia",
+      circle_date: "2026-09-10",
+      circle_time: "09:00 - 10:30",
+      diagnostico: "Diagnóstico",
+      objetivos: "Objetivos",
+      declaracion_inicial: "Declaración",
+      q_icebreaker: "Icebreaker",
+      q_intro: "Intro",
+      q_develop: "Develop",
+      q_actions: "Actions",
+      declaracion_cierre: "Cierre",
+      informe_circulo: "Informe",
+      conclusion: "Conclusión",
+      physical_file_ref: "Carpeta DECE 2026 / Círculos Restaurativos",
+      physical_evidence_url: "https://example.com/scan.pdf",
+      signature_type: "DIGITAL",
+      created_at: "2026-09-10T10:00:00Z",
+      updated_at: "2026-09-10T10:00:00Z",
+    };
+
+    const buffer = await generateRestorativeCircleFichaDocx(mockFichaCustody);
+    expect(buffer).toBeInstanceOf(Buffer);
+    expect(buffer.length).toBeGreaterThan(1000);
+  });
 });

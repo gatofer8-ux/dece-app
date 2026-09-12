@@ -64,6 +64,7 @@ export default async function FichasCirculoPage() {
                   <th>Participantes</th>
                   <th>Tipo</th>
                   <th>Facilitador/a</th>
+                  <th>Custodia y Archivo</th>
                   <th className="text-right">Acciones</th>
                 </tr>
               </thead>
@@ -95,6 +96,33 @@ export default async function FichasCirculoPage() {
                     </td>
                     <td className="text-xs text-slate-600">{f.circle_type || "—"}</td>
                     <td className="text-xs text-slate-600">{f.facilitator_name || "—"}</td>
+                    <td>
+                      {f.physical_evidence_url || (f.physical_file_ref && f.signature_type === "DIGITAL") ? (
+                        <div className="space-y-0.5">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                            🟢 Conforme
+                          </span>
+                          {f.physical_file_ref && (
+                            <div className="text-[10px] text-slate-500 font-mono truncate max-w-[130px]" title={f.physical_file_ref}>
+                              📁 {f.physical_file_ref}
+                            </div>
+                          )}
+                        </div>
+                      ) : f.physical_file_ref ? (
+                        <div className="space-y-0.5">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                            🟡 En carpeta
+                          </span>
+                          <div className="text-[10px] text-slate-500 font-mono truncate max-w-[130px]" title={f.physical_file_ref}>
+                            📁 {f.physical_file_ref}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+                          🔴 Pendiente
+                        </span>
+                      )}
+                    </td>
                     <td className="text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
                         <Link

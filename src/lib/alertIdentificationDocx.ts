@@ -24,6 +24,7 @@ import {
   mergeAttendeesWithReportingTeachers,
 } from "./alertIdentification";
 import { RISK_TYPE_LABELS, type RiskType } from "./types";
+import { createDocxCustodyCalloutTable } from "./docxCustodyHelper";
 
 /**
  * Acta de Identificación de Alertas (Junta de Curso) — réplica fiel del
@@ -111,6 +112,8 @@ export interface AlertIdentificationSessionRowLike {
   responsible_role: string | null;
   attendees_json: string;
   observaciones: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
 }
 export interface AlertIdentificationEntryLike {
   student_name: string;
@@ -237,6 +240,17 @@ export async function generateAlertIdentificationDocx(
               ]),
             ],
           }),
+          ...(s.physical_file_ref || s.physical_evidence_url
+            ? [
+                new Paragraph({ spacing: { before: 240, after: 100 }, children: [] }),
+                createDocxCustodyCalloutTable({
+                  physicalFileRef: s.physical_file_ref,
+                  physicalEvidenceUrl: s.physical_evidence_url,
+                  widthDxa: W,
+                  font: FONT,
+                })!,
+              ]
+            : []),
         ],
       },
     ],

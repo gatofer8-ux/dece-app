@@ -145,6 +145,7 @@ export function getInstitutionCustodyAudit(institutionId: string): InstitutionCu
     "case_corresponsibility_acts",
     "referrals",
     "restorative_circle_consents",
+    "restorative_circle_fichas",
     "case_accompaniment_reports",
   ];
 
@@ -192,6 +193,9 @@ export function getInstitutionCustodyAudit(institutionId: string): InstitutionCu
   // 9. Esquelas de Citación y Convocatorias DECE (dece_esquelas)
   const esquelasStats = queryCustodyStats(buildDirectInstSql("dece_esquelas"), [institutionId]);
 
+  // 10. Actas de Identificación de Alertas en Juntas de Curso (alert_identification_sessions)
+  const alertasStats = queryCustodyStats(buildDirectInstSql("alert_identification_sessions"), [institutionId]);
+
   function calcRate(num: number, denom: number): number {
     return denom > 0 ? Math.round((num / denom) * 100) : 100;
   }
@@ -206,6 +210,7 @@ export function getInstitutionCustodyAudit(institutionId: string): InstitutionCu
     { key: "juntas_curso", name: "Informes Técnicos de Juntas de Curso (Trimestrales)", stats: juntasStats },
     { key: "actas_reunion", name: "Actas de Reunión Institucional y de Equipo DECE", stats: actasReunionStats },
     { key: "esquelas", name: "Esquelas de Citación y Convocatorias a Representantes", stats: esquelasStats },
+    { key: "alertas_identificacion", name: "Actas de Identificación de Alertas (Juntas de Curso)", stats: alertasStats },
   ];
 
   const modules: InstitutionModuleCustodySummary[] = moduleItems.map((m) => {
@@ -286,6 +291,7 @@ export function getCasesCustodyMap(caseIds: string[]): Map<string, CaseCustodySu
     "case_corresponsibility_acts",
     "referrals",
     "restorative_circle_consents",
+    "restorative_circle_fichas",
     "case_accompaniment_reports",
     "dece_esquelas",
   ];

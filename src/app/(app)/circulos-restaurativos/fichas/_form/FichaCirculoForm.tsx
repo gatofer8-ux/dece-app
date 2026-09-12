@@ -346,6 +346,25 @@ export default function FichaCirculoForm({
     return p == null ? "" : String(p);
   };
 
+  const [physicalFileRef, setPhysicalFileRef] = useState(initialData?.physical_file_ref || "");
+  const [physicalEvidenceUrl, setPhysicalEvidenceUrl] = useState(initialData?.physical_evidence_url || "");
+  const [physicalEvidenceName, setPhysicalEvidenceName] = useState("");
+
+  function handleEvidenceUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 15 * 1024 * 1024) {
+      alert("El archivo no debe exceder los 15 MB.");
+      return;
+    }
+    setPhysicalEvidenceName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setPhysicalEvidenceUrl((ev.target?.result as string) || "");
+    };
+    reader.readAsDataURL(file);
+  }
+
   const action = mode === "edit" ? updateCircleFicha.bind(null, fichaId!) : createCircleFicha;
 
   const Label = ({ children }: { children: React.ReactNode }) => (
@@ -517,6 +536,78 @@ export default function FichaCirculoForm({
           7) Conclusión de la información recolectada
         </h3>
         {TA({ name: "conclusion", rows: 5, ai: "conclusion", hint: "Una conclusión por línea." })}
+      </section>
+
+      {/* Respaldo Físico DECE y Evidencia de Auditoría Distrital */}
+      <section className="bg-amber-50/70 p-5 rounded-xl border border-amber-200 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+            <span>📁</span> Respaldo Físico DECE y Evidencia de Auditoría Distrital
+          </span>
+          <span className="text-[11px] text-amber-700 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full font-medium">
+            Normativa Ministerial
+          </span>
+        </div>
+        <p className="text-xs text-amber-800/90 leading-relaxed">
+          Permite registrar la ubicación en archivador físico institucional de la ficha técnica firmada en papel, y adjuntar el escaneo o foto para auditoría distrital.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div>
+            <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+              Ubicación en Archivo Físico Institucional
+            </label>
+            <input
+              type="text"
+              name="physical_file_ref"
+              value={physicalFileRef}
+              onChange={(e) => setPhysicalFileRef(e.target.value)}
+              placeholder="Ej. Carpeta DECE 2026 / Fichas de Círculos / Exp #14"
+              className="w-full text-xs rounded-lg border border-amber-300 bg-white px-3 py-2 text-slate-800 placeholder-slate-400 focus:ring-1 focus:ring-amber-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+              Adjuntar Foto o Escaneo de la Ficha Firmada (PDF o Imagen)
+            </label>
+            <input type="hidden" name="physical_evidence_url" value={physicalEvidenceUrl} />
+            {physicalEvidenceUrl ? (
+              <div className="flex items-center justify-between p-2 bg-white rounded-lg border border-amber-300">
+                <span className="text-xs text-emerald-800 font-medium flex items-center gap-1.5 truncate max-w-[200px]">
+                  <span>📎</span> {physicalEvidenceName || "Ficha_Firmada_Escaneada"}
+                </span>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={physicalEvidenceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    Ver
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhysicalEvidenceUrl("");
+                      setPhysicalEvidenceName("");
+                    }}
+                    className="text-xs text-rose-600 hover:underline font-medium"
+                  >
+                    Quitar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <input
+                type="file"
+                accept="application/pdf,image/*"
+                onChange={handleEvidenceUpload}
+                className="w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 cursor-pointer"
+              />
+            )}
+          </div>
+        </div>
       </section>
 
       <div className="flex justify-end">

@@ -36,11 +36,24 @@ const TEXT_COLS = [
   "conclusion",
   "case_file_id",
   "student_id",
+  "signatures_json",
+  "signature_type",
+  "physical_file_ref",
+  "physical_evidence_url",
 ] as const;
 
 function payload(fd: FormData): Record<string, string | null> {
   const o: Record<string, string | null> = {};
   for (const c of TEXT_COLS) o[c] = str(fd, c);
+  if (!o.signature_type) {
+    if (o.physical_evidence_url && o.physical_evidence_url.trim()) {
+      o.signature_type = "DIGITAL";
+    } else if (o.physical_file_ref && o.physical_file_ref.trim()) {
+      o.signature_type = "FISICA";
+    } else {
+      o.signature_type = "PENDIENTE";
+    }
+  }
   return o;
 }
 

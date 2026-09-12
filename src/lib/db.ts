@@ -215,6 +215,15 @@ function createConnection(): Database.Database {
   safeAddColumn("restorative_circle_consents", "physical_file_ref TEXT");
   safeAddColumn("restorative_circle_consents", "physical_evidence_url TEXT");
 
+  safeAddColumn("restorative_circle_fichas", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("restorative_circle_fichas", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("restorative_circle_fichas", "physical_file_ref TEXT");
+  safeAddColumn("restorative_circle_fichas", "physical_evidence_url TEXT");
+
+  safeAddColumn("alert_identification_sessions", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("alert_identification_sessions", "physical_file_ref TEXT");
+  safeAddColumn("alert_identification_sessions", "physical_evidence_url TEXT");
+
   safeAddColumn("socialization_acts", "signatures_json TEXT DEFAULT '[]'");
   safeAddColumn("socialization_acts", "signature_type TEXT DEFAULT 'PENDIENTE'");
   safeAddColumn("socialization_acts", "physical_file_ref TEXT");

@@ -166,7 +166,61 @@ export default async function ImprimirFichaCirculoPage({ params }: { params: { i
             </tbody>
           </table>
         </section>
+
+        {/* Banner de Custodia de Archivo Físico */}
+        {f.physical_file_ref && (
+          <div className="mt-4 p-2.5 bg-amber-50/80 border border-amber-300 rounded text-[10pt] text-amber-950 flex items-center justify-between">
+            <span className="font-bold flex items-center gap-1.5">
+              <span>📁</span> Ubicación en Archivo Físico Institucional:
+            </span>
+            <span className="font-semibold text-amber-900">{f.physical_file_ref}</span>
+          </div>
+        )}
       </div>
+
+      {/* Anexo de Auditoría Distrital si existe evidencia física escaneada */}
+      {f.physical_evidence_url && (
+        <div className="print:break-before-page p-6 sm:p-8 bg-white border-2 border-dashed border-slate-300 print:border-slate-400 mt-6 max-w-3xl mx-auto w-full shadow-sm print:shadow-none">
+          <div className="text-center pb-3 border-b border-slate-300">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+              ANEXO DE AUDITORÍA DISTRITAL: RESPALDO DE FICHA TÉCNICA FÍSICA
+            </h3>
+            <p className="text-xs text-slate-600 mt-0.5">
+              Constancia oficial de respaldo documental físico según normativa de archivo y gestión DECE
+            </p>
+          </div>
+
+          <div className="my-4 p-3 bg-slate-50 border border-slate-200 rounded text-xs space-y-1">
+            <p><span className="font-semibold text-slate-700">Ubicación en Archivo Físico:</span> {f.physical_file_ref || "Carpeta DECE Institucional"}</p>
+            <p><span className="font-semibold text-slate-700">Facilitador/a:</span> {f.facilitator_name} &bull; <span className="font-semibold text-slate-700">Fecha:</span> {fmt(f.circle_date)}</p>
+          </div>
+
+          <div className="mt-4 flex flex-col items-center">
+            <p className="text-xs text-slate-500 mb-2 font-medium">Documento Físico Firmado y Digitalizado:</p>
+            {f.physical_evidence_url.startsWith("data:image/") || f.physical_evidence_url.match(/\.(png|jpg|jpeg|webp)$/i) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={f.physical_evidence_url}
+                alt="Ficha Técnica Digitalizada"
+                className="max-w-full max-h-[820px] object-contain border border-slate-300 rounded shadow-xs"
+              />
+            ) : (
+              <div className="p-6 border-2 border-dashed border-slate-300 rounded text-center w-full">
+                <span className="text-3xl block mb-2">📄</span>
+                <p className="text-xs font-semibold text-slate-700">Archivo digital adjunto (PDF / Documento)</p>
+                <a
+                  href={f.physical_evidence_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-brand-600 underline font-medium mt-1 inline-block"
+                >
+                  Ver archivo original adjunto
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

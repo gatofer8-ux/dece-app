@@ -48,6 +48,7 @@ export default async function AlertasIdentificacionPage() {
                   <th>Código</th>
                   <th>Estado</th>
                   <th>Estudiantes en alerta</th>
+                  <th>Custodia y Archivo</th>
                   <th className="text-right">Acciones</th>
                 </tr>
               </thead>
@@ -65,13 +66,46 @@ export default async function AlertasIdentificacionPage() {
                     </td>
                     <td>{s.status === "ABIERTA" ? <Badge color="green">Abierta</Badge> : <Badge color="slate">Cerrada</Badge>}</td>
                     <td className="text-xs text-slate-600">{counts.get(s.id) ?? 0}</td>
-                    <td className="text-right">
-                      <Link
-                        href={`/alertas-identificacion/${s.id}`}
-                        className="px-2.5 py-1 text-xs font-medium bg-brand-50 text-brand-700 hover:bg-brand-100 rounded border border-brand-200"
-                      >
-                        Ver acta
-                      </Link>
+                    <td>
+                      {s.signature_type === "DIGITAL" || s.physical_evidence_url ? (
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          🟢 Conforme
+                        </span>
+                      ) : s.signature_type === "FISICA" || s.physical_file_ref ? (
+                        <div className="text-xs text-amber-800 font-medium max-w-[150px] truncate" title={s.physical_file_ref || ""}>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 truncate">
+                            📁 {s.physical_file_ref || "En carpeta"}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-rose-50 text-rose-700 border border-rose-200">
+                          🔴 Pendiente
+                        </span>
+                      )}
+                    </td>
+                    <td className="text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Link
+                          href={`/alertas-identificacion/${s.id}/imprimir`}
+                          className="px-2 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded border border-slate-300"
+                          title="Ver o Imprimir Acta"
+                        >
+                          👁️ Imprimir
+                        </Link>
+                        <a
+                          href={`/api/alertas-identificacion/${s.id}/export-word`}
+                          className="px-2 py-1 text-xs font-medium bg-blue-50 hover:bg-blue-100 text-blue-700 rounded border border-blue-200"
+                          title="Descargar en Word oficial (.docx)"
+                        >
+                          📥 Word
+                        </a>
+                        <Link
+                          href={`/alertas-identificacion/${s.id}`}
+                          className="px-2.5 py-1 text-xs font-medium bg-brand-50 text-brand-700 hover:bg-brand-100 rounded border border-brand-200"
+                        >
+                          Ver acta
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}

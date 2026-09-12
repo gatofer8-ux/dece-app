@@ -57,6 +57,8 @@ export default async function DerivacionesPage({
                 <th className="text-left px-4 py-3">Alcance</th>
                 <th className="text-left px-4 py-3">Fecha</th>
                 <th className="text-left px-4 py-3">Estado</th>
+                <th className="text-left px-4 py-3">Custodia y Archivo</th>
+                <th className="text-right px-4 py-3">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -73,6 +75,58 @@ export default async function DerivacionesPage({
                   <td className="px-4 py-3 text-slate-600">{formatDate(r.referral_date)}</td>
                   <td className="px-4 py-3">
                     <Badge color={r.status === "PENDIENTE" ? "amber" : "blue"}>{REFERRAL_STATUS_LABELS[r.status]}</Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    {r.physical_evidence_url || (r.physical_file_ref && r.signature_type === "DIGITAL") ? (
+                      <div className="space-y-0.5">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                          🟢 Conforme
+                        </span>
+                        {r.physical_file_ref && (
+                          <div className="text-[10px] text-slate-500 font-mono truncate max-w-[130px]" title={r.physical_file_ref}>
+                            📁 {r.physical_file_ref}
+                          </div>
+                        )}
+                      </div>
+                    ) : r.physical_file_ref ? (
+                      <div className="space-y-0.5">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                          🟡 En carpeta
+                        </span>
+                        <div className="text-[10px] text-slate-500 font-mono truncate max-w-[130px]" title={r.physical_file_ref}>
+                          📁 {r.physical_file_ref}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+                        🔴 Pendiente
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <Link
+                        href={`/casos/${r.case_file_id}/derivaciones/${r.id}/imprimir`}
+                        className="px-2.5 py-1 text-xs font-medium bg-brand-50 text-brand-700 hover:bg-brand-100 rounded border border-brand-200"
+                        title="Ver e Imprimir Documento"
+                      >
+                        👁️ Ver / Imprimir
+                      </Link>
+                      <a
+                        href={`/api/casos/${r.case_file_id}/derivaciones/${r.id}/export-word`}
+                        className="px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 rounded border border-blue-200"
+                        title="Descargar Word"
+                      >
+                        📥 Word
+                      </a>
+                      <Link
+                        href={`/casos/${r.case_file_id}/derivaciones/${r.id}/editar`}
+                        className="px-2 py-1 text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 rounded"
+                        title="Editar Derivación"
+                      >
+                        ✏️
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

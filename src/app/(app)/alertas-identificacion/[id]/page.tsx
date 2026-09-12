@@ -31,6 +31,7 @@ export default async function AlertaIdentificacionDetailPage({ params }: { param
         action={
           <div className="flex items-center gap-2">
             <Link href="/alertas-identificacion" className="btn-secondary text-xs">← Todas</Link>
+            <a href={`/api/alertas-identificacion/${s.id}/export-word`} className="btn-secondary text-xs">📥 Word</a>
             <Link href={`/alertas-identificacion/${s.id}/imprimir`} className="btn-secondary text-xs">🖨️ Ver / imprimir</Link>
             {s.status === "ABIERTA" ? (
               <form action={setAlertSessionStatusAction.bind(null, s.id, "CERRADA")}>
@@ -53,6 +54,13 @@ export default async function AlertaIdentificacionDetailPage({ params }: { param
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             {s.status === "ABIERTA" ? <Badge color="green">Abierta</Badge> : <Badge color="slate">Cerrada</Badge>}
+            {s.signature_type === "DIGITAL" || s.physical_evidence_url ? (
+              <Badge color="green">🟢 Custodia Conforme</Badge>
+            ) : s.signature_type === "FISICA" || s.physical_file_ref ? (
+              <Badge color="amber">📁 En Archivo Físico</Badge>
+            ) : (
+              <Badge color="red">🔴 Custodia Pendiente</Badge>
+            )}
           </div>
           <p className="text-sm text-slate-600">Los docentes registran a sus estudiantes en:</p>
           <p className="font-mono text-sm bg-slate-100 rounded px-3 py-2 break-all select-all">{link}</p>
@@ -60,6 +68,31 @@ export default async function AlertaIdentificacionDetailPage({ params }: { param
             O en <span className="font-semibold">{publicBaseUrl().replace(/^https?:\/\//, "")}/al</span> con el código{" "}
             <span className="font-mono text-lg font-bold tracking-widest">{s.access_code}</span>
           </p>
+        </div>
+      </div>
+
+      {/* Banner de Custodia y Archivo Físico */}
+      <div className="card p-4 bg-amber-50/60 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2 text-amber-950">
+          <span className="text-base">📁</span>
+          <div>
+            <span className="font-bold">Custodia en Archivo Físico Institucional: </span>
+            <span>{s.physical_file_ref || "Pendiente de registrar ubicación física en el formulario inferior"}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {s.physical_evidence_url ? (
+            <a
+              href={s.physical_evidence_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 font-semibold text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded border border-emerald-300 hover:bg-emerald-200"
+            >
+              <span>📎</span> Ver Acta Escaneada
+            </a>
+          ) : (
+            <span className="text-amber-800 italic">Sin escaneo digital adjunto</span>
+          )}
         </div>
       </div>
 

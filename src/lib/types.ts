@@ -866,6 +866,9 @@ export interface AlertIdentificationSessionRow {
   observaciones: string | null;
   access_code: string;
   status: "ABIERTA" | "CERRADA";
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
+  signature_type?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -1034,6 +1037,10 @@ export interface RestorativeCircleFichaRow {
   declaracion_cierre: string | null;
   informe_circulo: string | null;
   conclusion: string | null;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
   created_at: string;
   updated_at: string;
 }
