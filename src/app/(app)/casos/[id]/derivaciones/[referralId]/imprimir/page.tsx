@@ -67,9 +67,21 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
   const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow;
   const institution = db.prepare("SELECT * FROM institutions WHERE id = ?").get(institutionId) as InstitutionRow;
 
-  const deceUser = referral.created_by_id
+    const deceUser = referral.created_by_id
     ? (db.prepare("SELECT * FROM users WHERE id = ?").get(referral.created_by_id) as UserRow | undefined)
     : undefined;
+
+  let signatures: Record<string, { tipo: "digital" | "fisica"; firma_data_url?: string; fecha?: string; observacion?: string }> = {};
+  if (referral.signatures_json) {
+    try {
+      signatures = JSON.parse(referral.signatures_json);
+    } catch {
+      signatures = {};
+    }
+  }
+  const deceSig = signatures.dece;
+  const repSig = signatures.rep;
+  const authoritySig = signatures.authority;
 
   const sel = referral.destination_detail;
   const cell = "border border-[#8EAADB] px-1.5 py-0.5 align-top text-black text-[9pt]";
@@ -170,13 +182,27 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
       )}
 
       <div id="printable-content" className="p-4 print:p-0 text-[9pt] leading-tight text-black">
-        <DocumentHeader
+                <DocumentHeader
           title="Ficha de Derivación"
           subtitle="Departamento de Consejería Estudiantil — DECE"
           institutionName={institution.name}
           sealImage={institution.seal_image}
           compact
         />
+
+        {referral.physical_file_ref && (
+          <div className="mt-2 mb-1 p-1.5 border border-amber-300 bg-amber-50/70 text-[8pt] rounded text-amber-900 flex items-center justify-between">
+            <div>
+              <span className="font-bold">📁 Respaldo Físico DECE:</span> Archivado en{" "}
+              <span className="font-semibold text-amber-950 underline">{referral.physical_file_ref}</span> bajo custodia institucional obligatoria.
+            </div>
+            {referral.signature_type && (
+              <span className="text-[7.5pt] font-semibold uppercase px-1.5 py-0.5 bg-amber-200/80 rounded border border-amber-300">
+                Modalidad de firmas: {referral.signature_type}
+              </span>
+            )}
+          </div>
+        )}
 
         <table
           className="w-full border-collapse mt-2 border border-[#8EAADB] text-[9pt] leading-tight"
@@ -399,28 +425,89 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
               <td colSpan={4} className="border border-[#8EAADB] font-bold text-center px-1.5 py-1 text-black uppercase text-[9pt]">AUTORIDAD INSTITUCIONAL</td>
             </tr>
             <tr className="text-center">
+              {/* DECE */}
               <td colSpan={5} className={cell}>
-                <div className="h-10 print:h-12" />
+                <div className="min-h-[50px] flex flex-col justify-end items-center pb-1">
+                  {deceSig?.firma_data_url ? (
+                    <div className="flex flex-col items-center justify-center mb-1">
+                      <img src={deceSig.firma_data_url} alt="Firma DECE" className="max-h-12 max-w-[150px] object-contain" />
+                      <span className="text-[6.5pt] text-emerald-700 font-mono">Firma Digital Registrada</span>
+                    </div>
+                  ) : deceSig?.tipo === "fisica" ? (
+                    <div className="w-full flex flex-col items-center">
+                      <div className="w-36 border-b border-dashed border-slate-400 mb-1"></div>
+                      <span className="text-[7pt] text-amber-800 font-semibold bg-amber-50 px-1 rounded">
+                        Firma Física en Archivo
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="h-10 print:h-12" />
+                  )}
+                </div>
                 <div className="font-bold text-[9.5pt]">{deceName}</div>
                 <div className="text-[8pt] uppercase text-slate-700">{deceRole}</div>
                 {deceDoc && <div className="text-[7.5pt] text-slate-600">{deceDoc}</div>}
               </td>
+
+              {/* REPRESENTANTE */}
               <td colSpan={5} className={cell}>
-                <div className="h-10 print:h-12" />
-                <div className="text-slate-400 text-xs">..............................................................</div>
+                <div className="min-h-[50px] flex flex-col justify-end items-center pb-1">
+                  {repSig?.firma_data_url ? (
+                    <div className="flex flex-col items-center justify-center mb-1">
+                      <img src={repSig.firma_data_url} alt="Firma Representante" className="max-h-12 max-w-[150px] object-contain" />
+                      <span className="text-[6.5pt] text-emerald-700 font-mono">Firma Digital Registrada</span>
+                    </div>
+                  ) : repSig?.tipo === "fisica" ? (
+                    <div className="w-full flex flex-col items-center">
+                      <div className="w-36 border-b border-dashed border-slate-400 mb-1"></div>
+                      <span className="text-[7pt] text-amber-800 font-semibold bg-amber-50 px-1 rounded">
+                        Firma Física en Archivo
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="h-10 print:h-12" />
+                      <div className="text-slate-400 text-xs">..............................................................</div>
+                    </>
+                  )}
+                </div>
                 <div className="font-bold text-[9.5pt]">{receivedName}</div>
                 <div className="text-[8pt] text-slate-700">Representante legal</div>
               </td>
+
+              {/* AUTORIDAD */}
               <td colSpan={4} className={cell}>
-                <div className="h-10 print:h-12" />
+                <div className="min-h-[50px] flex flex-col justify-end items-center pb-1">
+                  {authoritySig?.firma_data_url ? (
+                    <div className="flex flex-col items-center justify-center mb-1">
+                      <img src={authoritySig.firma_data_url} alt="Firma Autoridad" className="max-h-12 max-w-[150px] object-contain" />
+                      <span className="text-[6.5pt] text-emerald-700 font-mono">Firma Digital Registrada</span>
+                    </div>
+                  ) : authoritySig?.tipo === "fisica" ? (
+                    <div className="w-full flex flex-col items-center">
+                      <div className="w-36 border-b border-dashed border-slate-400 mb-1"></div>
+                      <span className="text-[7pt] text-amber-800 font-semibold bg-amber-50 px-1 rounded">
+                        Firma Física en Archivo
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="h-10 print:h-12" />
+                  )}
+                </div>
                 <div className="font-bold text-[9.5pt]">{authorityName}</div>
                 <div className="text-[8pt] uppercase text-slate-700">{authorityRole}</div>
               </td>
             </tr>
             <tr>
-              <td colSpan={5} className={`${cell} font-bold text-[8.5pt]`}>Fecha: …......................................................</td>
-              <td colSpan={5} className={`${cell} font-bold text-[8.5pt]`}>Fecha: …......................................................</td>
-              <td colSpan={4} className={`${cell} font-bold text-[8.5pt]`}>Fecha: …......................................................</td>
+              <td colSpan={5} className={`${cell} font-bold text-[8.5pt]`}>
+                Fecha: {deceSig?.fecha ? formatDate(deceSig.fecha) : "…......................................................"}
+              </td>
+              <td colSpan={5} className={`${cell} font-bold text-[8.5pt]`}>
+                Fecha: {repSig?.fecha ? formatDate(repSig.fecha) : "…......................................................"}
+              </td>
+              <td colSpan={4} className={`${cell} font-bold text-[8.5pt]`}>
+                Fecha: {authoritySig?.fecha ? formatDate(authoritySig.fecha) : "…......................................................"}
+              </td>
             </tr>
 
             {/* 8. Nota legal */}
@@ -432,6 +519,53 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
             </tr>
           </tbody>
         </table>
+
+                {/* Anexo de Auditoría Distrital: Ficha Sellada / Respaldo Físico Digitalizado */}
+        {referral.physical_evidence_url && (
+          <div className="mt-8 pt-6 border-t-2 border-dashed border-slate-300 print:break-before-page">
+            <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 text-xs mb-4 text-amber-900 flex items-center justify-between">
+              <div>
+                <span className="font-bold uppercase tracking-wider text-amber-950">
+                  Anexo de Auditoría Distrital: Respaldo Físico / Ficha Sellada Digitalizada
+                </span>
+                <p className="text-[11px] text-amber-800 mt-0.5">
+                  Copia digitalizada del documento con firmas manuscritas, sellos institucionales o comprobante de turno externo archivado físicamente.
+                  {referral.physical_file_ref && (
+                    <span className="font-semibold block mt-0.5">
+                      Ubicación de custodia física: {referral.physical_file_ref}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-1 rounded">
+                EVIDENCIA DE CUSTODIA
+              </span>
+            </div>
+
+            <div className="flex justify-center items-center border border-slate-200 rounded-lg p-2 bg-slate-50">
+              {referral.physical_evidence_url.startsWith("data:application/pdf") ? (
+                <div className="text-center py-12">
+                  <p className="text-sm font-semibold text-slate-700">Documento PDF Adjunto</p>
+                  <p className="text-xs text-slate-500 mt-1">El respaldo físico fue adjuntado en formato PDF.</p>
+                  <a
+                    href={referral.physical_evidence_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="no-print inline-block mt-3 text-xs bg-blue-600 text-white font-medium px-4 py-2 rounded shadow hover:bg-blue-700"
+                  >
+                    Abrir PDF en nueva pestaña
+                  </a>
+                </div>
+              ) : (
+                <img
+                  src={referral.physical_evidence_url}
+                  alt="Respaldo Físico Digitalizado"
+                  className="max-h-[800px] w-auto object-contain shadow-xs rounded"
+                />
+              )}
+            </div>
+          </div>
+        )}
 
         <DocumentFooter institution={institution} />
       </div>

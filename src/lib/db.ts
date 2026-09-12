@@ -214,6 +214,19 @@ function createConnection(): Database.Database {
   safeAddColumn("restorative_circle_consents", "physical_file_ref TEXT");
   safeAddColumn("restorative_circle_consents", "physical_evidence_url TEXT");
 
+  safeAddColumn("socialization_acts", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("socialization_acts", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("socialization_acts", "physical_file_ref TEXT");
+  safeAddColumn("socialization_acts", "physical_evidence_url TEXT");
+
+  safeAddColumn("authority_advisory_acts", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("authority_advisory_acts", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("authority_advisory_acts", "physical_file_ref TEXT");
+  safeAddColumn("authority_advisory_acts", "physical_evidence_url TEXT");
+
+  safeAddColumn("dece_esquelas", "physical_file_ref TEXT");
+  safeAddColumn("dece_esquelas", "physical_evidence_url TEXT");
+
   safeAddColumn("referrals", "destination_detail TEXT");
   safeAddColumn("referrals", "background_summary TEXT");
   safeAddColumn("referrals", "actions_taken TEXT");
@@ -226,7 +239,15 @@ function createConnection(): Database.Database {
   safeAddColumn("referrals", "student_disability TEXT");
   safeAddColumn("referrals", "student_nationality TEXT");
   safeAddColumn("referrals", "representative_document_id TEXT");
-  safeAddColumn("referrals", "district_office_label TEXT");
+  safeAddColumn("referrals", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("referrals", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("referrals", "physical_file_ref TEXT");
+  safeAddColumn("referrals", "physical_evidence_url TEXT");
+
+  safeAddColumn("case_interviews", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("case_interviews", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("case_interviews", "physical_file_ref TEXT");
+  safeAddColumn("case_interviews", "physical_evidence_url TEXT");
 
   safeAddColumn("institutions", "seal_image TEXT");
   safeAddColumn("institutions", "zona TEXT");

@@ -400,14 +400,21 @@ export async function createInterview(caseId: string, formData: FormData) {
     const fullName = str(formData, "full_name");
     createdFullName = fullName || "s/n";
 
+    const signaturesJson = str(formData, "signatures_json");
+    const signatureType = str(formData, "signature_type") || "DIGITAL";
+    const physicalFileRef = str(formData, "physical_file_ref");
+    const physicalEvidenceUrl = str(formData, "physical_evidence_url");
+
     db.prepare(
       `INSERT INTO case_interviews
         (id, case_file_id, institution_id, interviewee_full_name, interviewee_cedula, course, age, application_date,
          family_relation, emotional_state, social_relations, bullying_history, academic_history, summary,
-         recommendations, commitment, representative_name, professional_id, updated_at)
+         recommendations, commitment, representative_name, professional_id, signatures_json, signature_type,
+         physical_file_ref, physical_evidence_url, updated_at)
        VALUES (@id, @case_file_id, @institution_id, @full_name, @cedula, @course, @age, @application_date,
          @family_relation, @emotional_state, @social_relations, @bullying_history, @academic_history, @summary,
-         @recommendations, @commitment, @representative_name, @professional_id, datetime('now'))`
+         @recommendations, @commitment, @representative_name, @professional_id, @signatures_json, @signature_type,
+         @physical_file_ref, @physical_evidence_url, datetime('now'))`
     ).run({
       id,
       case_file_id: caseId,
@@ -427,6 +434,10 @@ export async function createInterview(caseId: string, formData: FormData) {
       commitment: str(formData, "commitment"),
       representative_name: str(formData, "representative_name"),
       professional_id: session.user.id,
+      signatures_json: signaturesJson,
+      signature_type: signatureType,
+      physical_file_ref: physicalFileRef,
+      physical_evidence_url: physicalEvidenceUrl,
     });
 
     db.prepare(
@@ -1179,12 +1190,19 @@ export async function createSocializationAct(
       docente: (teacherNames[i] || "").trim(),
     }));
 
+    const signaturesJson = str(formData, "signatures_json") || "[]";
+    const signatureType = str(formData, "signature_type") || "PENDIENTE";
+    const physicalFileRef = str(formData, "physical_file_ref");
+    const physicalEvidenceUrl = str(formData, "physical_evidence_url");
+
     db.prepare(
       `INSERT INTO socialization_acts
         (id, case_file_id, institution_id, act_date, act_place, vulnerability_type, curricular_adaptation_grade,
-         agreements, normative_text, psychosocial_strategies, teacher_signatures, prepared_by_name, approved_by_name, received_by_name, received_by_role, created_by)
+         agreements, normative_text, psychosocial_strategies, teacher_signatures, prepared_by_name, approved_by_name,
+         received_by_name, received_by_role, signatures_json, signature_type, physical_file_ref, physical_evidence_url, created_by)
        VALUES (@id, @case_file_id, @institution_id, @act_date, @act_place, @vulnerability_type, @curricular_adaptation_grade,
-         @agreements, @normative_text, @psychosocial_strategies, @teacher_signatures, @prepared_by_name, @approved_by_name, @received_by_name, @received_by_role, @created_by)`
+         @agreements, @normative_text, @psychosocial_strategies, @teacher_signatures, @prepared_by_name, @approved_by_name,
+         @received_by_name, @received_by_role, @signatures_json, @signature_type, @physical_file_ref, @physical_evidence_url, @created_by)`
     ).run({
       id,
       case_file_id: caseId,
@@ -1201,6 +1219,10 @@ export async function createSocializationAct(
       approved_by_name: str(formData, "approved_by_name"),
       received_by_name: str(formData, "received_by_name"),
       received_by_role: str(formData, "received_by_role") || "Tutor del curso",
+      signatures_json: signaturesJson,
+      signature_type: signatureType,
+      physical_file_ref: physicalFileRef,
+      physical_evidence_url: physicalEvidenceUrl,
       created_by: session.user.id,
     });
 
@@ -1242,12 +1264,19 @@ export async function createAuthorityAdvisoryAct(
     const measures = getAllStr(formData, "measure_item").map((m) => m.trim()).filter(Boolean);
     const advisoryScope = getAllStr(formData, "scope_item").map((s) => s.trim()).filter(Boolean);
 
+    const signaturesJson = str(formData, "signatures_json") || "[]";
+    const signatureType = str(formData, "signature_type") || "PENDIENTE";
+    const physicalFileRef = str(formData, "physical_file_ref");
+    const physicalEvidenceUrl = str(formData, "physical_evidence_url");
+
     db.prepare(
       `INSERT INTO authority_advisory_acts
         (id, case_file_id, institution_id, act_date, act_time, act_place, issuing_entity, standard_code,
-         participants, background, measures, advisory_scope, conclusion, dece_professional_name, authority_name, authority_role, created_by)
+         participants, background, measures, advisory_scope, conclusion, dece_professional_name,
+         authority_name, authority_role, signatures_json, signature_type, physical_file_ref, physical_evidence_url, created_by)
        VALUES (@id, @case_file_id, @institution_id, @act_date, @act_time, @act_place, @issuing_entity, @standard_code,
-         @participants, @background, @measures, @advisory_scope, @conclusion, @dece_professional_name, @authority_name, @authority_role, @created_by)`
+         @participants, @background, @measures, @advisory_scope, @conclusion, @dece_professional_name,
+         @authority_name, @authority_role, @signatures_json, @signature_type, @physical_file_ref, @physical_evidence_url, @created_by)`
     ).run({
       id,
       case_file_id: caseId,
@@ -1265,6 +1294,10 @@ export async function createAuthorityAdvisoryAct(
       dece_professional_name: str(formData, "dece_professional_name") || session.user.name || null,
       authority_name: str(formData, "authority_name"),
       authority_role: str(formData, "authority_role") || "Rector/a",
+      signatures_json: signaturesJson,
+      signature_type: signatureType,
+      physical_file_ref: physicalFileRef,
+      physical_evidence_url: physicalEvidenceUrl,
       created_by: session.user.id,
     });
 
@@ -2775,6 +2808,10 @@ export async function updateInterview(caseId: string, interviewId: string, formD
   const emotionalState = formData.getAll("emotional_state").filter((v): v is string => typeof v === "string");
   const socialRelations = formData.getAll("social_relations").filter((v): v is string => typeof v === "string");
   const fullName = str(formData, "full_name");
+  const signaturesJson = str(formData, "signatures_json");
+  const signatureType = str(formData, "signature_type") || "DIGITAL";
+  const physicalFileRef = str(formData, "physical_file_ref");
+  const physicalEvidenceUrl = str(formData, "physical_evidence_url");
 
   db.prepare(
     `UPDATE case_interviews SET
@@ -2792,6 +2829,10 @@ export async function updateInterview(caseId: string, interviewId: string, formD
       recommendations = @recommendations,
       commitment = @commitment,
       representative_name = @representative_name,
+      signatures_json = @signatures_json,
+      signature_type = @signature_type,
+      physical_file_ref = @physical_file_ref,
+      physical_evidence_url = @physical_evidence_url,
       updated_at = datetime('now')
     WHERE id = @id AND case_file_id = @case_file_id AND institution_id = @institution_id`
   ).run({
@@ -2812,6 +2853,10 @@ export async function updateInterview(caseId: string, interviewId: string, formD
     recommendations: str(formData, "recommendations"),
     commitment: str(formData, "commitment"),
     representative_name: str(formData, "representative_name"),
+    signatures_json: signaturesJson,
+    signature_type: signatureType,
+    physical_file_ref: physicalFileRef,
+    physical_evidence_url: physicalEvidenceUrl,
   });
 
   logAudit({ userId: session.user.id, action: "EDITAR", entityType: "CaseInterview", entityId: interviewId, details: caseId, institutionId });
@@ -2906,6 +2951,11 @@ export async function updateSocializationAct(
       docente: (teacherNames[i] || "").trim(),
     }));
 
+    const signaturesJson = str(formData, "signatures_json");
+    const signatureType = str(formData, "signature_type");
+    const physicalFileRef = str(formData, "physical_file_ref");
+    const physicalEvidenceUrl = str(formData, "physical_evidence_url");
+
     db.prepare(
       `UPDATE socialization_acts SET
         act_date = @act_date,
@@ -2920,6 +2970,10 @@ export async function updateSocializationAct(
         approved_by_name = @approved_by_name,
         received_by_name = @received_by_name,
         received_by_role = @received_by_role,
+        signatures_json = COALESCE(@signatures_json, signatures_json),
+        signature_type = COALESCE(@signature_type, signature_type),
+        physical_file_ref = COALESCE(@physical_file_ref, physical_file_ref),
+        physical_evidence_url = COALESCE(@physical_evidence_url, physical_evidence_url),
         updated_at = datetime('now')
       WHERE id = @id AND case_file_id = @case_file_id AND institution_id = @institution_id`
     ).run({
@@ -2938,6 +2992,10 @@ export async function updateSocializationAct(
       approved_by_name: str(formData, "approved_by_name"),
       received_by_name: str(formData, "received_by_name"),
       received_by_role: str(formData, "received_by_role") || "Tutor del curso",
+      signatures_json: signaturesJson,
+      signature_type: signatureType,
+      physical_file_ref: physicalFileRef,
+      physical_evidence_url: physicalEvidenceUrl,
     });
 
     logAudit({ userId: session.user.id, action: "EDITAR", entityType: "SocializationAct", entityId: actId, details: caseId, institutionId });
@@ -3052,6 +3110,11 @@ export async function updateAuthorityAdvisoryAct(
     const measures = getAllStr(formData, "measure_item").map((m) => m.trim()).filter(Boolean);
     const advisoryScope = getAllStr(formData, "scope_item").map((s) => s.trim()).filter(Boolean);
 
+    const signaturesJson = str(formData, "signatures_json");
+    const signatureType = str(formData, "signature_type");
+    const physicalFileRef = str(formData, "physical_file_ref");
+    const physicalEvidenceUrl = str(formData, "physical_evidence_url");
+
     db.prepare(
       `UPDATE authority_advisory_acts SET
         act_date = @act_date,
@@ -3067,6 +3130,10 @@ export async function updateAuthorityAdvisoryAct(
         dece_professional_name = @dece_professional_name,
         authority_name = @authority_name,
         authority_role = @authority_role,
+        signatures_json = COALESCE(@signatures_json, signatures_json),
+        signature_type = COALESCE(@signature_type, signature_type),
+        physical_file_ref = COALESCE(@physical_file_ref, physical_file_ref),
+        physical_evidence_url = COALESCE(@physical_evidence_url, physical_evidence_url),
         updated_at = datetime('now')
       WHERE id = @id AND case_file_id = @case_file_id AND institution_id = @institution_id`
     ).run({
@@ -3086,6 +3153,10 @@ export async function updateAuthorityAdvisoryAct(
       dece_professional_name: str(formData, "dece_professional_name") || session.user.name || null,
       authority_name: str(formData, "authority_name"),
       authority_role: str(formData, "authority_role") || "Rector/a",
+      signatures_json: signaturesJson,
+      signature_type: signatureType,
+      physical_file_ref: physicalFileRef,
+      physical_evidence_url: physicalEvidenceUrl,
     });
 
     logAudit({ userId: session.user.id, action: "EDITAR", entityType: "AuthorityAdvisoryAct", entityId: actId, details: caseId, institutionId });

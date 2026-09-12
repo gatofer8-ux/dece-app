@@ -33,7 +33,19 @@ export default async function ImprimirEntrevistaPage({ params }: { params: { id:
     analystRole = "COORDINADOR/A DECE";
   }
 
-  const studentCourseFormatted = formatStudentCourseFull(student);
+    const studentCourseFormatted = formatStudentCourseFull(student);
+
+  let signatures: Record<string, { tipo: "digital" | "fisica"; firma_data_url?: string; fecha?: string; observacion?: string }> = {};
+  if (interview.signatures_json) {
+    try {
+      signatures = JSON.parse(interview.signatures_json);
+    } catch {
+      signatures = {};
+    }
+  }
+  const deceSig = signatures.dece;
+  const repSig = signatures.rep;
+  const studentSig = signatures.student;
 
   // Helper to render checkboxes like: Buena ( X )
   const renderCheck = (value: string | null | undefined, target: string) => {
@@ -112,6 +124,20 @@ export default async function ImprimirEntrevistaPage({ params }: { params: { id:
         <div className="border border-black font-bold text-center text-[12px] sm:text-[13px] py-1 mb-2 bg-white tracking-wide uppercase">
           ENTREVISTA SEMIESTRUCTURADA A ESTUDIANTES / REPRESENTANTES
         </div>
+
+        {interview.physical_file_ref && (
+          <div className="mb-3 p-2 border border-amber-300 bg-amber-50/70 text-[8pt] rounded text-amber-900 flex items-center justify-between">
+            <div>
+              <span className="font-bold">📁 Respaldo Físico DECE:</span> Archivado en{" "}
+              <span className="font-semibold text-amber-950 underline">{interview.physical_file_ref}</span> bajo custodia institucional física obligatoria.
+            </div>
+            {interview.signature_type && (
+              <span className="text-[7.5pt] font-semibold uppercase px-1.5 py-0.5 bg-amber-200/80 rounded border border-amber-300">
+                Modalidad de firmas: {interview.signature_type}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* DATOS PERSONALES SIN CUADRO DE FOTO */}
         <div className="text-[11px] mb-4 space-y-2.5">
@@ -225,37 +251,161 @@ export default async function ImprimirEntrevistaPage({ params }: { params: { id:
         </table>
 
         {/* Firmas */}
-        <div className="mt-16 grid grid-cols-3 gap-6 text-[10px] font-bold text-center">
-          <div className="flex flex-col items-center">
-            <div className="w-full border-t border-black pt-1 mb-6"></div>
+        <div className="mt-12 grid grid-cols-3 gap-6 text-[10px] font-bold text-center">
+          {/* DECE */}
+          <div className="flex flex-col items-center justify-end">
+            <div className="min-h-[50px] flex flex-col justify-end items-center pb-1">
+              {deceSig?.firma_data_url ? (
+                <div className="flex flex-col items-center justify-center mb-1">
+                  <img src={deceSig.firma_data_url} alt="Firma DECE" className="max-h-12 max-w-[150px] object-contain" />
+                  <span className="text-[6.5pt] text-emerald-700 font-mono">Firma Digital Registrada</span>
+                </div>
+              ) : deceSig?.tipo === "fisica" ? (
+                <div className="w-full flex flex-col items-center">
+                  <div className="w-36 border-b border-dashed border-slate-400 mb-1"></div>
+                  <span className="text-[7pt] text-amber-800 font-semibold bg-amber-50 px-1 rounded">
+                    Firma Física en Archivo
+                  </span>
+                </div>
+              ) : (
+                <div className="w-full border-t border-black pt-1 mb-6"></div>
+              )}
+            </div>
             <div className="w-full border-t border-black pt-1">{analystRole}</div>
-            {professional?.name && <div className="text-[9px] text-gray-700 font-normal mt-0.5">{professional.name}</div>}
+            {(professional?.name || session.user.name) && (
+              <div className="text-[9px] text-gray-700 font-normal mt-0.5">
+                {professional?.name || session.user.name}
+              </div>
+            )}
+            {deceSig?.fecha && (
+              <div className="text-[7.5pt] text-slate-500 font-normal mt-0.5">
+                Fecha: {formatDate(deceSig.fecha)}
+              </div>
+            )}
           </div>
           
-          <div className="flex flex-col text-left">
-            <div className="font-bold mb-1">REPRESENTANTE</div>
-            <div className="flex mb-3">
-              <span>NOMBRE:</span>
-              <span className="flex-1 border-b border-black ml-1"></span>
+          {/* REPRESENTANTE */}
+          <div className="flex flex-col text-left text-[9.5pt]">
+            <div className="font-bold mb-1 text-center sm:text-left">REPRESENTANTE</div>
+            <div className="flex mb-1">
+              <span className="text-[8.5pt]">NOMBRE:</span>
+              <span className="flex-1 border-b border-black ml-1 text-[8.5pt] text-blue-950 font-normal px-1">
+                {interview.representative_name || student.representative || student.mother_name || student.father_name || " "}
+              </span>
             </div>
-            <div className="flex mb-3">
-              <span>CI:</span>
-              <span className="flex-1 border-b border-black ml-1"></span>
+            <div className="flex mb-1">
+              <span className="text-[8.5pt]">CI:</span>
+              <span className="flex-1 border-b border-black ml-1 text-[8.5pt] text-blue-950 font-normal px-1">
+                {student.representative_document_id || " "}
+              </span>
             </div>
-            <div className="flex mb-3">
-              <span>TELÉFONO:</span>
-              <span className="flex-1 border-b border-black ml-1"></span>
+            <div className="flex mb-1">
+              <span className="text-[8.5pt]">TELÉFONO:</span>
+              <span className="flex-1 border-b border-black ml-1 text-[8.5pt] text-blue-950 font-normal px-1">
+                {student.rep_phone || " "}
+              </span>
             </div>
-            <div className="flex">
-              <span>FIRMA:</span>
-              <span className="flex-1 border-b border-black ml-1"></span>
+            <div className="flex items-center min-h-[38px] pt-1">
+              <span className="text-[8.5pt]">FIRMA:</span>
+              <div className="flex-1 border-b border-black ml-1 flex items-center justify-center">
+                {repSig?.firma_data_url ? (
+                  <div className="flex flex-col items-center">
+                    <img src={repSig.firma_data_url} alt="Firma Representante" className="max-h-10 max-w-[120px] object-contain" />
+                    <span className="text-[6pt] text-emerald-700 font-mono">Firma Digital</span>
+                  </div>
+                ) : repSig?.tipo === "fisica" ? (
+                  <span className="text-[7pt] text-amber-800 font-semibold bg-amber-50 px-1 rounded">
+                    Firma Física en Archivo
+                  </span>
+                ) : (
+                  <span className="h-4"></span>
+                )}
+              </div>
             </div>
+            {repSig?.fecha && (
+              <div className="text-[7.5pt] text-slate-500 font-normal mt-0.5 text-center">
+                Fecha: {formatDate(repSig.fecha)}
+              </div>
+            )}
           </div>
 
-          <div className="flex flex-col items-center pt-8">
+          {/* ESTUDIANTE */}
+          <div className="flex flex-col items-center justify-end">
+            <div className="min-h-[50px] flex flex-col justify-end items-center pb-1">
+              {studentSig?.firma_data_url ? (
+                <div className="flex flex-col items-center justify-center mb-1">
+                  <img src={studentSig.firma_data_url} alt="Firma Estudiante" className="max-h-12 max-w-[150px] object-contain" />
+                  <span className="text-[6.5pt] text-emerald-700 font-mono">Firma Digital Registrada</span>
+                </div>
+              ) : studentSig?.tipo === "fisica" ? (
+                <div className="w-full flex flex-col items-center">
+                  <div className="w-36 border-b border-dashed border-slate-400 mb-1"></div>
+                  <span className="text-[7pt] text-amber-800 font-semibold bg-amber-50 px-1 rounded">
+                    Firma Física en Archivo
+                  </span>
+                </div>
+              ) : (
+                <div className="w-full border-t border-black pt-1 mb-6"></div>
+              )}
+            </div>
             <div className="w-full border-t border-black pt-1">ESTUDIANTE</div>
+            <div className="text-[9pt] text-gray-700 font-normal mt-0.5">
+              {interview.interviewee_full_name || student.full_name}
+            </div>
+            {studentSig?.fecha && (
+              <div className="text-[7.5pt] text-slate-500 font-normal mt-0.5">
+                Fecha: {formatDate(studentSig.fecha)}
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Anexo de Auditoría Distrital: Entrevista Física Digitalizada */}
+        {interview.physical_evidence_url && (
+          <div className="mt-12 pt-8 border-t-2 border-dashed border-slate-300 print:break-before-page">
+            <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 text-xs mb-4 text-amber-900 flex items-center justify-between">
+              <div>
+                <span className="font-bold uppercase tracking-wider text-amber-950">
+                  Anexo de Auditoría Distrital: Entrevista Física Firmada y Digitalizada
+                </span>
+                <p className="text-[11px] text-amber-800 mt-0.5">
+                  Copia digitalizada del documento con firmas manuscritas y acuerdos archivados físicamente.
+                  {interview.physical_file_ref && (
+                    <span className="font-semibold block mt-0.5">
+                      Ubicación de custodia física: {interview.physical_file_ref}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-1 rounded">
+                EVIDENCIA DE CUSTODIA
+              </span>
+            </div>
+
+            <div className="flex justify-center items-center border border-slate-200 rounded-lg p-2 bg-slate-50">
+              {interview.physical_evidence_url.startsWith("data:application/pdf") ? (
+                <div className="text-center py-12">
+                  <p className="text-sm font-semibold text-slate-700">Documento PDF Adjunto</p>
+                  <p className="text-xs text-slate-500 mt-1">La entrevista física fue adjuntada en formato PDF.</p>
+                  <a
+                    href={interview.physical_evidence_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="no-print inline-block mt-3 text-xs bg-blue-600 text-white font-medium px-4 py-2 rounded shadow hover:bg-blue-700"
+                  >
+                    Abrir PDF en nueva pestaña
+                  </a>
+                </div>
+              ) : (
+                <img
+                  src={interview.physical_evidence_url}
+                  alt="Entrevista Física Digitalizada"
+                  className="max-h-[800px] w-auto object-contain shadow-xs rounded"
+                />
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

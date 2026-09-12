@@ -185,6 +185,11 @@ export default function EsquelaPrintClient({
           <div className="text-center w-48">
             <div className="border-b border-slate-400 w-full mb-0.5"></div>
             <div className="font-semibold text-slate-800">Firma de Recepción / Representante</div>
+            {esquela.physical_file_ref && (
+              <div className="text-[8.5px] text-amber-800 mt-0.5">
+                📁 Archivo físico: {esquela.physical_file_ref}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -224,25 +229,26 @@ export default function EsquelaPrintClient({
             break-inside: avoid !important;
             margin-bottom: 3mm !important;
           }
-          .page-break-after {
-            page-break-after: always;
+          .break-before-page {
+            page-break-before: always;
+            break-before: page;
           }
         }
       `,
         }}
       />
 
-      {/* Barra de Controles en Pantalla (No imprimible) */}
-      <div className="max-w-4xl mx-auto mb-4 bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 no-print flex flex-wrap items-center justify-between gap-3">
+      {/* Barra Superior de Control de Impresión */}
+      <div className="no-print max-w-[210mm] mx-auto bg-white p-3 rounded-lg shadow-sm border border-slate-200 mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Link
             href={`/esquelas/${esquela.id}`}
             className="btn-secondary text-xs flex items-center gap-1 font-medium"
           >
-            ← Volver al detalle
+            ← Volver a la Esquela
           </Link>
           <span className="text-slate-300">|</span>
-          <span className="font-mono text-xs font-bold text-brand-800 bg-brand-50 px-2 py-0.5 rounded border border-brand-200">
+          <span className="text-xs text-slate-500 font-mono font-bold">
             {esquela.citation_number}
           </span>
         </div>
@@ -299,6 +305,51 @@ export default function EsquelaPrintClient({
           </div>
         ) : (
           renderSingleEsquela(1)
+        )}
+
+        {/* Anexo de Auditoría Distrital: Talón Firmado Digitalizado */}
+        {esquela.physical_evidence_url && (
+          <div className="mt-8 pt-6 border-t-2 border-dashed border-slate-300 break-before-page print:pt-4">
+            <div className="bg-slate-100 p-3 rounded-t border border-slate-300 flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-bold uppercase text-slate-800 tracking-wider">
+                  ANEXO DE AUDITORÍA DISTRITAL: TALÓN DE NOTIFICACIÓN FIRMADO Y DIGITALIZADO
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Comprobante físico de recepción y firma del representante legal digitalizado para auditoría ministerial.
+                </p>
+              </div>
+              {esquela.physical_file_ref && (
+                <span className="text-xs text-amber-800 font-semibold bg-amber-50 border border-amber-300 px-2.5 py-1 rounded">
+                  📁 {esquela.physical_file_ref}
+                </span>
+              )}
+            </div>
+            <div className="border border-t-0 border-slate-300 p-4 bg-white flex flex-col items-center justify-center min-h-[250px]">
+              {esquela.physical_evidence_url.startsWith("data:application/pdf") ? (
+                <div className="w-full text-center py-6">
+                  <p className="text-xs font-medium text-slate-700 mb-2">
+                    📄 Documento PDF con el talón firmado adjunto.
+                  </p>
+                  <a
+                    href={esquela.physical_evidence_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="no-print inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md"
+                  >
+                    Ver PDF del talón firmado ↗
+                  </a>
+                </div>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={esquela.physical_evidence_url}
+                  alt="Talón Firmado Digitalizado"
+                  className="max-h-[750px] w-auto object-contain border border-slate-200 rounded shadow-xs"
+                />
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>

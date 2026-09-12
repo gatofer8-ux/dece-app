@@ -136,6 +136,8 @@ export async function updateTalonStatusAction(id: string, formData: FormData) {
   const talonAttendedRaw = str(formData, "talon_attended");
   const talonAttended = talonAttendedRaw ? parseInt(talonAttendedRaw, 10) : 0;
   const talonNotes = str(formData, "talon_notes") || null;
+  const physicalFileRef = str(formData, "physical_file_ref") || null;
+  const physicalEvidenceUrl = str(formData, "physical_evidence_url") || null;
 
   updateTalonStatus(id, institutionId, {
     talonReturned,
@@ -145,6 +147,8 @@ export async function updateTalonStatusAction(id: string, formData: FormData) {
     receivedDate,
     talonAttended: isNaN(talonAttended) ? 0 : talonAttended,
     talonNotes,
+    physicalFileRef,
+    physicalEvidenceUrl,
   });
 
   revalidatePath("/esquelas");
