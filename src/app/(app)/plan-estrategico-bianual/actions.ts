@@ -49,6 +49,10 @@ function readFields(formData: FormData) {
     elaborated_by: str(formData, "elaborated_by") || "[]",
     reviewed_by: str(formData, "reviewed_by"),
     approved_by: str(formData, "approved_by"),
+    signatures_json: str(formData, "signatures_json") || "[]",
+    signature_type: str(formData, "signature_type") || "PENDIENTE",
+    physical_file_ref: str(formData, "physical_file_ref") || null,
+    physical_evidence_url: str(formData, "physical_evidence_url") || null,
   };
 }
 
@@ -74,6 +78,7 @@ export async function createStrategicBianualPlan(
         students_count, professionals_count, available_resources, socioeconomic_condition,
         general_objective, specific_objectives, axis_items_data,
         elaborated_by, reviewed_by, approved_by,
+        signatures_json, signature_type, physical_file_ref, physical_evidence_url,
         created_by, created_at, updated_at
       ) VALUES (
         @id, @institution_id, @period_start_year, @period_end_year, @period_text,
@@ -81,6 +86,7 @@ export async function createStrategicBianualPlan(
         @students_count, @professionals_count, @available_resources, @socioeconomic_condition,
         @general_objective, @specific_objectives, @axis_items_data,
         @elaborated_by, @reviewed_by, @approved_by,
+        @signatures_json, @signature_type, @physical_file_ref, @physical_evidence_url,
         @created_by, datetime('now'), datetime('now')
       )`
     ).run({
@@ -142,6 +148,10 @@ export async function updateStrategicBianualPlan(
           elaborated_by = @elaborated_by,
           reviewed_by = @reviewed_by,
           approved_by = @approved_by,
+          signatures_json = @signatures_json,
+          signature_type = @signature_type,
+          physical_file_ref = @physical_file_ref,
+          physical_evidence_url = @physical_evidence_url,
           updated_at = datetime('now')`;
 
     const updateSql = isSuperAdmin

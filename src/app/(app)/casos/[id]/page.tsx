@@ -48,6 +48,8 @@ import { getCaseInactivityInfo } from "@/lib/caseAlerts";
 import { listEsquelasByCase, deleteEsquela } from "@/lib/esquelas";
 import { deleteCircleConsentAction } from "@/lib/restorativeCircleConsent";
 import AttachmentsSection from "./AttachmentsSection";
+import CasePhysicalCustodySemaphore from "./CasePhysicalCustodySemaphore";
+import { resolveCustodyStatus, type CaseCustodyDocumentItem } from "@/lib/physicalCustodyAudit";
 import {
   addCaseAction,
   updateCaseStatus,
@@ -183,10 +185,17 @@ export default async function CasoDetallePage({
   const violenceReports = db
     .prepare("SELECT * FROM violence_reports WHERE case_file_id = ? ORDER BY report_date DESC, created_at DESC")
     .all(caseFile.id) as ViolenceReportRow[];
-  let accompanimentReports: { id: string; report_number: string | null; report_date: string }[] = [];
+  let accompanimentReports: {
+    id: string;
+    report_number: string | null;
+    report_date: string;
+    physical_file_ref?: string | null;
+    physical_evidence_url?: string | null;
+    signature_type?: string | null;
+  }[] = [];
   try {
     accompanimentReports = db
-      .prepare("SELECT id, report_number, report_date FROM case_accompaniment_reports WHERE case_file_id = ? ORDER BY created_at DESC")
+      .prepare("SELECT id, report_number, report_date, physical_file_ref, physical_evidence_url, signature_type FROM case_accompaniment_reports WHERE case_file_id = ? ORDER BY created_at DESC")
       .all(caseFile.id) as typeof accompanimentReports;
   } catch {
     /* tabla aún no migrada */
@@ -270,6 +279,219 @@ export default async function CasoDetallePage({
   } catch (err) {
     console.error("[casos] Error consultando inactividad:", err);
   }
+
+  const caseCustodyDocs: CaseCustodyDocumentItem[] = [
+    ...situationalReports.map((r) => ({
+      id: r.id,
+      moduleKey: "situational",
+      moduleName: "Informe de Hecho / Situacional",
+      docTitle: `Informe Situacional (${formatDate(r.report_date)})`,
+      date: r.report_date,
+      viewUrl: `/casos/${caseFile.id}/informe-situacional/${r.id}/imprimir`,
+      editUrl: `/casos/${caseFile.id}/informe-situacional/${r.id}/editar`,
+      printUrl: `/casos/${caseFile.id}/informe-situacional/${r.id}/imprimir`,
+      signatureType: r.signature_type,
+      physicalFileRef: r.physical_file_ref,
+      physicalEvidenceUrl: r.physical_evidence_url,
+      status: resolveCustodyStatus(r),
+    })),
+    ...violenceReports.map((r) => ({
+      id: r.id,
+      moduleKey: "violence",
+      moduleName: "Informe de Detección de Violencia",
+      docTitle: `Informe de Violencia (${formatDate(r.report_date)})`,
+      date: r.report_date,
+      viewUrl: `/casos/${caseFile.id}/hecho-violencia/${r.id}/imprimir`,
+      editUrl: `/casos/${caseFile.id}/hecho-violencia/${r.id}/editar`,
+      printUrl: `/casos/${caseFile.id}/hecho-violencia/${r.id}/imprimir`,
+      signatureType: r.signature_type,
+      physicalFileRef: r.physical_file_ref,
+      physicalEvidenceUrl: r.physical_evidence_url,
+      status: resolveCustodyStatus(r),
+    })),
+    ...bimonthlyReports.map((r) => ({
+      id: r.id,
+      moduleKey: "bimonthly",
+      moduleName: "Informe Bimestral / Quimestral",
+      docTitle: `Informe Bimestral - Periodo ${r.period_months || "General"}`,
+      date: (r.created_at || "").slice(0, 10),
+      viewUrl: `/casos/${caseFile.id}/informe-bimensual/${r.id}/imprimir`,
+      editUrl: `/casos/${caseFile.id}/informe-bimensual/${r.id}/editar`,
+      printUrl: `/casos/${caseFile.id}/informe-bimensual/${r.id}/imprimir`,
+      signatureType: r.signature_type,
+      physicalFileRef: r.physical_file_ref,
+      physicalEvidenceUrl: r.physical_evidence_url,
+      status: resolveCustodyStatus(r),
+    })),
+    ...closureReports.map((r) => ({
+      id: r.id,
+      moduleKey: "closure",
+      moduleName: "Informe de Cierre de Caso",
+      docTitle: `Informe de Cierre ${r.report_number || ""}`,
+      date: (r.report_date || r.created_at || "").slice(0, 10),
+      viewUrl: `/casos/${caseFile.id}/informe-cierre/${r.id}/imprimir`,
+      editUrl: `/casos/${caseFile.id}/informe-cierre/${r.id}/editar`,
+      printUrl: `/casos/${caseFile.id}/informe-cierre/${r.id}/imprimir`,
+      signatureType: r.signature_type,
+      physicalFileRef: r.physical_file_ref,
+      physicalEvidenceUrl: r.physical_evidence_url,
+      status: resolveCustodyStatus(r),
+    })),
+    ...accompanimentReports.map((r) => ({
+      id: r.id,
+      moduleKey: "accompaniment",
+      moduleName: "Informe de Acompañamiento Técnico",
+      docTitle: `Informe Acompañamiento ${r.report_number || ""}`,
+      date: r.report_date,
+      viewUrl: `/casos/${caseFile.id}/acompanamiento-tecnico/${r.id}/imprimir`,
+      editUrl: `/casos/${caseFile.id}/acompanamiento-tecnico/${r.id}/editar`,
+      printUrl: `/casos/${caseFile.id}/acompanamiento-tecnico/${r.id}/imprimir`,
+      signatureType: r.signature_type,
+      physicalFileRef: r.physical_file_ref,
+      physicalEvidenceUrl: r.physical_evidence_url,
+      status: resolveCustodyStatus(r),
+    })),
+    ...observationSheets.map((r) => ({
+      id: r.id,
+      moduleKey: "observation",
+      moduleName: "Ficha de Observación Áulica",
+      docTitle: `Ficha de Observación (${formatDate(r.observation_date)})`,
+      date: r.observation_date,
+      viewUrl: `/casos/${caseFile.id}/observacion/${r.id}/imprimir`,
+      editUrl: `/casos/${caseFile.id}/observacion/${r.id}/editar`,
+      printUrl: `/casos/${caseFile.id}/observacion/${r.id}/imprimir`,
+      signatureType: r.signature_type,
+      physicalFileRef: r.physical_file_ref,
+      physicalEvidenceUrl: r.physical_evidence_url,
+      status: resolveCustodyStatus(r),
+    })),
+    ...carePlans.map((r) => ({
+      id: r.id,
+      moduleKey: "care_plan",
+      moduleName: "Plan de Atención Psicosocial",
+      docTitle: `Plan de Atención (${formatDate(r.plan_date)})`,
+      date: r.plan_date,
+      viewUrl: `/casos/${caseFile.id}/atencion/${r.id}/imprimir`,
+      editUrl: `/casos/${caseFile.id}/atencion/${r.id}/editar`,
+      printUrl: `/casos/${caseFile.id}/atencion/${r.id}/imprimir`,
+      signatureType: r.signature_type,
+      physicalFileRef: r.physical_file_ref,
+      physicalEvidenceUrl: r.physical_evidence_url,
+      status: resolveCustodyStatus(r),
+    })),
+    ...restitutionPlans.map((r) => ({
+      id: r.id,
+      moduleKey: "restitution",
+      moduleName: "Plan de Restitución de Derechos",
+      docTitle: `Plan de Restitución (${formatDate(r.elaboration_date)})`,
+      date: r.elaboration_date,
+      viewUrl: `/casos/${caseFile.id}/restitucion/${r.id}/imprimir`,
+      editUrl: `/casos/${caseFile.id}/restitucion/${r.id}/editar`,
+      printUrl: `/casos/${caseFile.id}/restitucion/${r.id}/imprimir`,
+      signatureType: r.signature_type,
+      physicalFileRef: r.physical_file_ref,
+      physicalEvidenceUrl: r.physical_evidence_url,
+      status: resolveCustodyStatus(r),
+    })),
+    ...interviews.map((r) => ({
+      id: r.id,
+      moduleKey: "interview",
+      moduleName: "Entrevista Psicosocial Individual",
+      docTitle: `Entrevista: ${r.interviewee_full_name || "Estudiante/Representante"}`,
+      date: r.application_date || (r.created_at || "").slice(0, 10),
+      viewUrl: `/casos/${caseFile.id}/entrevistas/${r.id}/imprimir`,
+      editUrl: `/casos/${caseFile.id}/entrevistas/${r.id}/editar`,
+      printUrl: `/casos/${caseFile.id}/entrevistas/${r.id}/imprimir`,
+      signatureType: r.signature_type,
+      physicalFileRef: r.physical_file_ref,
+      physicalEvidenceUrl: r.physical_evidence_url,
+      status: resolveCustodyStatus(r),
+    })),
+    ...socializationActs.map((r) => ({
+      id: r.id,
+      moduleKey: "socialization",
+      moduleName: "Acta de Socialización Curricular",
+      docTitle: `Acta de Socialización (${formatDate(r.act_date)})`,
+      date: r.act_date,
+      viewUrl: `/casos/${caseFile.id}/socializacion/${r.id}/imprimir`,
+      editUrl: `/casos/${caseFile.id}/socializacion/${r.id}/editar`,
+      printUrl: `/casos/${caseFile.id}/socializacion/${r.id}/imprimir`,
+      signatureType: r.signature_type,
+      physicalFileRef: r.physical_file_ref,
+      physicalEvidenceUrl: r.physical_evidence_url,
+      status: resolveCustodyStatus(r),
+    })),
+    ...authorityAdvisoryActs.map((r) => ({
+      id: r.id,
+      moduleKey: "advisory",
+      moduleName: "Acta de Asesoramiento a Autoridades",
+      docTitle: `Acta de Asesoramiento (${formatDate(r.act_date)})`,
+      date: r.act_date,
+      viewUrl: `/casos/${caseFile.id}/asesoramiento-autoridad/${r.id}/imprimir`,
+      editUrl: `/casos/${caseFile.id}/asesoramiento-autoridad/${r.id}/editar`,
+      printUrl: `/casos/${caseFile.id}/asesoramiento-autoridad/${r.id}/imprimir`,
+      signatureType: r.signature_type,
+      physicalFileRef: r.physical_file_ref,
+      physicalEvidenceUrl: r.physical_evidence_url,
+      status: resolveCustodyStatus(r),
+    })),
+    ...corresponsibilityActs.map((r) => ({
+      id: r.id,
+      moduleKey: "corresponsibility",
+      moduleName: "Acta de Compromiso y Corresponsabilidad",
+      docTitle: `Acta de Compromiso (${formatDate(r.act_date)})`,
+      date: r.act_date,
+      viewUrl: `/casos/${caseFile.id}/corresponsabilidad/${r.id}/imprimir`,
+      editUrl: `/casos/${caseFile.id}/corresponsabilidad/${r.id}/editar`,
+      printUrl: `/casos/${caseFile.id}/corresponsabilidad/${r.id}/imprimir`,
+      signatureType: r.signature_type,
+      physicalFileRef: r.physical_file_ref,
+      physicalEvidenceUrl: r.physical_evidence_url,
+      status: resolveCustodyStatus(r),
+    })),
+    ...referrals.map((r) => ({
+      id: r.id,
+      moduleKey: "referral",
+      moduleName: "Derivación Interinstitucional",
+      docTitle: `Derivación: ${r.institution}`,
+      date: (r.created_at || "").slice(0, 10),
+      viewUrl: `/casos/${caseFile.id}/derivaciones/${r.id}/imprimir`,
+      editUrl: `/casos/${caseFile.id}/derivaciones/${r.id}/editar`,
+      printUrl: `/casos/${caseFile.id}/derivaciones/${r.id}/imprimir`,
+      signatureType: r.signature_type,
+      physicalFileRef: r.physical_file_ref,
+      physicalEvidenceUrl: r.physical_evidence_url,
+      status: resolveCustodyStatus(r),
+    })),
+    ...circleConsents.map((r) => ({
+      id: r.id,
+      moduleKey: "circle_consent",
+      moduleName: "Consentimiento Círculo Restaurativo",
+      docTitle: `Consentimiento Círculo Restaurativo`,
+      date: r.consent_date,
+      viewUrl: `/casos/${caseFile.id}/circulos-restaurativos/${r.id}/imprimir`,
+      editUrl: `/casos/${caseFile.id}/circulos-restaurativos/${r.id}/editar`,
+      printUrl: `/casos/${caseFile.id}/circulos-restaurativos/${r.id}/imprimir`,
+      signatureType: r.signature_type,
+      physicalFileRef: r.physical_file_ref,
+      physicalEvidenceUrl: r.physical_evidence_url,
+      status: resolveCustodyStatus(r),
+    })),
+    ...caseEsquelas.map((r) => ({
+      id: r.id,
+      moduleKey: "esquela",
+      moduleName: "Esquela DECE de Citación",
+      docTitle: `Esquela: ${r.representative_name || "Representante"}`,
+      date: r.citation_date,
+      viewUrl: `/casos/${caseFile.id}/esquelas/${r.id}/imprimir`,
+      editUrl: `/casos/${caseFile.id}/esquelas/${r.id}/editar`,
+      printUrl: `/casos/${caseFile.id}/esquelas/${r.id}/imprimir`,
+      signatureType: r.signature_type,
+      physicalFileRef: r.physical_file_ref,
+      physicalEvidenceUrl: r.physical_evidence_url,
+      status: resolveCustodyStatus(r),
+    })),
+  ].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
   return (
     <div>
@@ -406,6 +628,14 @@ export default async function CasoDetallePage({
           </div>
         }
       />
+
+      <div className="mb-6">
+        <CasePhysicalCustodySemaphore
+          caseCode={caseFile.code}
+          studentName={student.full_name}
+          documents={caseCustodyDocs}
+        />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

@@ -2034,6 +2034,8 @@ export interface DeceEsquelaRow {
   talon_notes: string | null;
   physical_file_ref?: string | null;
   physical_evidence_url?: string | null;
+  signature_type?: string | null;
+  signatures_json?: string | null;
   created_at: string;
   updated_at: string;
 }

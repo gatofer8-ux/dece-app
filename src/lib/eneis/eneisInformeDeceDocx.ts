@@ -14,6 +14,11 @@ import {
   TableLayoutType,
 } from "docx";
 import { ENEIS_INFORME_DECE_ACTIVIDADES_REQUERIDAS, formatPeriodoDece, type EneisInformeDeceActividad } from "./eneisInformeDece";
+import {
+  parseDocxSignatures,
+  createDocxSignatureParagraphs,
+  createDocxCustodyCalloutTable,
+} from "@/lib/docxCustodyHelper";
 
 /**
  * Informe mensual de actividades DECE ("INFORME DE ACTIVIDADES Nº ...") —
@@ -65,6 +70,10 @@ function decodeDataUri(dataUri: string | null): { data: Buffer; type: "png" | "j
 export interface EneisInformeDeceRowLike {
   periodo: string;
   actividades_json: string;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
 }
 
 export async function generateEneisInformeDeceDocx(
@@ -125,10 +134,34 @@ export async function generateEneisInformeDeceDocx(
           p(`MES Y AÑO: ${formatPeriodoDece(informe.periodo)}`, { bold: true }),
           new Paragraph({ spacing: { before: 120, after: 0 }, children: [] }),
           table,
-          new Paragraph({ spacing: { before: 300, after: 0 }, children: [r("Firma:")] }),
-          new Paragraph({ spacing: { after: 0 }, children: [r("_______________________")] }),
-          new Paragraph({ spacing: { after: 0 }, children: [r(ctx.firmaNombre)] }),
-          new Paragraph({ spacing: { after: 0 }, children: [r(ctx.firmaRol)] }),
+          new Paragraph({ spacing: { before: 200, after: 60 }, children: [r("Firma de Responsabilidad:", { bold: true })] }),
+          ...(() => {
+            const dualSigs = parseDocxSignatures(informe.signatures_json);
+            const matchedSig = dualSigs[0] || null;
+            return createDocxSignatureParagraphs({
+              signer: matchedSig,
+              name: ctx.firmaNombre,
+              role: ctx.firmaRol,
+              signatureType: matchedSig?.tipo === "digital" ? "DIGITAL" : matchedSig?.tipo === "fisica" ? "FISICA" : informe.signature_type,
+              font: FONT,
+            });
+          })(),
+          ...(createDocxCustodyCalloutTable({
+            physicalFileRef: informe.physical_file_ref,
+            physicalEvidenceUrl: informe.physical_evidence_url,
+            widthDxa: W,
+            font: FONT,
+          })
+            ? [
+                new Paragraph({ spacing: { before: 120, after: 60 }, children: [r(" ")] }),
+                createDocxCustodyCalloutTable({
+                  physicalFileRef: informe.physical_file_ref,
+                  physicalEvidenceUrl: informe.physical_evidence_url,
+                  widthDxa: W,
+                  font: FONT,
+                })!,
+              ]
+            : []),
         ],
       },
     ],

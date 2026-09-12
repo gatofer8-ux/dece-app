@@ -100,6 +100,10 @@ export default async function EditarPlanEstrategicoBianualPage({
             ? { name: sig.authority.fullName, role: sig.authority.role, date: "" }
             : undefined
         )}
+        defaultSignaturesJson={plan.signatures_json}
+        defaultSignatureType={plan.signature_type}
+        defaultPhysicalFileRef={plan.physical_file_ref}
+        defaultPhysicalEvidenceUrl={plan.physical_evidence_url}
         deceStaffNames={deceStaffNames}
         isEditing={true}
       />

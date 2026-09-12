@@ -18,6 +18,7 @@ import {
   TableLayoutType,
 } from "docx";
 import type { CaseAccompanimentReportRow } from "./types";
+import { parseDocxSignatures, createDocxSignatureParagraphs, createDocxCustodyCalloutTable } from "./docxCustodyHelper";
 import {
   parseIndicators,
   parseRiskProtection,
@@ -246,12 +247,18 @@ export async function generateAccompanimentReportDocx(
 
   rows.push(fieldRow("Fecha de elaboración del Informe técnico de acompañamiento a víctimas de violencia", `(${fmtD(report.signing_date || report.report_date)}):`));
   rows.push(fieldRow("Nombre del profesional o la profesional DECE que elaboró el Informe técnico de acompañamiento a víctimas de violencia:", report.professional_signing || ""));
+  const dualSigs = parseDocxSignatures(report.signatures_json);
+  const matchedSig = dualSigs.find((s) => s.signer_id === "professional" || s.signer_id === "elaborated") || dualSigs[0];
+
+  const firmaParagraphs = createDocxSignatureParagraphs({
+    signer: matchedSig || null,
+    signatureType: matchedSig?.tipo === "digital" ? "DIGITAL" : matchedSig?.tipo === "fisica" ? "FISICA" : report.signature_type,
+    font: FONT,
+  });
+
   rows.push(
     R([
-      cell([
-        new Paragraph({ spacing: { before: 260, after: 0 }, children: [run("_______________________________", {})] }),
-        new Paragraph({ spacing: { after: 0 }, children: [run("FIRMA", {})] }),
-      ], { valign: VerticalAlign.TOP }),
+      cell(firmaParagraphs, { valign: VerticalAlign.TOP }),
     ])
   );
 
@@ -299,7 +306,25 @@ export async function generateAccompanimentReportDocx(
             ],
           }),
         },
-        children: [table],
+        children: [
+          table,
+          ...(createDocxCustodyCalloutTable({
+            physicalFileRef: report.physical_file_ref,
+            physicalEvidenceUrl: report.physical_evidence_url,
+            widthDxa: W,
+            font: FONT,
+          })
+            ? [
+                new Paragraph({ spacing: { before: 120, after: 60 }, children: [run(" ", { size: SMALL })] }),
+                createDocxCustodyCalloutTable({
+                  physicalFileRef: report.physical_file_ref,
+                  physicalEvidenceUrl: report.physical_evidence_url,
+                  widthDxa: W,
+                  font: FONT,
+                })!,
+              ]
+            : []),
+        ],
       },
     ],
   });

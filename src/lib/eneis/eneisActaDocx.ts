@@ -18,6 +18,12 @@ import {
   TableLayoutType,
 } from "docx";
 import { parseEneisActaParticipants, parseEneisActaCompromisos } from "./eneisActas";
+import {
+  parseDocxSignatures,
+  createDocxSignatureParagraphs,
+  createDocxCustodyCalloutTable,
+  type DocxSignerInfo,
+} from "@/lib/docxCustodyHelper";
 
 /**
  * Acta de reunión ENEIS — réplica fiel del formato propio de seguimiento
@@ -108,6 +114,10 @@ export interface EneisActaRowLike {
   desarrollo: string | null;
   participants_json: string;
   compromisos_json: string;
+  signatures_json?: string | null;
+  signature_type?: string | null;
+  physical_file_ref?: string | null;
+  physical_evidence_url?: string | null;
 }
 
 export interface EneisActaInstitutionHeader {
@@ -196,13 +206,25 @@ export async function generateEneisActaDocx(a: EneisActaRowLike, header: EneisAc
         cell([new Paragraph({ alignment: AlignmentType.CENTER, children: [r("CARGO", { bold: true })] })]),
         cell([new Paragraph({ alignment: AlignmentType.CENTER, children: [r("FIRMAS", { bold: true })] })]),
       ]),
-      ...partRows.map((p) =>
-        row([
-          cell([new Paragraph({ children: [r(p.nombre || "")] })]),
-          cell([new Paragraph({ children: [r(p.cargo || "")] })]),
-          cell([new Paragraph({ children: [r(" ")] })], { valign: VerticalAlign.CENTER }),
-        ])
-      ),
+      ...(() => {
+        const dualSigs = parseDocxSignatures(a.signatures_json);
+        return partRows.map((p, idx) => {
+          const matchedSig = dualSigs.find(
+            (s: DocxSignerInfo) => s.signer_id === `part_${idx}` || (s.name && p.nombre && s.name.toLowerCase().trim() === p.nombre.toLowerCase().trim())
+          );
+          const sigParas = p.nombre ? createDocxSignatureParagraphs({
+            signer: matchedSig || null,
+            signatureType: matchedSig?.tipo === "digital" ? "DIGITAL" : matchedSig?.tipo === "fisica" ? "FISICA" : a.signature_type,
+            font: FONT,
+          }) : [new Paragraph({ children: [r(" ")] })];
+
+          return row([
+            cell([new Paragraph({ children: [r(p.nombre || "")] })]),
+            cell([new Paragraph({ children: [r(p.cargo || "")] })]),
+            cell(sigParas, { valign: VerticalAlign.CENTER }),
+          ]);
+        });
+      })(),
     ],
   });
 
@@ -254,6 +276,22 @@ export async function generateEneisActaDocx(a: EneisActaRowLike, header: EneisAc
           compromisosTable,
           new Paragraph({ spacing: { before: 120, after: 60 }, children: [r("FIRMAS DE RESPONSABILIDAD", { bold: true })] }),
           firmasTable,
+          ...(createDocxCustodyCalloutTable({
+            physicalFileRef: a.physical_file_ref,
+            physicalEvidenceUrl: a.physical_evidence_url,
+            widthDxa: W,
+            font: FONT,
+          })
+            ? [
+                new Paragraph({ spacing: { before: 120, after: 60 }, children: [r(" ", { size: SMALL })] }),
+                createDocxCustodyCalloutTable({
+                  physicalFileRef: a.physical_file_ref,
+                  physicalEvidenceUrl: a.physical_evidence_url,
+                  widthDxa: W,
+                  font: FONT,
+                })!,
+              ]
+            : []),
         ],
       },
     ],

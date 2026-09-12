@@ -17,6 +17,7 @@ import { smartAlign } from "./wordJustify";
 import { currentSchoolYearText } from "./schoolYearText";
 import path from "path";
 import fs from "fs";
+import { parseDocxSignatures, createDocxSignatureParagraphs, createDocxCustodyCalloutTable, type DocxSignerInfo } from "./docxCustodyHelper";
 import type {
   CaseRestitutionPlanRow,
   StudentRow,
@@ -807,6 +808,23 @@ export async function generateRestitutionPlanDocx(data: {
     })
   );
 
+  const dualSigs = parseDocxSignatures(plan.signatures_json);
+  const prepSig = dualSigs.find((s) => s.signer_id === "prepared");
+  const coordSig = dualSigs.find((s) => s.signer_id === "reviewed_coord");
+  const authSig = dualSigs.find((s) => s.signer_id === "reviewed_auth");
+  const appSig = dualSigs.find((s) => s.signer_id === "approved");
+
+  const makeFirmaCell = (sig?: DocxSignerInfo | null) => {
+    return new TableCell({
+      margins: cellMargins,
+      children: createDocxSignatureParagraphs({
+        signer: sig,
+        signatureType: sig?.tipo === "digital" ? "DIGITAL" : sig?.tipo === "fisica" ? "FISICA" : plan.signature_type,
+        font: FONT_NAME,
+      }),
+    });
+  };
+
   const t2Rows: TableRow[] = [
     // Header 5 columnas
     new TableRow({
@@ -859,10 +877,7 @@ export async function generateRestitutionPlanDocx(data: {
           margins: cellMargins,
           children: [new Paragraph({ children: [new TextRun({ text: plan.prepared_by_name || "Lic. Martha Punina", bold: true, font: FONT_NAME, size: 15 })] })],
         }),
-        new TableCell({
-          margins: cellMargins,
-          children: [new Paragraph({ children: [new TextRun({ text: "Firma:", bold: true, font: FONT_NAME, size: 15 })] })],
-        }),
+        makeFirmaCell(prepSig),
       ],
     }),
 
@@ -887,10 +902,7 @@ export async function generateRestitutionPlanDocx(data: {
                 margins: cellMargins,
                 children: [new Paragraph({ children: [new TextRun({ text: plan.reviewed_coordinator_name || "Psic. Cl. Marlon Jácome", bold: true, font: FONT_NAME, size: 15 })] })],
               }),
-              new TableCell({
-                margins: cellMargins,
-                children: [new Paragraph({ children: [new TextRun({ text: "Firma:", bold: true, font: FONT_NAME, size: 15 })] })],
-              }),
+              makeFirmaCell(coordSig),
             ],
           }),
         ]
@@ -915,10 +927,7 @@ export async function generateRestitutionPlanDocx(data: {
           margins: cellMargins,
           children: [new Paragraph({ children: [new TextRun({ text: plan.reviewed_authority_name || institution?.rector_name || "Mg. Diana Manzano", bold: true, font: FONT_NAME, size: 15 })] })],
         }),
-        new TableCell({
-          margins: cellMargins,
-          children: [new Paragraph({ children: [new TextRun({ text: "Firma:", bold: true, font: FONT_NAME, size: 15 })] })],
-        }),
+        makeFirmaCell(authSig),
       ],
     }),
 
@@ -941,10 +950,7 @@ export async function generateRestitutionPlanDocx(data: {
           margins: cellMargins,
           children: [new Paragraph({ children: [new TextRun({ text: plan.approved_by_name || "Psic. Silvia Paredes", bold: true, font: FONT_NAME, size: 15 })] })],
         }),
-        new TableCell({
-          margins: cellMargins,
-          children: [new Paragraph({ children: [new TextRun({ text: "Firma:", bold: true, font: FONT_NAME, size: 15 })] })],
-        }),
+        makeFirmaCell(appSig),
       ],
     }),
   ];
@@ -956,6 +962,19 @@ export async function generateRestitutionPlanDocx(data: {
       rows: t2Rows,
     })
   );
+
+  const custodyCallout = createDocxCustodyCalloutTable({
+    physicalFileRef: plan.physical_file_ref,
+    physicalEvidenceUrl: plan.physical_evidence_url,
+    widthDxa: 9500,
+    font: FONT_NAME,
+  });
+  if (custodyCallout) {
+    children.push(
+      new Paragraph({ spacing: { before: 120, after: 60 }, children: [new TextRun({ text: " ", font: FONT_NAME })] }),
+      custodyCallout
+    );
+  }
 
   const doc = new Document({
     styles: {

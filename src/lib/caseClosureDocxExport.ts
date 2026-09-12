@@ -20,6 +20,7 @@ import {
 import path from "path";
 import fs from "fs";
 import { smartAlign } from "./wordJustify";
+import { parseDocxSignatures, createDocxSignatureParagraphs, createDocxCustodyCalloutTable, type DocxSignerInfo } from "./docxCustodyHelper";
 import type {
   CaseFileRow,
   StudentRow,
@@ -617,6 +618,24 @@ export async function generateCaseClosureReportDocx(data: {
   // ============================================================
   // TABLA 3: FIRMAS DE RESPONSABILIDAD (CALCA FIEL)
   // ============================================================
+  const dualSigs = parseDocxSignatures(report.signatures_json);
+  const elabSig = dualSigs.find((s) => s.signer_id === "elaborated" || s.signer_id === "elaborated_0");
+  const revSig = dualSigs.find((s) => s.signer_id === "reviewed" || s.signer_id === "coordinator");
+  const appSig = dualSigs.find((s) => s.signer_id === "approved" || s.signer_id === "authority");
+
+  const buildFirmaCell = (sig?: DocxSignerInfo | null) => {
+    return new TableCell({
+      width: { size: 2487, type: WidthType.DXA },
+      margins: { top: 100, bottom: 100, left: 100, right: 100 },
+      verticalAlign: VerticalAlign.BOTTOM,
+      children: createDocxSignatureParagraphs({
+        signer: sig,
+        signatureType: sig?.tipo === "digital" ? "DIGITAL" : sig?.tipo === "fisica" ? "FISICA" : report.signature_type,
+        font: "Calibri",
+      }),
+    });
+  };
+
   const table3 = new Table({
     alignment: AlignmentType.CENTER,
     width: { size: 9157, type: WidthType.DXA },
@@ -682,17 +701,7 @@ export async function generateCaseClosureReportDocx(data: {
               }),
             ],
           }),
-          new TableCell({
-            width: { size: 2487, type: WidthType.DXA },
-            margins: { top: 200, bottom: 100, left: 100, right: 100 },
-            verticalAlign: VerticalAlign.BOTTOM,
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                children: [new TextRun({ text: "____________________", size: 16 })],
-              }),
-            ],
-          }),
+          buildFirmaCell(elabSig),
           new TableCell({
             width: { size: 2706, type: WidthType.DXA },
             margins: { top: 200, bottom: 100, left: 100, right: 100 },
@@ -774,17 +783,7 @@ export async function generateCaseClosureReportDocx(data: {
               }),
             ],
           }),
-          new TableCell({
-            width: { size: 2487, type: WidthType.DXA },
-            margins: { top: 200, bottom: 100, left: 100, right: 100 },
-            verticalAlign: VerticalAlign.BOTTOM,
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                children: [new TextRun({ text: "____________________", size: 16 })],
-              }),
-            ],
-          }),
+          buildFirmaCell(revSig),
           new TableCell({
             width: { size: 2706, type: WidthType.DXA },
             margins: { top: 200, bottom: 100, left: 100, right: 100 },
@@ -866,17 +865,7 @@ export async function generateCaseClosureReportDocx(data: {
               }),
             ],
           }),
-          new TableCell({
-            width: { size: 2487, type: WidthType.DXA },
-            margins: { top: 200, bottom: 100, left: 100, right: 100 },
-            verticalAlign: VerticalAlign.BOTTOM,
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                children: [new TextRun({ text: "____________________", size: 16 })],
-              }),
-            ],
-          }),
+          buildFirmaCell(appSig),
           new TableCell({
             width: { size: 2706, type: WidthType.DXA },
             margins: { top: 200, bottom: 100, left: 100, right: 100 },
@@ -1072,6 +1061,22 @@ export async function generateCaseClosureReportDocx(data: {
 
           // TABLA 3: FIRMAS
           table3,
+          ...(createDocxCustodyCalloutTable({
+            physicalFileRef: report.physical_file_ref,
+            physicalEvidenceUrl: report.physical_evidence_url,
+            widthDxa: 9157,
+            font: "Calibri",
+          })
+            ? [
+                new Paragraph({ spacing: { before: 100, after: 60 }, children: [new TextRun({ text: " ", font: "Calibri" })] }),
+                createDocxCustodyCalloutTable({
+                  physicalFileRef: report.physical_file_ref,
+                  physicalEvidenceUrl: report.physical_evidence_url,
+                  widthDxa: 9157,
+                  font: "Calibri",
+                })!,
+              ]
+            : []),
 
           // ANTECEDENTES Y ANEXOS
           createHeading("ANEXOS:", 21, 140, 60),

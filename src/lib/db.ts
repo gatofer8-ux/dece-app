@@ -313,6 +313,11 @@ function createConnection(): Database.Database {
   safeAddColumn("eneis_informes_dece", "physical_file_ref TEXT");
   safeAddColumn("eneis_informes_dece", "physical_evidence_url TEXT");
 
+  safeAddColumn("strategic_plans_bianual", "signatures_json TEXT DEFAULT '[]'");
+  safeAddColumn("strategic_plans_bianual", "signature_type TEXT DEFAULT 'PENDIENTE'");
+  safeAddColumn("strategic_plans_bianual", "physical_file_ref TEXT");
+  safeAddColumn("strategic_plans_bianual", "physical_evidence_url TEXT");
+
   safeAddColumn("institutions", "seal_image TEXT");
   safeAddColumn("institutions", "zona TEXT");
 

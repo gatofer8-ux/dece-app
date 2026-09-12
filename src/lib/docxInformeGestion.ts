@@ -27,6 +27,7 @@ import {
   PreventionProjectRow,
   ManagementReportSignatureItem,
 } from "./types";
+import { createDocxSignatureParagraphs, createDocxCustodyCalloutTable } from "./docxCustodyHelper";
 
 function getImageBuffer(fileName: string): Buffer | null {
   try {
@@ -1018,9 +1019,11 @@ export async function generateAnnualManagementReportDocx(data: {
             ],
           }),
           new TableCell({
-            children: [
-              new Paragraph({ spacing: { before: 200, after: 100 }, children: [new TextRun({ text: "" })] }),
-            ],
+            children: createDocxSignatureParagraphs({
+              signer: { tipo: s.signature_type as any, firma_data_url: s.firma_data_url },
+              signatureType: s.signature_type || report.signature_type,
+              font: "Arial",
+            }),
           }),
           new TableCell({
             children: [
@@ -1077,9 +1080,11 @@ export async function generateAnnualManagementReportDocx(data: {
             ],
           }),
           new TableCell({
-            children: [
-              new Paragraph({ spacing: { before: 200, after: 100 }, children: [new TextRun({ text: "" })] }),
-            ],
+            children: createDocxSignatureParagraphs({
+              signer: { tipo: s.signature_type as any, firma_data_url: s.firma_data_url },
+              signatureType: s.signature_type || report.signature_type,
+              font: "Arial",
+            }),
           }),
           new TableCell({
             children: [
@@ -1102,7 +1107,23 @@ export async function generateAnnualManagementReportDocx(data: {
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: borderAllBlack,
       rows: aprRows,
+    }),
+    ...(createDocxCustodyCalloutTable({
+      physicalFileRef: report.physical_file_ref,
+      physicalEvidenceUrl: report.physical_evidence_url,
+      widthDxa: 9072,
+      font: "Arial",
     })
+      ? [
+          new Paragraph({ spacing: { before: 100, after: 60 } }),
+          createDocxCustodyCalloutTable({
+            physicalFileRef: report.physical_file_ref,
+            physicalEvidenceUrl: report.physical_evidence_url,
+            widthDxa: 9072,
+            font: "Arial",
+          })!,
+        ]
+      : [])
   );
 
   const FONT_NAME = "Arial";
