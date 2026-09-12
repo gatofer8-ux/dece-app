@@ -5,6 +5,16 @@ import { processDictationPunctuation } from "@/lib/dictation";
 
 export const maxDuration = 30;
 
+// Vocabulario y contexto del dominio DECE (Ecuador) para sesgar la transcripción
+// hacia terminología técnica, siglas y patrones de nombres propios frecuentes.
+const DECE_DOMAIN_HINT =
+  "Departamento de Consejería Estudiantil (DECE), Ministerio de Educación del Ecuador. " +
+  "Vocabulario frecuente: acompañamiento psicosocial, riesgo psicosocial, vulneración de derechos, " +
+  "violencia intrafamiliar, violencia escolar, acoso escolar, embarazo adolescente, consumo de sustancias, " +
+  "salud mental, junta de curso, acta de reunión, ficha de notificación de alerta, plan de acción, " +
+  "representante legal, tutor, paralelo, jornada matutina, jornada vespertina, año lectivo. " +
+  "Tratamientos y títulos comunes: Lcda., Lcdo., Mgtr., Psc., Ing., Dra., Dr. Nombres propios en español ecuatoriano.";
+
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session?.user?.id) {
@@ -42,7 +52,7 @@ export async function POST(req: Request) {
       groqBody.append("temperature", "0.0");
       groqBody.append(
         "prompt",
-        "Dictado formal en español para el Departamento de Consejería Estudiantil (DECE), Ecuador. Respeta signos de puntuación, mayúsculas, nombres propios y redacción técnica educativa."
+        `Dictado formal en español ecuatoriano. ${DECE_DOMAIN_HINT} Respeta signos de puntuación, mayúsculas y redacción técnica educativa.`
       );
 
       const groqRes = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
@@ -97,7 +107,8 @@ export async function POST(req: Request) {
                 {
                   text:
                     "Transcribe con máxima fidelidad todo lo dicho en este audio en español ecuatoriano. " +
-                    "Aplica ortografía correcta y puntuación adecuada en el contexto educativo y psicológico institucional (DECE Ecuador). " +
+                    `Contexto del dominio: ${DECE_DOMAIN_HINT} ` +
+                    "Aplica ortografía correcta y puntuación adecuada. " +
                     "Devuelve ÚNICAMENTE el texto dictado transcrito, sin añadir explicaciones, sin comillas envolventes ni notas introductorias.",
                 },
               ],

@@ -18,6 +18,9 @@ import { processDictationPunctuation } from "@/lib/dictation";
 
 type DictationMode = "webspeech" | "audio-record";
 type DictationState = "idle" | "listening-live" | "recording-audio" | "transcribing";
+type EnginePreference = "auto" | DictationMode;
+
+const ENGINE_PREFERENCE_STORAGE_KEY = "dece-dictation-engine-preference";
 
 export default function VoiceDictationButton({
   targetId,
@@ -36,6 +39,7 @@ export default function VoiceDictationButton({
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [activeEngineLabel, setActiveEngineLabel] = useState<string>("");
+  const [enginePreference, setEnginePreferenceState] = useState<EnginePreference>("auto");
 
   // Referencias para ciclo de vida de Web Speech
   const recognitionRef = useRef<any>(null);
@@ -67,6 +71,15 @@ export default function VoiceDictationButton({
 
       setHasWebSpeech(speechAvailable);
       setHasMediaRecorder(mediaAvailable);
+
+      try {
+        const saved = window.localStorage.getItem(ENGINE_PREFERENCE_STORAGE_KEY);
+        if (saved === "webspeech" || saved === "audio-record") {
+          setEnginePreferenceState(saved);
+        }
+      } catch {
+        // localStorage no disponible (modo privado, etc.); se mantiene "auto"
+      }
     }
 
     return () => {
@@ -467,19 +480,36 @@ export default function VoiceDictationButton({
     }
   }
 
+  function setEnginePreference(pref: EnginePreference) {
+    setEnginePreferenceState(pref);
+    try {
+      window.localStorage.setItem(ENGINE_PREFERENCE_STORAGE_KEY, pref);
+    } catch {
+      // localStorage no disponible; la preferencia solo dura la sesión actual
+    }
+  }
+
+  // "En vivo" es más rápido pero depende del motor nativo del navegador (sin
+  // vocabulario del DECE). "Preciso (IA)" graba y transcribe con Whisper/Gemini
+  // usando un prompt con contexto del DECE: más lento, pero más fiel en
+  // acentos, nombres propios y terminología técnica. El usuario puede elegir
+  // manualmente en vez de esperar a que el modo en vivo falle.
+  function resolveEngine(): DictationMode {
+    if (enginePreference === "webspeech" && hasWebSpeech) return "webspeech";
+    if (enginePreference === "audio-record" && hasMediaRecorder) return "audio-record";
+    return hasWebSpeech ? "webspeech" : "audio-record";
+  }
+
   function handleButtonClick() {
     if (state === "listening-live" || state === "recording-audio") {
       stopAll();
     } else if (state === "transcribing") {
       // Bloqueado mientras transcribe
       return;
+    } else if (resolveEngine() === "webspeech") {
+      startWebSpeech();
     } else {
-      // Si tiene Web Speech API disponible, comenzar en vivo; si no (ej. Firefox), comenzar directamente con audio IA
-      if (hasWebSpeech) {
-        startWebSpeech();
-      } else {
-        startAudioRecording();
-      }
+      startAudioRecording();
     }
   }
 
@@ -553,6 +583,36 @@ export default function VoiceDictationButton({
           </>
         )}
       </button>
+
+      {/* Selector manual de motor: solo tiene sentido si ambos están disponibles y no hay dictado en curso. */}
+      {state === "idle" && hasWebSpeech && hasMediaRecorder && (
+        <div className="inline-flex items-center rounded-full border border-slate-200 overflow-hidden" role="radiogroup" aria-label="Modo de dictado">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={resolveEngine() === "webspeech"}
+            onClick={() => setEnginePreference("webspeech")}
+            title="Transcripción instantánea del navegador. Más rápido, pero sin vocabulario del DECE."
+            className={`text-[10px] px-2 py-0.5 transition-colors ${
+              resolveEngine() === "webspeech" ? "bg-slate-700 text-white" : "bg-white text-slate-500 hover:bg-slate-50"
+            }`}
+          >
+            En vivo
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={resolveEngine() === "audio-record"}
+            onClick={() => setEnginePreference("audio-record")}
+            title="Graba y transcribe con IA usando vocabulario del DECE. Más preciso, con unos segundos de espera."
+            className={`text-[10px] px-2 py-0.5 border-l border-slate-200 transition-colors ${
+              resolveEngine() === "audio-record" ? "bg-violet-600 text-white" : "bg-white text-slate-500 hover:bg-slate-50"
+            }`}
+          >
+            ✨ Preciso IA
+          </button>
+        </div>
+      )}
 
       {/* Si el usuario está usando Firefox o si la red forzó modo Audio IA, se indica sutilmente */}
       {isRecording && (
