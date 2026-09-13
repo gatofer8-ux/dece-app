@@ -30,6 +30,7 @@ import { ParchisQuestionModal } from "./components/ParchisQuestionModal";
 import { ParchisSetupModal } from "./components/ParchisSetupModal";
 import { ParchisCelebrationModal } from "./components/ParchisCelebrationModal";
 import { ParchisFacilitatorDrawer } from "./components/ParchisFacilitatorDrawer";
+import { ParchisOnboardingModal } from "./components/ParchisOnboardingModal";
 
 export default function ParchisInclusivoApp() {
   const [state, setState] = useState<ParchisGameState>(() => {
@@ -37,10 +38,12 @@ export default function ParchisInclusivoApp() {
   });
 
   const [setupModalOpen, setSetupModalOpen] = useState<boolean>(false);
+  const [onboardingOpen, setOnboardingOpen] = useState<boolean>(false);
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
   const [inspectModalSquare, setInspectModalSquare] = useState<SquareDefinition | null>(null);
   const [isRollingAnimation, setIsRollingAnimation] = useState<boolean>(false);
   const [isHopping, setIsHopping] = useState<boolean>(false);
+  const [hoppingPawnId, setHoppingPawnId] = useState<string | null>(null);
 
   const hoppingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -55,6 +58,18 @@ export default function ParchisInclusivoApp() {
       setSetupModalOpen(true);
     }
   }, [state.turnPhase]);
+
+  // Onboarding automático si es primera visita del facilitador
+  useEffect(() => {
+    try {
+      const tourDone = localStorage.getItem("sadex_parchis_tour_completed");
+      if (tourDone !== "true") {
+        setOnboardingOpen(true);
+      }
+    } catch (e) {
+      // Ignorar restricciones en entornos con localStorage restringido
+    }
+  }, []);
 
   // Limpiar timer de salto al desmontar
   useEffect(() => {
@@ -197,6 +212,7 @@ export default function ParchisInclusivoApp() {
   // 3. Animación de salto casilla por casilla (Pawn Hop - Dinámica de Monopolio Moderno)
   const startHoppingAnimation = (pawn: PawnState, totalSteps: number) => {
     setIsHopping(true);
+    setHoppingPawnId(pawn.id);
     const originalPos = pawn.position;
 
     // Si está saliendo de base (con 5)
@@ -217,6 +233,7 @@ export default function ParchisInclusivoApp() {
       });
 
       setIsHopping(false);
+      setHoppingPawnId(null);
       finishLanding({ ...state, teams: updatedTeams }, pawn, targetPos, originalPos, 5);
       return;
     }
@@ -247,6 +264,7 @@ export default function ParchisInclusivoApp() {
       if (currentStepIndex >= totalSteps) {
         if (hoppingTimerRef.current) clearInterval(hoppingTimerRef.current);
         setIsHopping(false);
+        setHoppingPawnId(null);
 
         // Evaluar aterrizaje final
         finishLanding(state, pawn, currentPos, originalPos, totalSteps);
@@ -553,6 +571,25 @@ export default function ParchisInclusivoApp() {
     }
   };
 
+  // Pasos de la jugada guiada (Stage Director)
+  const isStep1Active =
+    (state.turnPhase === "WAITING_ROLL" || state.turnPhase === "ROLL_OFF") && !isHopping;
+  const isStep1Done = state.diceValue !== null && !isStep1Active;
+
+  const isStep2Active =
+    isHopping || state.turnPhase === "SELECTING_PAWN" || state.turnPhase === "CHOOSING_FIVE_ACTION";
+  const isStep2Done =
+    isStep1Done &&
+    !isStep2Active &&
+    (state.turnPhase === "RESOLVING_QUESTION" ||
+      state.turnPhase === "CELEBRATING_GOAL" ||
+      state.turnPhase === "SELECTING_BONUS_DESTINATION");
+
+  const isStep3Active =
+    state.turnPhase === "RESOLVING_QUESTION" ||
+    state.turnPhase === "CELEBRATING_GOAL" ||
+    state.turnPhase === "SELECTING_BONUS_DESTINATION";
+
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-between text-slate-100 pb-8">
       {/* 1. BARRA SUPERIOR DE FACILITACIÓN MONOPOLIO */}
@@ -577,6 +614,16 @@ export default function ParchisInclusivoApp() {
 
           {/* Botones de acción rápida de facilitación */}
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setOnboardingOpen(true)}
+              className="p-2 md:px-3.5 md:py-2 rounded-xl text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-400/40 transition-all flex items-center gap-1.5 shadow-sm"
+              title="Guía interactiva y reglas oficiales"
+            >
+              <span>❓</span>
+              <span className="hidden md:inline">¿Cómo se juega?</span>
+            </button>
+
             <button
               type="button"
               onClick={handleToggleFullScreen}
@@ -610,75 +657,177 @@ export default function ParchisInclusivoApp() {
 
       {/* 2. ÁREA PRINCIPAL: TABLERO MONOPOLIO + PANEL DE ACCIÓN */}
       <main className="max-w-7xl mx-auto w-full px-4 md:px-8 py-6 flex-1">
-        {/* BANNER DE TURNO ESTILO MONOPOLIO */}
-        <div className="mb-6 p-4 md:p-5 rounded-3xl bg-slate-900 border-2 border-amber-400/40 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4 w-full md:w-auto">
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center font-black text-white text-2xl shadow-xl flex-shrink-0 border-2 border-white/40"
-              style={{ backgroundColor: currentTeam.colorHex }}
-            >
-              {currentTeam.color[0]}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xs font-black text-amber-400 uppercase tracking-widest">
-                  TURNO ACTUAL:
-                </span>
-                <span
-                  className="px-2.5 py-0.5 rounded-full text-xs font-black"
-                  style={{
-                    backgroundColor: `${currentTeam.colorHex}25`,
-                    color: currentTeam.colorHex,
-                  }}
-                >
-                  {currentTeam.color}
-                </span>
+        {/* BANNER DE TURNO ESTILO MONOPOLIO CON BARRA DE 3 PASOS */}
+        <div className="mb-6 p-4 md:p-5 rounded-3xl bg-slate-900 border-2 border-amber-400/40 shadow-xl space-y-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4 w-full md:w-auto">
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center font-black text-white text-2xl shadow-xl flex-shrink-0 border-2 border-white/40"
+                style={{ backgroundColor: currentTeam.colorHex }}
+              >
+                {currentTeam.color[0]}
               </div>
-              <h2 className="text-xl md:text-2xl font-black text-white leading-tight">
-                {currentTeam.name}
-              </h2>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xs font-black text-amber-400 uppercase tracking-widest">
+                    TURNO ACTUAL:
+                  </span>
+                  <span
+                    className="px-2.5 py-0.5 rounded-full text-xs font-black"
+                    style={{
+                      backgroundColor: `${currentTeam.colorHex}25`,
+                      color: currentTeam.colorHex,
+                    }}
+                  >
+                    {currentTeam.color}
+                  </span>
+                </div>
+                <h2 className="text-xl md:text-2xl font-black text-white leading-tight">
+                  {currentTeam.name}
+                </h2>
+              </div>
+            </div>
+
+            {/* Guía interactiva de paso */}
+            <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+              <div className="px-5 py-2.5 rounded-2xl bg-slate-800 border border-slate-700 text-xs md:text-sm font-bold text-slate-200 flex items-center gap-2.5">
+                {isHopping ? (
+                  <>
+                    <span className="animate-bounce text-emerald-400">🏃</span>
+                    <span className="text-emerald-300 font-extrabold">Avanzando casilleros...</span>
+                  </>
+                ) : state.turnPhase === "WAITING_ROLL" ? (
+                  <>
+                    <span className="animate-bounce">🎲</span>
+                    <span>Tira el dado para iniciar tu jugada</span>
+                  </>
+                ) : state.turnPhase === "SELECTING_PAWN" ? (
+                  <>
+                    <span className="animate-pulse text-blue-400">👆</span>
+                    <span>Selecciona en el tablero la ficha que saltará</span>
+                  </>
+                ) : state.turnPhase === "RESOLVING_QUESTION" ? (
+                  <>
+                    <span>📖</span>
+                    <span>Resuelvan en equipo el reto de la casilla</span>
+                  </>
+                ) : state.turnPhase === "CHOOSING_FIVE_ACTION" ? (
+                  <>
+                    <span>🎯</span>
+                    <span>Sacó 5: Elige avanzar 5 o poner ficha en Inicio</span>
+                  </>
+                ) : state.turnPhase === "CELEBRATING_GOAL" ? (
+                  <>
+                    <span>🎉</span>
+                    <span>¡Canten la barra inclusiva y elijan su bono de +10!</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🏆</span>
+                    <span>¡Gran victoria comunitaria!</span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Guía interactiva de paso */}
-          <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-            <div className="px-5 py-2.5 rounded-2xl bg-slate-800 border border-slate-700 text-xs md:text-sm font-bold text-slate-200 flex items-center gap-2.5">
-              {isHopping ? (
-                <>
-                  <span className="animate-bounce text-emerald-400">🏃</span>
-                  <span className="text-emerald-300 font-extrabold">Avanzando casilleros...</span>
-                </>
-              ) : state.turnPhase === "WAITING_ROLL" ? (
-                <>
-                  <span className="animate-bounce">🎲</span>
-                  <span>Tira el dado para iniciar tu jugada</span>
-                </>
-              ) : state.turnPhase === "SELECTING_PAWN" ? (
-                <>
-                  <span className="animate-pulse text-blue-400">👆</span>
-                  <span>Selecciona en el tablero la ficha que saltará</span>
-                </>
-              ) : state.turnPhase === "RESOLVING_QUESTION" ? (
-                <>
-                  <span>📖</span>
-                  <span>Resuelvan en equipo el reto de la casilla</span>
-                </>
-              ) : state.turnPhase === "CHOOSING_FIVE_ACTION" ? (
-                <>
-                  <span>🎯</span>
-                  <span>Sacó 5: Elige avanzar 5 o poner ficha en Inicio</span>
-                </>
-              ) : state.turnPhase === "CELEBRATING_GOAL" ? (
-                <>
-                  <span>🎉</span>
-                  <span>¡Canten la barra inclusiva y elijan su bono de +10!</span>
-                </>
-              ) : (
-                <>
-                  <span>🏆</span>
-                  <span>¡Gran victoria comunitaria!</span>
-                </>
-              )}
+          {/* BARRA DE PROGRESO DE 3 PASOS GUIADA (STAGE DIRECTOR) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-800/80">
+            {/* Paso 1: Tirar Dado */}
+            <div
+              className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${
+                isStep1Active
+                  ? "bg-amber-500/20 border-amber-400/80 text-amber-300 shadow-lg shadow-amber-500/10 ring-2 ring-amber-400/40"
+                  : isStep1Done
+                  ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-300"
+                  : "bg-slate-950/50 border-slate-800/80 text-slate-500"
+              }`}
+            >
+              <div
+                className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0 ${
+                  isStep1Active
+                    ? "bg-amber-400 text-slate-950 animate-bounce"
+                    : isStep1Done
+                    ? "bg-emerald-500 text-white"
+                    : "bg-slate-800 text-slate-400"
+                }`}
+              >
+                {isStep1Done ? "✓" : "🎲"}
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-black truncate">1. Tirar Dado 3D</div>
+                <div className="text-2xs opacity-80 truncate">
+                  {isStep1Active
+                    ? "¡Lanza el cubo virtual!"
+                    : isStep1Done
+                    ? `Resultado: ${state.diceValue}`
+                    : "Esperando turno"}
+                </div>
+              </div>
+            </div>
+
+            {/* Paso 2: Mover Ficha */}
+            <div
+              className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${
+                isStep2Active
+                  ? "bg-blue-500/20 border-blue-400/80 text-blue-300 shadow-lg shadow-blue-500/10 ring-2 ring-blue-400/40"
+                  : isStep2Done
+                  ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-300"
+                  : "bg-slate-950/50 border-slate-800/80 text-slate-500"
+              }`}
+            >
+              <div
+                className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0 ${
+                  isStep2Active
+                    ? "bg-blue-400 text-slate-950 animate-pulse"
+                    : isStep2Done
+                    ? "bg-emerald-500 text-white"
+                    : "bg-slate-800 text-slate-400"
+                }`}
+              >
+                {isStep2Done ? "✓" : "🏃"}
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-black truncate">2. Mover Ficha</div>
+                <div className="text-2xs opacity-80 truncate">
+                  {isHopping
+                    ? "Rebotando en arco..."
+                    : state.turnPhase === "SELECTING_PAWN"
+                    ? "Elige ficha a mover"
+                    : state.turnPhase === "CHOOSING_FIVE_ACTION"
+                    ? "Elige acción del 5"
+                    : isStep2Done
+                    ? "Aterrizaje completo"
+                    : "Pendiente del dado"}
+                </div>
+              </div>
+            </div>
+
+            {/* Paso 3: Resolver Reto */}
+            <div
+              className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${
+                isStep3Active
+                  ? "bg-purple-500/20 border-purple-400/80 text-purple-300 shadow-lg shadow-purple-500/10 ring-2 ring-purple-400/40 animate-pulse"
+                  : "bg-slate-950/50 border-slate-800/80 text-slate-500"
+              }`}
+            >
+              <div
+                className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0 ${
+                  isStep3Active
+                    ? "bg-purple-400 text-white animate-bounce"
+                    : "bg-slate-800 text-slate-400"
+                }`}
+              >
+                📖
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-black truncate">3. Responder Reto</div>
+                <div className="text-2xs opacity-80 truncate">
+                  {isStep3Active
+                    ? "Debate inclusivo en equipo"
+                    : "Al caer en casilla del circuito"}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -749,6 +898,7 @@ export default function ParchisInclusivoApp() {
               currentTeam={currentTeam}
               selectablePawnIds={selectablePawnIds}
               activePawnId={state.activePawnId}
+              isHoppingPawnId={hoppingPawnId}
               onPawnClick={handleSelectPawn}
               onInspectSquare={(sq) => setInspectModalSquare(sq)}
             />
@@ -756,14 +906,24 @@ export default function ParchisInclusivoApp() {
 
           {/* PANEL LATERAL DE MONOPOLIO */}
           <div className="lg:col-span-4 space-y-6">
-            {/* DADO MONOPOLIO 3D */}
-            <ParchisDice
-              value={state.diceValue}
-              isRolling={isRollingAnimation}
-              disabled={isHopping || state.turnPhase !== "WAITING_ROLL"}
-              consecutiveSixes={state.consecutiveSixes}
-              onRoll={handleRollDice}
-            />
+            {/* DADO MONOPOLIO 3D CON DIRECCIÓN DE ESCENA */}
+            <div
+              className={`transition-all duration-300 rounded-3xl ${
+                isStep1Active
+                  ? "ring-2 ring-amber-400/60 shadow-2xl shadow-amber-500/10"
+                  : isHopping
+                  ? "opacity-60 pointer-events-none"
+                  : ""
+              }`}
+            >
+              <ParchisDice
+                value={state.diceValue}
+                isRolling={isRollingAnimation}
+                disabled={isHopping || state.turnPhase !== "WAITING_ROLL"}
+                consecutiveSixes={state.consecutiveSixes}
+                onRoll={handleRollDice}
+              />
+            </div>
 
             {/* LEADERBOARD DE EQUIPOS Y FICHAS */}
             <div className="bg-slate-900 p-5 rounded-3xl border border-slate-800 shadow-xl space-y-3">
@@ -911,6 +1071,12 @@ export default function ParchisInclusivoApp() {
           const next = advanceToNextTeam(state);
           setState(next);
         }}
+      />
+
+      {/* Tour interactivo de Onboarding y Reglas */}
+      <ParchisOnboardingModal
+        isOpen={onboardingOpen}
+        onClose={() => setOnboardingOpen(false)}
       />
     </div>
   );
