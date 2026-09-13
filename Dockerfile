@@ -72,6 +72,7 @@ RUN mkdir -p /usr/share/fonts/truetype/custom \
 EXPOSE 3000
 
 # `npm run start` corre scripts/seed.js (migraciones idempotentes + bootstrap
-# del superadmin) y luego `next start`. El seed ya NO sobrescribe contraseñas
-# existentes y los datos demo requieren SEED_DEMO=1.
+# del superadmin) y luego server.js (servidor Node propio, necesario para
+# capturar la IP real del cliente en la bitácora de auditoría). El seed ya NO
+# sobrescribe contraseñas existentes y los datos demo requieren SEED_DEMO=1.
 CMD ["npm", "run", "start"]
