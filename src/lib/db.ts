@@ -4,6 +4,8 @@ import path from "path";
 import { runMigrations } from "./migrations";
 import { recodifyExistingCases } from "./recodifyCases";
 import { recodifyExistingReports } from "./recodifyReports";
+import { CONFLICT_TYPES_CATALOG } from "./corresponsibilityCatalog";
+import type { CorresponsibilityConflictType } from "./types";
 
 // Ubicación del archivo de base de datos SQLite.
 // Por defecto se guarda en /data/dece.db (pensado para volumen persistente en Docker);
@@ -640,6 +642,182 @@ function createConnection(): Database.Database {
       `);
     } catch {
       // ignorar si no existe la tabla aún
+    }
+
+    // Reformateo retroactivo: las actas de corresponsabilidad, entrevistas y
+    // sesiones de seguimiento creadas ANTES de este cambio quedaron con el
+    // relato completo en `description` (la columna corta de la Ficha de
+    // Seguimiento) y `observations` vacío. Se recalculan con la misma lógica
+    // que usa el flujo de creación actual, tomando los datos de la tabla
+    // fuente (no del texto viejo), para que también se vean corregidas sin
+    // tener que volver a crearlas. Solo toca filas que todavía tienen el
+    // prefijo del formato antiguo, así que es seguro ejecutarlo en cada
+    // arranque: una vez corregida una fila, deja de coincidir.
+    try {
+      const staleActs = db
+        .prepare(
+          `SELECT ca.id as action_id, a.representative_name, a.representative_relationship,
+                  a.conflict_type, COALESCE(a.agreements_and_commitments, a.commitments_representative) as agreements,
+                  a.observations as act_observations
+           FROM case_actions ca
+           JOIN case_corresponsibility_acts a
+             ON a.case_file_id = ca.case_file_id AND a.act_date = ca.date
+           WHERE ca.type = 'Acta de compromiso y corresponsabilidad'
+             AND ca.description LIKE 'Acta de compromiso y corresponsabilidad suscrita con %'`
+        )
+        .all() as {
+        action_id: string;
+        representative_name: string;
+        representative_relationship: string | null;
+        conflict_type: string;
+        agreements: string | null;
+        act_observations: string | null;
+      }[];
+
+      if (staleActs.length > 0) {
+        const updateAct = db.prepare(`UPDATE case_actions SET description = ?, observations = ? WHERE id = ?`);
+        for (const row of staleActs) {
+          const catalogInfo =
+            CONFLICT_TYPES_CATALOG[row.conflict_type as CorresponsibilityConflictType] || CONFLICT_TYPES_CATALOG.OTRO;
+          const agreements = row.agreements || "";
+          const agreementsExcerpt = agreements.slice(0, 140).trim();
+          const description = `Acta de compromiso suscrita con ${row.representative_name} (${row.representative_relationship || "Representante legal"}).`;
+          const observations =
+            `Motivo: ${catalogInfo?.label || row.conflict_type}. Acuerdos: ${agreementsExcerpt}${agreements.length > 140 ? "..." : ""}` +
+            (row.act_observations ? ` ${row.act_observations}` : "");
+          updateAct.run(description, observations, row.action_id);
+        }
+        console.log(`[migraciones] reformateadas ${staleActs.length} actas de corresponsabilidad en la bitácora del caso`);
+      }
+    } catch {
+      // ignorar si falla (p.ej. tabla no existe aún en instalaciones nuevas)
+    }
+
+    try {
+      const staleInterviews = db
+        .prepare(
+          `SELECT ca.id as action_id, ci.interviewee_full_name, ci.representative_name, ci.summary
+           FROM case_actions ca
+           JOIN case_interviews ci
+             ON ci.case_file_id = ca.case_file_id
+             AND ca.description = 'Entrevista registrada a: ' || ci.interviewee_full_name
+           WHERE ca.type = 'Entrevista semiestructurada'
+             AND ca.description LIKE 'Entrevista registrada a: %'`
+        )
+        .all() as { action_id: string; interviewee_full_name: string; representative_name: string | null; summary: string | null }[];
+
+      if (staleInterviews.length > 0) {
+        const updateInterview = db.prepare(`UPDATE case_actions SET description = ?, observations = ? WHERE id = ?`);
+        for (const row of staleInterviews) {
+          const description = row.representative_name
+            ? `Entrevista realizada al representante ${row.representative_name} y estudiante ${row.interviewee_full_name}.`
+            : `Entrevista realizada al/a la estudiante ${row.interviewee_full_name}.`;
+          const summary = row.summary || "";
+          const summaryExcerpt = summary.slice(0, 140).trim();
+          const observations = summaryExcerpt ? `${summaryExcerpt}${summary.length > 140 ? "..." : ""}` : null;
+          updateInterview.run(description, observations, row.action_id);
+        }
+        console.log(`[migraciones] reformateadas ${staleInterviews.length} entrevistas en la bitácora del caso`);
+      }
+    } catch {
+      // ignorar si falla (p.ej. tabla no existe aún en instalaciones nuevas)
+    }
+
+    try {
+      const staleFollowups = db
+        .prepare(
+          `SELECT ca.id as action_id, f.intervention_type, f.description as session_description, f.observations as followup_observations
+           FROM case_actions ca
+           JOIN case_care_followups f
+             ON f.case_file_id = ca.case_file_id
+             AND ca.description = 'Sesión registrada: ' || f.description
+           WHERE ca.type = 'Seguimiento atención psicosocial'
+             AND ca.description LIKE 'Sesión registrada: %'`
+        )
+        .all() as { action_id: string; intervention_type: string; session_description: string; followup_observations: string | null }[];
+
+      if (staleFollowups.length > 0) {
+        const updateFollowup = db.prepare(`UPDATE case_actions SET description = ?, observations = ? WHERE id = ?`);
+        for (const row of staleFollowups) {
+          const description = `Sesión de seguimiento de la atención psicosocial (${row.intervention_type}).`;
+          const sessionExcerpt = (row.session_description || "").slice(0, 140).trim();
+          const observations =
+            `${sessionExcerpt}${(row.session_description || "").length > 140 ? "..." : ""}` +
+            (row.followup_observations ? ` ${row.followup_observations}` : "");
+          updateFollowup.run(description, observations, row.action_id);
+        }
+        console.log(`[migraciones] reformateadas ${staleFollowups.length} sesiones de seguimiento en la bitácora del caso`);
+      }
+    } catch {
+      // ignorar si falla (p.ej. tabla no existe aún en instalaciones nuevas)
+    }
+
+    try {
+      const staleEsquelas = db
+        .prepare(
+          `SELECT ca.id as action_id, e.citation_number, e.representative_name, e.citation_date, e.citation_time,
+                  e.citation_place, e.citation_reason, e.urgency_level
+           FROM case_actions ca
+           JOIN dece_esquelas e
+             ON e.case_file_id = ca.case_file_id
+             AND ca.description LIKE 'Emisión de Esquela de Citación N° ' || e.citation_number || '%'
+           WHERE ca.type = 'Esquela de citación'
+             AND ca.description LIKE 'Emisión de Esquela de Citación N° %'`
+        )
+        .all() as {
+        action_id: string;
+        citation_number: string;
+        representative_name: string;
+        citation_date: string;
+        citation_time: string;
+        citation_place: string | null;
+        citation_reason: string;
+        urgency_level: string | null;
+      }[];
+
+      if (staleEsquelas.length > 0) {
+        const updateEsquela = db.prepare(`UPDATE case_actions SET description = ?, observations = ? WHERE id = ?`);
+        for (const row of staleEsquelas) {
+          const description = `Esquela de Citación N° ${row.citation_number} emitida al representante ${row.representative_name} (Cita: ${row.citation_date} ${row.citation_time} en ${row.citation_place || "la institución"}).`;
+          const reason = row.citation_reason || "";
+          const reasonExcerpt = reason.slice(0, 120).trim();
+          const observations = `Motivo: ${reasonExcerpt}${reason.length > 120 ? "..." : ""} (Citación ${row.urgency_level || "formal"}).`;
+          updateEsquela.run(description, observations, row.action_id);
+        }
+        console.log(`[migraciones] reformateadas ${staleEsquelas.length} esquelas de citación en la bitácora del caso`);
+      }
+    } catch {
+      // ignorar si falla (p.ej. tabla no existe aún en instalaciones nuevas)
+    }
+
+    try {
+      const staleComparecencias = db
+        .prepare(
+          `SELECT ca.id as action_id, e.citation_number, e.representative_name, e.talon_notes
+           FROM case_actions ca
+           JOIN dece_esquelas e
+             ON e.case_file_id = ca.case_file_id
+             AND ca.description LIKE 'Comparecencia y atención por citación N° ' || e.citation_number || ':%'
+           WHERE ca.type = 'Entrevista'
+             AND ca.description LIKE 'Comparecencia y atención por citación N° %'`
+        )
+        .all() as { action_id: string; citation_number: string; representative_name: string; talon_notes: string | null }[];
+
+      if (staleComparecencias.length > 0) {
+        const updateComparecencia = db.prepare(`UPDATE case_actions SET description = ?, observations = ? WHERE id = ?`);
+        for (const row of staleComparecencias) {
+          const description = `Comparecencia del representante ${row.representative_name} por citación N° ${row.citation_number}.`;
+          const talonNotes = (row.talon_notes || "").trim();
+          const talonNotesExcerpt = talonNotes.slice(0, 140);
+          const observations = talonNotesExcerpt
+            ? `${talonNotesExcerpt}${talonNotes.length > 140 ? "..." : ""}`
+            : "Atención a citación formal.";
+          updateComparecencia.run(description, observations, row.action_id);
+        }
+        console.log(`[migraciones] reformateadas ${staleComparecencias.length} comparecencias de citación en la bitácora del caso`);
+      }
+    } catch {
+      // ignorar si falla (p.ej. tabla no existe aún en instalaciones nuevas)
     }
   } catch {
     // ignorar si fallan los índices en caliente
