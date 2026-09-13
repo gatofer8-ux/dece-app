@@ -56,6 +56,7 @@ import {
   createInterventionPlan,
   updatePlanStatus,
   ensureChecklist,
+  deleteChecklist,
   saveChecklist,
   uploadChecklistItemAttachment,
   unlinkChecklistItemAttachment,
@@ -1816,12 +1817,22 @@ export default async function CasoDetallePage({
                 <div key={category} className={availableChecklistCategories.length > 0 ? "border-b border-slate-100 pb-5" : ""}>
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs font-semibold text-slate-500 uppercase">{CHECKLIST_CATEGORY_LABELS[category]}</p>
-                    <Link
-                      href={`/casos/${caseFile.id}/checklist/imprimir?categoria=${category}`}
-                      className="text-xs text-brand-700 hover:underline"
-                    >
-                      🖨️ Imprimir
-                    </Link>
+                    <div className="flex items-center gap-3">
+                      <Link
+                        href={`/casos/${caseFile.id}/checklist/imprimir?categoria=${category}`}
+                        className="text-xs text-brand-700 hover:underline flex items-center gap-1"
+                      >
+                        🖨️ Imprimir
+                      </Link>
+                      <DeleteButton
+                        onDelete={async () => {
+                          "use server";
+                          return await deleteChecklist(caseFile.id, category);
+                        }}
+                        label="🗑️ Eliminar checklist"
+                        confirmMessage={`¿Estás seguro de eliminar el checklist de "${CHECKLIST_CATEGORY_LABELS[category]}"? Esta acción quitará todos los ítems y respaldos de esta categoría en este caso.`}
+                      />
+                    </div>
                   </div>
                   <form action={boundSaveChecklist} className="space-y-4">
                     <div className="overflow-x-auto -mx-1">
@@ -1887,7 +1898,15 @@ export default async function CasoDetallePage({
                       </div>
                     </div>
 
-                    <div className="flex justify-end">
+                    <div className="flex items-center justify-between pt-1">
+                      <DeleteButton
+                        onDelete={async () => {
+                          "use server";
+                          return await deleteChecklist(caseFile.id, category);
+                        }}
+                        label="🗑️ Eliminar este checklist"
+                        confirmMessage={`¿Estás seguro de eliminar el checklist de "${CHECKLIST_CATEGORY_LABELS[category]}"? Esta acción quitará todos los ítems y respaldos de esta categoría en este caso.`}
+                      />
                       <button type="submit" className="btn-primary">Guardar checklist</button>
                     </div>
                   </form>

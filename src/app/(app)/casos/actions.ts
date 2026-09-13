@@ -254,6 +254,61 @@ export async function ensureChecklist(caseId: string, formData: FormData) {
   revalidatePath(`/casos/${caseId}`);
 }
 
+/**
+ * Elimina un checklist de expediente de una categoría específica para el caso.
+ * Remueve los ítems, sus respaldos documentales asociados y, si no quedan más
+ * checklists en el caso, las firmas/revisiones de checklist.
+ */
+export async function deleteChecklist(caseId: string, category: ChecklistCategory): Promise<{ error?: string } | void> {
+  try {
+    const session = await requireRole(["ADMIN", "DECE"]);
+    const institutionId = requireInstitutionId(session);
+    requireOwnedCase(caseId, institutionId);
+
+    const items = db
+      .prepare("SELECT id, attachment_id FROM case_checklist_items WHERE case_file_id = ? AND category = ?")
+      .all(caseId, category) as { id: string; attachment_id: string | null }[];
+
+    const tx = db.transaction(() => {
+      for (const item of items) {
+        if (item.attachment_id) {
+          const att = db
+            .prepare("SELECT path FROM attachments WHERE id = ? AND case_file_id = ?")
+            .get(item.attachment_id, caseId) as { path: string } | undefined;
+          if (att) {
+            db.prepare("DELETE FROM attachments WHERE id = ?").run(item.attachment_id);
+            deleteAttachmentFile(att.path);
+          }
+        }
+      }
+
+      db.prepare("DELETE FROM case_checklist_items WHERE case_file_id = ? AND category = ?").run(caseId, category);
+
+      const remaining = db
+        .prepare("SELECT COUNT(*) as n FROM case_checklist_items WHERE case_file_id = ?")
+        .get(caseId) as { n: number };
+      if (remaining.n === 0) {
+        db.prepare("DELETE FROM case_checklist_reviews WHERE case_file_id = ?").run(caseId);
+      }
+    });
+
+    tx();
+
+    logAudit({
+      userId: session.user.id,
+      action: "ELIMINAR",
+      entityType: "CaseChecklist",
+      entityId: caseId,
+      details: category,
+      institutionId,
+    });
+
+    revalidatePath(`/casos/${caseId}`);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Error al eliminar el checklist." };
+  }
+}
+
 /** Guarda de una sola vez todos los ítems del checklist y el bloque de revisión/firmas. */
 export async function saveChecklist(caseId: string, formData: FormData) {
   const session = await requireRole(["ADMIN", "DECE"]);
