@@ -54,10 +54,32 @@ export const WORD_EXPORT_CSS = `
   [class*="w-3/4"] { width: 75% !important; }
   [class*="w-full"] { width: 100% !important; }
   .text-justify { text-align: justify; }
+  /* DocumentHeader.tsx (membrete institucional compartido) usa colores y tamaños
+     de fuente arbitrarios de Tailwind (bg-[#2F5496], text-[#475569], text-[11px]…)
+     que no existen como reglas reales fuera del navegador — se traducen aquí para
+     que la barra de título y el membrete no pierdan su color al exportar a Word. */
+  [class*="bg-[#2F5496]"] { background-color: #2F5496 !important; color: #ffffff !important; }
+  [class*="text-[#475569]"] { color: #475569 !important; }
+  [class*="text-[#767171]"] { color: #767171 !important; }
+  [class*="text-blue-100"] { color: #dbeafe !important; }
+  [class*="text-[9px]"] { font-size: 9pt !important; }
+  [class*="text-[10px]"] { font-size: 10pt !important; }
+  [class*="text-[11px]"] { font-size: 11pt !important; }
+  [class*="text-[12px]"] { font-size: 12pt !important; }
+  [class*="text-[13px]"] { font-size: 13pt !important; }
+  [class*="text-[14px]"] { font-size: 14pt !important; }
+`;
+
+/** CSS de página en horizontal (apaisada) reconocido por Word, vía la sintaxis "mso". */
+const WORD_LANDSCAPE_CSS = `
+  @page Section1 { size: 842.0pt 595.0pt; mso-page-orientation: landscape; }
+  div.Section1 { page: Section1; }
 `;
 
 /** Envuelve el HTML de un documento imprimible en un shell reconocible por Word (formato HTML/MHTML clásico). */
-export function buildWordDocument(innerHtml: string, title: string): string {
+export function buildWordDocument(innerHtml: string, title: string, opts?: { landscape?: boolean }): string {
+  const landscape = Boolean(opts?.landscape);
+  const body = landscape ? `<div class="Section1">${innerHtml}</div>` : innerHtml;
   return `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
 <head>
@@ -72,10 +94,10 @@ export function buildWordDocument(innerHtml: string, title: string): string {
 </w:WordDocument>
 </xml>
 <![endif]-->
-<style>${WORD_EXPORT_CSS}</style>
+<style>${WORD_EXPORT_CSS}${landscape ? WORD_LANDSCAPE_CSS : ""}</style>
 </head>
 <body>
-${innerHtml}
+${body}
 </body>
 </html>`;
 }
