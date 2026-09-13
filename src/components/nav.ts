@@ -53,21 +53,26 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/eneis/reporte-avances", label: "Reporte de avances por materia", icon: "📈", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "ENEIS" },
 
   // Informes
-  { href: "/reportes", label: "Reportes", icon: "📈", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Informes" },
-  { href: "/reportes/ejecutivo", label: "Rendición al Distrito", icon: "🏛️", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD", "DISTRITO"], group: "Informes" },
-  { href: "/reportes/estadisticas", label: "Cuadros estadísticos", icon: "📊", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Informes" },
-  { href: "/juntas-curso", label: "Juntas de curso", icon: "📑", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Informes" },
+  { href: "/reportes", label: "Reportes", icon: "📊", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Informes" },
+  { href: "/reportes/ejecutivo", label: "Rendición al Distrito", icon: "🏢", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD", "DISTRITO"], group: "Informes" },
+  { href: "/reportes/estadisticas", label: "Cuadros estadísticos", icon: "📈", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Informes" },
+  { href: "/juntas-curso", label: "Juntas de curso", icon: "👨‍🏫", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Informes" },
   { href: "/informe-gestion", label: "Informe de fin de gestión", icon: "📋", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD", "DISTRITO"], group: "Informes" },
 
+  // Extramural
+  { href: "/extramural/visitas", label: "Visitas domiciliarias", icon: "🏠", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Extramural" },
+  { href: "/extramural/redes", label: "Redes de apoyo", icon: "🤝", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Extramural" },
+  { href: "/extramural/riesgos", label: "Riesgos comunitarios", icon: "⚠️", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Extramural" },
+  { href: "/extramural/mapa", label: "Mapa interactivo", icon: "🗺️", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Extramural" },
 
   // Administración
   { href: "/distributivo", label: "Distributivo DECE", icon: "👥", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Administración" },
-  { href: "/anios-lectivos", label: "Años lectivos", icon: "🗓️", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Administración" },
-  { href: "/pasantes", label: "Pasantes y voluntarios", icon: "🤝", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Administración" },
-  { href: "/usuarios", label: "Usuarios", icon: "👤", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Administración" },
-  { href: "/institucion", label: "Mi institución", icon: "🏛️", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Administración" },
+  { href: "/anios-lectivos", label: "Años lectivos", icon: "📅", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Administración" },
+  { href: "/pasantes", label: "Pasantes y voluntarios", icon: "🎓", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Administración" },
+  { href: "/usuarios", label: "Usuarios", icon: "👥", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Administración" },
+  { href: "/institucion", label: "Mi institución", icon: "🏢", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Administración" },
   { href: "/respaldos", label: "Copias de seguridad", icon: "💾", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Administración" },
-  { href: "/auditoria", label: "Auditoría", icon: "📜", roles: ["SUPERADMIN", "ADMIN", "DISTRITO"], group: "Administración" },
+  { href: "/auditoria", label: "Auditoría", icon: "🔍", roles: ["SUPERADMIN", "ADMIN", "DISTRITO"], group: "Administración" },
 
   // Cuenta
   { href: "/perfil", label: "Mi perfil", icon: "👤", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD", "DOCENTE"], group: "Cuenta" },
@@ -80,6 +85,7 @@ export const GROUP_ORDER = [
   "Orientación Vocacional y Profesional (OVP)",
   "ENEIS",
   "Informes",
+  "Extramural",
   "Administración",
   "Cuenta",
 ];

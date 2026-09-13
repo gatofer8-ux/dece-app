@@ -222,6 +222,20 @@ export async function updateReferralStatus(referralId: string, caseId: string, f
   revalidatePath("/derivaciones");
 }
 
+export async function updateReferralKanbanStatus(referralId: string, caseId: string, status: string) {
+  const session = await requireRole(["ADMIN", "DECE"]);
+  const institutionId = requireInstitutionId(session);
+  requireOwnedCase(caseId, institutionId);
+
+  db.prepare(
+    `UPDATE referrals SET status=?, updated_at=datetime('now') WHERE id=? AND case_file_id=?`
+  ).run(status, referralId, caseId);
+
+  logAudit({ userId: session.user.id, action: "EDITAR", entityType: "Referral", entityId: referralId, institutionId });
+  revalidatePath(`/casos/${caseId}`);
+  revalidatePath("/derivaciones");
+}
+
 /** Borra una derivación duplicada o registrada por error (ronda 19). */
 export async function deleteReferral(referralId: string, caseId: string) {
   const session = await requireRole(["ADMIN", "DECE"]);
