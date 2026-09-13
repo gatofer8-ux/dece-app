@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { parchisAudio } from "@/lib/parchis/parchisAudio";
 
 interface ParchisDiceProps {
@@ -8,183 +8,244 @@ interface ParchisDiceProps {
   isRolling: boolean;
   disabled: boolean;
   consecutiveSixes: number;
+  focused?: boolean;
   onRoll: (result: number) => void;
 }
+
+// Mapeo exacto de rotaciones 3D para que cada cara quede de frente
+const DICE_ROTATIONS: Record<number, { x: number; y: number }> = {
+  1: { x: 0, y: 0 },
+  2: { x: 0, y: -90 },
+  3: { x: 0, y: 90 },
+  4: { x: -90, y: 0 },
+  5: { x: 90, y: 0 },
+  6: { x: 0, y: 180 },
+};
 
 export const ParchisDice: React.FC<ParchisDiceProps> = ({
   value,
   isRolling,
   disabled,
   consecutiveSixes,
+  focused = true,
   onRoll,
 }) => {
   const [manualMode, setManualMode] = useState(false);
   const [animating, setAnimating] = useState(false);
+  const [revealingNumber, setRevealingNumber] = useState<number | null>(null);
+  const [cubeRotation, setCubeRotation] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  const rollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const revealTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (rollTimeoutRef.current) clearTimeout(rollTimeoutRef.current);
+      if (revealTimeoutRef.current) clearTimeout(revealTimeoutRef.current);
+    };
+  }, []);
+
+  // Actualizar rotación si cambia el valor externamente
+  useEffect(() => {
+    if (value && DICE_ROTATIONS[value] && !animating) {
+      setCubeRotation(DICE_ROTATIONS[value]);
+    }
+  }, [value, animating]);
 
   const handleRollClick = () => {
-    if (disabled || isRolling || animating) return;
+    if (disabled || isRolling || animating || revealingNumber !== null) return;
 
     setAnimating(true);
+    setRevealingNumber(null);
     parchisAudio.playDiceRoll();
 
-    // Animación de giro de dados de 650ms
-    setTimeout(() => {
-      const outcome = Math.floor(Math.random() * 6) + 1;
+    // Generar resultado
+    const outcome = Math.floor(Math.random() * 6) + 1;
+    const targetBase = DICE_ROTATIONS[outcome];
+
+    // Múltiples giros de 360° para realismo físico
+    const spinsX = (Math.floor(Math.random() * 2) + 2) * 360;
+    const spinsY = (Math.floor(Math.random() * 2) + 2) * 360;
+
+    setCubeRotation({
+      x: targetBase.x + spinsX,
+      y: targetBase.y + spinsY,
+    });
+
+    // 1. Giro del dado (850ms)
+    rollTimeoutRef.current = setTimeout(() => {
       setAnimating(false);
-      onRoll(outcome);
-    }, 650);
+      setRevealingNumber(outcome);
+
+      // 2. Pausa de revelación clara para el auditorio (1200ms)
+      revealTimeoutRef.current = setTimeout(() => {
+        setRevealingNumber(null);
+        onRoll(outcome);
+      }, 1200);
+    }, 850);
   };
 
   const handleManualSelect = (num: number) => {
-    if (disabled) return;
+    if (disabled || animating) return;
     parchisAudio.playDiceRoll();
-    onRoll(num);
+    setCubeRotation(DICE_ROTATIONS[num]);
+    setRevealingNumber(num);
+
+    revealTimeoutRef.current = setTimeout(() => {
+      setRevealingNumber(null);
+      onRoll(num);
+    }, 800);
   };
 
-  const renderDots = (num: number) => {
-    switch (num) {
-      case 1:
-        return (
-          <div className="flex items-center justify-center w-full h-full">
-            <span className="w-6 h-6 rounded-full bg-rose-600 shadow-sm ring-2 ring-rose-300" />
-          </div>
-        );
-      case 2:
-        return (
-          <div className="flex justify-between w-full h-full p-2.5">
-            <span className="w-4 h-4 rounded-full bg-slate-900" />
-            <span className="w-4 h-4 rounded-full bg-slate-900 self-end" />
-          </div>
-        );
-      case 3:
-        return (
-          <div className="flex justify-between w-full h-full p-2.5">
-            <span className="w-4 h-4 rounded-full bg-slate-900" />
-            <span className="w-4 h-4 rounded-full bg-slate-900 self-center" />
-            <span className="w-4 h-4 rounded-full bg-slate-900 self-end" />
-          </div>
-        );
-      case 4:
-        return (
-          <div className="grid grid-cols-2 gap-3.5 w-full h-full p-2.5 place-items-center">
-            <span className="w-4 h-4 rounded-full bg-slate-900" />
-            <span className="w-4 h-4 rounded-full bg-slate-900" />
-            <span className="w-4 h-4 rounded-full bg-slate-900" />
-            <span className="w-4 h-4 rounded-full bg-slate-900" />
-          </div>
-        );
-      case 5:
-        return (
-          <div className="relative w-full h-full p-2.5">
-            <div className="grid grid-cols-2 gap-3.5 h-full place-items-center">
-              <span className="w-4 h-4 rounded-full bg-slate-900" />
-              <span className="w-4 h-4 rounded-full bg-slate-900" />
-              <span className="w-4 h-4 rounded-full bg-slate-900" />
-              <span className="w-4 h-4 rounded-full bg-slate-900" />
-            </div>
-            <span className="absolute inset-0 m-auto w-4 h-4 rounded-full bg-slate-900" />
-          </div>
-        );
-      case 6:
-        return (
-          <div className="grid grid-cols-2 grid-rows-3 gap-2 w-full h-full p-2.5 place-items-center">
-            <span className="w-3.5 h-3.5 rounded-full bg-slate-900" />
-            <span className="w-3.5 h-3.5 rounded-full bg-slate-900" />
-            <span className="w-3.5 h-3.5 rounded-full bg-slate-900" />
-            <span className="w-3.5 h-3.5 rounded-full bg-slate-900" />
-            <span className="w-3.5 h-3.5 rounded-full bg-slate-900" />
-            <span className="w-3.5 h-3.5 rounded-full bg-slate-900" />
-          </div>
-        );
-      default:
-        return (
-          <div className="flex items-center justify-center w-full h-full text-slate-400 font-black text-2xl">
-            🎲
-          </div>
-        );
-    }
-  };
+  // Renderizado de las 6 caras del cubo con puntos clásicos grabados
+  const renderPip = (colorClass: string = "bg-slate-900") => (
+    <span
+      className={`w-3.5 h-3.5 rounded-full ${colorClass} shadow-inner transform transition-transform`}
+    />
+  );
 
   return (
-    <div className="flex flex-col items-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-5 rounded-3xl border-2 border-amber-400/40 shadow-xl text-white">
-      {/* Selector de modo */}
+    <div
+      className={`relative flex flex-col items-center bg-[#FDFBF7] p-5 rounded-3xl border-2 transition-all duration-500 shadow-md ${
+        focused
+          ? "border-amber-500 ring-4 ring-amber-400/30 scale-100"
+          : "border-slate-300 opacity-80 scale-95"
+      }`}
+    >
+      {/* Selector de modo y cabecera */}
       <div className="flex items-center justify-between w-full mb-4">
-        <span className="text-2xs font-black text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
-          <span>👑</span> {manualMode ? "Dado Físico de Taller" : "Dado Monopolio 3D"}
+        <span className="text-2xs font-black text-amber-800 uppercase tracking-widest flex items-center gap-1.5">
+          <span>🎲</span> {manualMode ? "Dado Físico de Taller" : "Dado 3D Oficial"}
         </span>
         <button
           type="button"
           onClick={() => setManualMode(!manualMode)}
-          className="text-2xs font-bold text-blue-300 hover:text-white underline transition-colors"
+          className="text-2xs font-bold text-blue-700 hover:text-blue-900 underline transition-colors cursor-pointer"
         >
-          {manualMode ? "🔄 Modo Virtual" : "🎯 Entrada Manual"}
+          {manualMode ? "🔄 Usar 3D Virtual" : "🎯 Entrada Manual"}
         </button>
       </div>
 
       {!manualMode ? (
-        <div className="flex flex-col items-center gap-4">
-          {/* Cubo 3D de Monopolio */}
-          <button
-            type="button"
+        <div className="flex flex-col items-center gap-4 my-2">
+          {/* Escenario 3D con perspectiva para el cubo */}
+          <div
+            className="w-32 h-32 flex items-center justify-center cursor-pointer select-none"
+            style={{ perspective: "800px" }}
             onClick={handleRollClick}
-            disabled={disabled || isRolling || animating}
-            className={`relative group focus:outline-none transition-all transform ${
-              disabled
-                ? "opacity-50 cursor-not-allowed scale-95"
-                : "hover:scale-105 active:scale-95 cursor-pointer"
-            }`}
-            aria-label="Lanzar Dado"
           >
             <div
-              className={`w-28 h-28 rounded-3xl bg-gradient-to-br from-white via-slate-100 to-slate-300 border-4 border-amber-300 shadow-2xl flex items-center justify-center transition-all duration-500 ${
-                animating
-                  ? "animate-spin ring-8 ring-amber-400/60 rotate-180 scale-110"
-                  : "group-hover:border-amber-400 group-hover:shadow-amber-500/20"
-              }`}
+              className="relative w-20 h-20 transition-transform duration-[850ms] ease-out"
+              style={{
+                transformStyle: "preserve-3d",
+                transform: `rotateX(${cubeRotation.x}deg) rotateY(${cubeRotation.y}deg)`,
+              }}
             >
-              {renderDots(value || 0)}
+              {/* Cara 1 (Frontal - Punto rojo central) */}
+              <div
+                className="absolute inset-0 bg-white border-2 border-slate-400 rounded-2xl shadow-md flex items-center justify-center"
+                style={{ transform: "rotateY(0deg) translateZ(40px)" }}
+              >
+                <span className="w-5 h-5 rounded-full bg-rose-600 ring-2 ring-rose-300 shadow-sm" />
+              </div>
+
+              {/* Cara 6 (Trasera - 6 puntos) */}
+              <div
+                className="absolute inset-0 bg-white border-2 border-slate-400 rounded-2xl shadow-md grid grid-cols-2 grid-rows-3 p-2 place-items-center"
+                style={{ transform: "rotateY(180deg) translateZ(40px)" }}
+              >
+                {renderPip()}
+                {renderPip()}
+                {renderPip()}
+                {renderPip()}
+                {renderPip()}
+                {renderPip()}
+              </div>
+
+              {/* Cara 2 (Derecha - 2 puntos) */}
+              <div
+                className="absolute inset-0 bg-white border-2 border-slate-400 rounded-2xl shadow-md flex justify-between p-2.5"
+                style={{ transform: "rotateY(90deg) translateZ(40px)" }}
+              >
+                {renderPip()}
+                <span className="self-end">{renderPip()}</span>
+              </div>
+
+              {/* Cara 3 (Izquierda - 3 puntos) */}
+              <div
+                className="absolute inset-0 bg-white border-2 border-slate-400 rounded-2xl shadow-md flex justify-between p-2.5"
+                style={{ transform: "rotateY(-90deg) translateZ(40px)" }}
+              >
+                {renderPip()}
+                <span className="self-center">{renderPip()}</span>
+                <span className="self-end">{renderPip()}</span>
+              </div>
+
+              {/* Cara 4 (Superior - 4 puntos) */}
+              <div
+                className="absolute inset-0 bg-white border-2 border-slate-400 rounded-2xl shadow-md grid grid-cols-2 p-2.5 place-items-center gap-2"
+                style={{ transform: "rotateX(90deg) translateZ(40px)" }}
+              >
+                {renderPip()}
+                {renderPip()}
+                {renderPip()}
+                {renderPip()}
+              </div>
+
+              {/* Cara 5 (Inferior - 5 puntos) */}
+              <div
+                className="absolute inset-0 bg-white border-2 border-slate-400 rounded-2xl shadow-md relative p-2.5"
+                style={{ transform: "rotateX(-90deg) translateZ(40px)" }}
+              >
+                <div className="grid grid-cols-2 h-full place-items-center gap-2">
+                  {renderPip()}
+                  {renderPip()}
+                  {renderPip()}
+                  {renderPip()}
+                </div>
+                <div className="absolute inset-0 m-auto w-3.5 h-3.5">{renderPip()}</div>
+              </div>
             </div>
+          </div>
 
-            {/* Baliza pulsante cuando es hora de tirar */}
-            {!disabled && !value && !animating && (
-              <span className="absolute -top-2 -right-2 flex h-5 w-5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-5 w-5 bg-emerald-500 border-2 border-white"></span>
-              </span>
-            )}
-          </button>
+          {/* Banner de revelación clara tras detenerse */}
+          {revealingNumber !== null && (
+            <div className="animate-bounce px-4 py-1.5 rounded-full bg-emerald-600 text-white font-black text-sm tracking-wide shadow-lg border-2 border-emerald-300">
+              ¡SACASTE UN {revealingNumber}!
+            </div>
+          )}
 
-          {/* Gran Botón Estilo Monopolio GO */}
+          {/* Botón de Tirar Dado estilo Monopolio */}
           <button
             type="button"
             onClick={handleRollClick}
-            disabled={disabled || isRolling || animating}
-            className={`w-full px-6 py-3.5 rounded-2xl text-base font-black uppercase tracking-wider transition-all shadow-xl ${
-              disabled
-                ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed"
-                : "bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 hover:from-emerald-400 hover:to-green-500 text-white border-2 border-emerald-300 ring-4 ring-emerald-500/30 active:scale-95 shadow-emerald-900/50"
+            disabled={disabled || isRolling || animating || revealingNumber !== null}
+            className={`w-full px-6 py-3.5 rounded-2xl text-sm font-black uppercase tracking-wider transition-all shadow-md cursor-pointer ${
+              disabled || animating || revealingNumber !== null
+                ? "bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed"
+                : "bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-600 text-white border-2 border-red-800 shadow-rose-900/30 active:scale-95 ring-4 ring-red-400/20"
             }`}
           >
-            {animating ? "Tirando..." : "🎲 ¡TIRAR DADO!"}
+            {animating ? "Girando..." : revealingNumber !== null ? "¡Revelando!" : "🎲 ¡Lanzar Dado!"}
           </button>
         </div>
       ) : (
-        /* Modo Manual para Facilitadores con dados de espuma */
-        <div className="w-full space-y-2">
-          <p className="text-2xs text-slate-400 text-center">
-            Selecciona el número obtenido en el dado de espuma del taller:
+        /* Modo Manual para el facilitador con dado gigante de espuma */
+        <div className="w-full space-y-2.5 my-2">
+          <p className="text-2xs text-slate-600 text-center font-semibold">
+            Ingresa el número obtenido con el dado físico en el taller:
           </p>
           <div className="grid grid-cols-6 gap-2">
             {[1, 2, 3, 4, 5, 6].map((num) => (
               <button
                 key={num}
                 type="button"
-                disabled={disabled}
+                disabled={disabled || animating}
                 onClick={() => handleManualSelect(num)}
-                className={`h-12 rounded-xl font-black text-lg transition-all border ${
+                className={`h-12 rounded-xl font-black text-lg transition-all border cursor-pointer ${
                   disabled
-                    ? "bg-slate-800 text-slate-600 border-slate-700 cursor-not-allowed"
-                    : "bg-slate-800 hover:bg-emerald-600 hover:border-emerald-400 text-white border-slate-600 active:scale-95 shadow-md"
+                    ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                    : "bg-white hover:bg-red-600 hover:text-white hover:border-red-700 text-slate-800 border-slate-300 active:scale-95 shadow-xs"
                 }`}
               >
                 {num}
@@ -196,10 +257,10 @@ export const ParchisDice: React.FC<ParchisDiceProps> = ({
 
       {/* Racha de seises */}
       {consecutiveSixes > 0 && (
-        <div className="mt-3 text-2xs font-extrabold px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 animate-pulse text-center">
-          {consecutiveSixes === 1 && "🔥 ¡Sacó 6! Repite lanzamiento tras resolver"}
+        <div className="mt-2 text-2xs font-extrabold px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 animate-pulse text-center">
+          {consecutiveSixes === 1 && "🔥 ¡Sacó 6! Vuelve a lanzar tras resolver el reto"}
           {consecutiveSixes === 2 && "⚡ ¡2do seis! Un 3er seis cede el avance por solidaridad"}
-          {consecutiveSixes >= 3 && "🤝 ¡3er seis consecutivo! Se cede el avance por solidaridad"}
+          {consecutiveSixes >= 3 && "🤝 ¡3er seis consecutivo! Se cede el avance al equipo en desventaja"}
         </div>
       )}
     </div>
