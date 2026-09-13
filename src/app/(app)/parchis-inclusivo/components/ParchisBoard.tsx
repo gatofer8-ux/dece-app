@@ -3,14 +3,11 @@
 import React, { useState } from "react";
 import type { Team, PawnState, TeamColor, SquareDefinition } from "@/lib/parchis/types";
 import {
-  BOARD_SIZE,
-  CELL_SIZE,
-  TRACK_COORDS,
-  RAMP_COORDS,
-  BASE_COORDS,
-  CENTER_META_BOUNDS,
-} from "@/lib/parchis/boardLayout";
-import { SQUARES_CATALOG } from "@/lib/parchis/parchisCatalog";
+  MONOPOLY_BOARD_SIZE,
+  MONOPOLY_TILES,
+  MONOPOLY_CENTER_STAGE,
+} from "@/lib/parchis/monopolyLayout";
+import { SQUARES_CATALOG, EJES_INFO } from "@/lib/parchis/parchisCatalog";
 import { hasBarrierAtPosition } from "@/lib/parchis/parchisEngine";
 
 interface ParchisBoardProps {
@@ -32,27 +29,13 @@ export const ParchisBoard: React.FC<ParchisBoardProps> = ({
 }) => {
   const [hoveredSquare, setHoveredSquare] = useState<number | null>(null);
 
-  // Mapeo de fichas por posición en el circuito (1..68)
-  const pawnsByTrackSquare: Record<number, PawnState[]> = {};
-  // Mapeo de fichas por rampa privada
-  const pawnsByRamp: Record<TeamColor, Record<number, PawnState[]>> = {
-    AMARILLO: {},
-    VERDE: {},
-    VIOLETA: {},
-    AZUL: {},
-  };
-
+  // Mapear fichas activas por casillero en el circuito (1..68)
+  const pawnsBySquare: Record<number, PawnState[]> = {};
   teams.forEach((t) => {
     t.pawns.forEach((p) => {
-      if (!p.isAtBase && !p.isAtGoal) {
-        if (p.position >= 1 && p.position <= 68) {
-          pawnsByTrackSquare[p.position] = pawnsByTrackSquare[p.position] || [];
-          pawnsByTrackSquare[p.position].push(p);
-        } else if (p.position >= 101 && p.position <= 107) {
-          const step = p.position - 100;
-          pawnsByRamp[p.teamColor][step] = pawnsByRamp[p.teamColor][step] || [];
-          pawnsByRamp[p.teamColor][step].push(p);
-        }
+      if (!p.isAtBase && !p.isAtGoal && p.position >= 1 && p.position <= 68) {
+        pawnsBySquare[p.position] = pawnsBySquare[p.position] || [];
+        pawnsBySquare[p.position].push(p);
       }
     });
   });
@@ -60,314 +43,537 @@ export const ParchisBoard: React.FC<ParchisBoardProps> = ({
   const getTeamColorHex = (c: TeamColor) => {
     switch (c) {
       case "AMARILLO":
-        return "#EAB308";
+        return "#EAB308"; // Amarillo brillante
       case "VERDE":
-        return "#10B981";
+        return "#10B981"; // Esmeralda
       case "VIOLETA":
-        return "#8B5CF6";
+        return "#8B5CF6"; // Violeta
       case "AZUL":
-        return "#0284C7";
+        return "#0284C7"; // Azul cielo
     }
   };
 
-  const getTeamLightHex = (c: TeamColor) => {
+  const getTeamSoftBg = (c: TeamColor) => {
     switch (c) {
       case "AMARILLO":
-        return "#FEF9C3";
+        return "#FEF08A";
       case "VERDE":
-        return "#D1FAE5";
+        return "#BBF7D0";
       case "VIOLETA":
-        return "#EDE9FE";
+        return "#DDD6FE";
       case "AZUL":
-        return "#E0F2FE";
+        return "#BAE6FD";
     }
   };
 
   return (
-    <div className="relative w-full max-w-[850px] aspect-square mx-auto select-none">
+    <div className="relative w-full max-w-[960px] aspect-square mx-auto select-none">
       <svg
-        viewBox={`0 0 ${BOARD_SIZE} ${BOARD_SIZE}`}
-        className="w-full h-full rounded-3xl shadow-2xl bg-white border-4 border-slate-800"
+        viewBox={`0 0 ${MONOPOLY_BOARD_SIZE} ${MONOPOLY_BOARD_SIZE}`}
+        className="w-full h-full rounded-3xl shadow-2xl bg-[#0f172a] border-4 border-slate-900"
       >
         <defs>
-          <radialGradient id="metaGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#FDE047" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#CA8A04" stopOpacity="0.2" />
-          </radialGradient>
-          <filter id="pawnShadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="1" dy="2" stdDeviation="2" floodOpacity="0.35" />
+          <filter id="tileShadow" x="-10%" y="-10%" width="120%" height="120%">
+            <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.2" />
           </filter>
+          <filter id="pawnShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="1" dy="3" stdDeviation="3" floodOpacity="0.45" />
+          </filter>
+          <linearGradient id="boardFelt" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1e293b" />
+            <stop offset="50%" stopColor="#0f172a" />
+            <stop offset="100%" stopColor="#1e293b" />
+          </linearGradient>
+          <linearGradient id="goldTrim" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FDE047" />
+            <stop offset="50%" stopColor="#CA8A04" />
+            <stop offset="100%" stopColor="#FDE047" />
+          </linearGradient>
         </defs>
 
-        {/* 1. BASES EN LAS ESQUINAS ("Inicia el camino inclusivo") */}
-        {(["AMARILLO", "VERDE", "VIOLETA", "AZUL"] as TeamColor[]).map((color) => {
-          const base = BASE_COORDS[color];
-          const team = teams.find((t) => t.color === color);
-          const colorHex = getTeamColorHex(color);
-          const lightHex = getTeamLightHex(color);
-          const pawnsAtBase = team ? team.pawns.filter((p) => p.isAtBase) : [];
+        {/* 1. FONDO PRINCIPAL DEL TABLERO DE MONOPOLIO */}
+        <rect
+          x="0"
+          y="0"
+          width={MONOPOLY_BOARD_SIZE}
+          height={MONOPOLY_BOARD_SIZE}
+          fill="url(#boardFelt)"
+        />
 
-          let title = "IDENTIDAD";
-          if (color === "VERDE") title = "DIVERSIDAD";
-          if (color === "VIOLETA") title = "JUSTICIA";
-          if (color === "AZUL") title = "CAMBIO SOCIAL";
+        {/* Marco dorado interior delimitador */}
+        <rect
+          x="116"
+          y="116"
+          width="888"
+          height="888"
+          fill="none"
+          stroke="url(#goldTrim)"
+          strokeWidth="3"
+          rx="12"
+          opacity="0.8"
+        />
 
-          return (
-            <g key={color} className="transition-all">
-              {/* Contenedor cuadrante */}
-              <rect
-                x={base.x}
-                y={base.y}
-                width={base.width}
-                height={base.height}
-                fill={lightHex}
-                stroke="#1E293B"
-                strokeWidth="3"
-              />
+        {/* 2. ESCENARIO CENTRAL (CENTER STAGE) */}
+        <g id="center-stage">
+          {/* Logo Central de Monopolio Inclusivo */}
+          <g transform="translate(560, 220)">
+            {/* Cinta decorativa */}
+            <rect
+              x="-240"
+              y="-40"
+              width="480"
+              height="70"
+              rx="16"
+              fill="#1e293b"
+              stroke="#ca8a04"
+              strokeWidth="2"
+              filter="url(#tileShadow)"
+            />
+            <text
+              x="0"
+              y="-10"
+              textAnchor="middle"
+              fill="#FDE047"
+              fontSize="24"
+              fontWeight="900"
+              letterSpacing="3"
+            >
+              PARCHÍS INCLUSIVO
+            </text>
+            <text
+              x="0"
+              y="15"
+              textAnchor="middle"
+              fill="#94a3b8"
+              fontSize="12"
+              fontWeight="700"
+              letterSpacing="1"
+            >
+              PROGRAMA «RESPIRAMOS INCLUSIÓN» — WORLD VISION & ACNUR
+            </text>
+          </g>
 
-              {/* Círculo interior de la base */}
-              <circle
-                cx={base.x + base.width / 2}
-                cy={base.y + base.height / 2}
-                r={base.width * 0.38}
-                fill="#FFFFFF"
-                stroke={colorHex}
-                strokeWidth="4"
-              />
+          {/* Emblema central de los 4 Ejes */}
+          <g transform="translate(560, 360)">
+            <circle cx="0" cy="0" r="55" fill="#0f172a" stroke="#ca8a04" strokeWidth="3" />
+            <text x="0" y="-8" textAnchor="middle" fontSize="30">
+              🎲
+            </text>
+            <text
+              x="0"
+              y="22"
+              textAnchor="middle"
+              fill="#e2e8f0"
+              fontSize="11"
+              fontWeight="900"
+            >
+              TABLERO 68
+            </text>
+          </g>
 
-              {/* Título del Eje y Equipo */}
-              <text
-                x={base.x + base.width / 2}
-                y={base.y + base.height * 0.28}
-                textAnchor="middle"
-                fill="#0F172A"
-                fontSize="18"
-                fontWeight="900"
-                letterSpacing="1"
-              >
-                {title}
-              </text>
-              <text
-                x={base.x + base.width / 2}
-                y={base.y + base.height * 0.35}
-                textAnchor="middle"
-                fill={colorHex}
-                fontSize="13"
-                fontWeight="800"
-              >
-                Inicia el camino inclusivo
-              </text>
-
-              {/* Ranuras para fichas en base */}
-              {base.slots.map((slot, sIdx) => {
-                const pawn = pawnsAtBase[sIdx];
-                const isSelectable = pawn && selectablePawnIds.includes(pawn.id);
-
-                return (
-                  <g key={slot.slotIndex}>
-                    <circle
-                      cx={slot.x}
-                      cy={slot.y}
-                      r={CELL_SIZE * 0.45}
-                      fill="#F1F5F9"
-                      stroke="#CBD5E1"
-                      strokeWidth="2"
-                    />
-
-                    {pawn && (
-                      <g
-                        onClick={() => isSelectable && onPawnClick(pawn)}
-                        className={`transition-all ${
-                          isSelectable
-                            ? "cursor-pointer hover:scale-110 active:scale-95"
-                            : "cursor-default"
-                        }`}
-                      >
-                        {isSelectable && (
-                          <circle
-                            cx={slot.x}
-                            cy={slot.y}
-                            r={CELL_SIZE * 0.6}
-                            fill="none"
-                            stroke="#2563EB"
-                            strokeWidth="3"
-                            className="animate-ping opacity-60"
-                          />
-                        )}
+          {/* 4 Refugios de Base de los Equipos en las esquinas del Center Stage */}
+          {/* Base Amarilla (Abajo-Izquierda) */}
+          <g transform="translate(140, 840)">
+            <rect
+              x="0"
+              y="0"
+              width="150"
+              height="110"
+              rx="14"
+              fill="#FEF08A20"
+              stroke="#EAB308"
+              strokeWidth="2"
+            />
+            <text x="75" y="24" textAnchor="middle" fill="#FDE047" fontSize="12" fontWeight="900">
+              BASE AMARILLO
+            </text>
+            <text x="75" y="42" textAnchor="middle" fill="#94a3b8" fontSize="10">
+              Identidad
+            </text>
+            {/* Fichas en base */}
+            <g transform="translate(25, 60)">
+              {teams
+                .find((t) => t.color === "AMARILLO")
+                ?.pawns.filter((p) => p.isAtBase)
+                .map((p, idx) => {
+                  const isSel = selectablePawnIds.includes(p.id);
+                  return (
+                    <g
+                      key={p.id}
+                      transform={`translate(${idx * 32}, 15)`}
+                      onClick={() => isSel && onPawnClick(p)}
+                      className={isSel ? "cursor-pointer" : ""}
+                    >
+                      {isSel && (
                         <circle
-                          cx={slot.x}
-                          cy={slot.y}
-                          r={CELL_SIZE * 0.42}
-                          fill={colorHex}
-                          stroke="#FFFFFF"
+                          cx="12"
+                          cy="0"
+                          r="18"
+                          fill="none"
+                          stroke="#3B82F6"
                           strokeWidth="3"
-                          filter="url(#pawnShadow)"
+                          className="animate-ping"
                         />
-                        <text
-                          x={slot.x}
-                          y={slot.y + 5}
-                          textAnchor="middle"
-                          fill="#FFFFFF"
-                          fontSize="15"
-                          fontWeight="900"
-                        >
-                          {pawn.pawnNumber}
-                        </text>
-                      </g>
-                    )}
-                  </g>
-                );
-              })}
+                      )}
+                      <circle
+                        cx="12"
+                        cy="0"
+                        r="14"
+                        fill="#EAB308"
+                        stroke="#ffffff"
+                        strokeWidth="2.5"
+                        filter="url(#pawnShadow)"
+                      />
+                      <text
+                        x="12"
+                        y="4"
+                        textAnchor="middle"
+                        fill="#ffffff"
+                        fontSize="11"
+                        fontWeight="900"
+                      >
+                        {p.pawnNumber}
+                      </text>
+                    </g>
+                  );
+                })}
             </g>
-          );
-        })}
+          </g>
 
-        {/* 2. CASILLEROS DEL CIRCUITO EXTERIOR (1 a 68) */}
-        {Object.values(TRACK_COORDS).map((coord) => {
-          const isHovered = hoveredSquare === coord.number;
-          const zoneColor = getTeamColorHex(coord.zone);
-          const pawnsHere = pawnsByTrackSquare[coord.number] || [];
-          const barrierInfo = hasBarrierAtPosition(teams, coord.number);
+          {/* Base Verde (Abajo-Derecha) */}
+          <g transform="translate(830, 840)">
+            <rect
+              x="0"
+              y="0"
+              width="150"
+              height="110"
+              rx="14"
+              fill="#BBF7D020"
+              stroke="#10B981"
+              strokeWidth="2"
+            />
+            <text x="75" y="24" textAnchor="middle" fill="#34D399" fontSize="12" fontWeight="900">
+              BASE VERDE
+            </text>
+            <text x="75" y="42" textAnchor="middle" fill="#94a3b8" fontSize="10">
+              Diversidad
+            </text>
+            <g transform="translate(25, 60)">
+              {teams
+                .find((t) => t.color === "VERDE")
+                ?.pawns.filter((p) => p.isAtBase)
+                .map((p, idx) => {
+                  const isSel = selectablePawnIds.includes(p.id);
+                  return (
+                    <g
+                      key={p.id}
+                      transform={`translate(${idx * 32}, 15)`}
+                      onClick={() => isSel && onPawnClick(p)}
+                      className={isSel ? "cursor-pointer" : ""}
+                    >
+                      {isSel && (
+                        <circle
+                          cx="12"
+                          cy="0"
+                          r="18"
+                          fill="none"
+                          stroke="#3B82F6"
+                          strokeWidth="3"
+                          className="animate-ping"
+                        />
+                      )}
+                      <circle
+                        cx="12"
+                        cy="0"
+                        r="14"
+                        fill="#10B981"
+                        stroke="#ffffff"
+                        strokeWidth="2.5"
+                        filter="url(#pawnShadow)"
+                      />
+                      <text
+                        x="12"
+                        y="4"
+                        textAnchor="middle"
+                        fill="#ffffff"
+                        fontSize="11"
+                        fontWeight="900"
+                      >
+                        {p.pawnNumber}
+                      </text>
+                    </g>
+                  );
+                })}
+            </g>
+          </g>
 
-          // Estilo de fondo del casillero
-          let bgFill = "#FFFFFF";
-          if (coord.isExit) {
-            bgFill = getTeamLightHex(coord.zone);
-          } else if (coord.isInclusive) {
-            bgFill = "#F0FDF4"; // Verde suave zona inclusiva
-          } else if (coord.isReturnToStart) {
-            bgFill = "#FFF1F2"; // Rojo suave retroceso
-          } else if (coord.isCuriosity) {
-            bgFill = "#FFFBEB"; // Ámbar suave dato curioso
-          }
+          {/* Base Violeta (Arriba-Derecha) */}
+          <g transform="translate(830, 140)">
+            <rect
+              x="0"
+              y="0"
+              width="150"
+              height="110"
+              rx="14"
+              fill="#DDD6FE20"
+              stroke="#8B5CF6"
+              strokeWidth="2"
+            />
+            <text x="75" y="24" textAnchor="middle" fill="#A78BFA" fontSize="12" fontWeight="900">
+              BASE VIOLETA
+            </text>
+            <text x="75" y="42" textAnchor="middle" fill="#94a3b8" fontSize="10">
+              Justicia
+            </text>
+            <g transform="translate(25, 60)">
+              {teams
+                .find((t) => t.color === "VIOLETA")
+                ?.pawns.filter((p) => p.isAtBase)
+                .map((p, idx) => {
+                  const isSel = selectablePawnIds.includes(p.id);
+                  return (
+                    <g
+                      key={p.id}
+                      transform={`translate(${idx * 32}, 15)`}
+                      onClick={() => isSel && onPawnClick(p)}
+                      className={isSel ? "cursor-pointer" : ""}
+                    >
+                      {isSel && (
+                        <circle
+                          cx="12"
+                          cy="0"
+                          r="18"
+                          fill="none"
+                          stroke="#3B82F6"
+                          strokeWidth="3"
+                          className="animate-ping"
+                        />
+                      )}
+                      <circle
+                        cx="12"
+                        cy="0"
+                        r="14"
+                        fill="#8B5CF6"
+                        stroke="#ffffff"
+                        strokeWidth="2.5"
+                        filter="url(#pawnShadow)"
+                      />
+                      <text
+                        x="12"
+                        y="4"
+                        textAnchor="middle"
+                        fill="#ffffff"
+                        fontSize="11"
+                        fontWeight="900"
+                      >
+                        {p.pawnNumber}
+                      </text>
+                    </g>
+                  );
+                })}
+            </g>
+          </g>
+
+          {/* Base Azul (Arriba-Izquierda) */}
+          <g transform="translate(140, 140)">
+            <rect
+              x="0"
+              y="0"
+              width="150"
+              height="110"
+              rx="14"
+              fill="#BAE6FD20"
+              stroke="#0284C7"
+              strokeWidth="2"
+            />
+            <text x="75" y="24" textAnchor="middle" fill="#38BDF8" fontSize="12" fontWeight="900">
+              BASE AZUL
+            </text>
+            <text x="75" y="42" textAnchor="middle" fill="#94a3b8" fontSize="10">
+              Cambio Social
+            </text>
+            <g transform="translate(25, 60)">
+              {teams
+                .find((t) => t.color === "AZUL")
+                ?.pawns.filter((p) => p.isAtBase)
+                .map((p, idx) => {
+                  const isSel = selectablePawnIds.includes(p.id);
+                  return (
+                    <g
+                      key={p.id}
+                      transform={`translate(${idx * 32}, 15)`}
+                      onClick={() => isSel && onPawnClick(p)}
+                      className={isSel ? "cursor-pointer" : ""}
+                    >
+                      {isSel && (
+                        <circle
+                          cx="12"
+                          cy="0"
+                          r="18"
+                          fill="none"
+                          stroke="#3B82F6"
+                          strokeWidth="3"
+                          className="animate-ping"
+                        />
+                      )}
+                      <circle
+                        cx="12"
+                        cy="0"
+                        r="14"
+                        fill="#0284C7"
+                        stroke="#ffffff"
+                        strokeWidth="2.5"
+                        filter="url(#pawnShadow)"
+                      />
+                      <text
+                        x="12"
+                        y="4"
+                        textAnchor="middle"
+                        fill="#ffffff"
+                        fontSize="11"
+                        fontWeight="900"
+                      >
+                        {p.pawnNumber}
+                      </text>
+                    </g>
+                  );
+                })}
+            </g>
+          </g>
+        </g>
+
+        {/* 3. PISTA PERIMÉTRICA DE CASILLAS ESTILO MONOPOLIO (1 a 68) */}
+        {Object.values(MONOPOLY_TILES).map((tile) => {
+          const isHovered = hoveredSquare === tile.number;
+          const pawnsHere = pawnsBySquare[tile.number] || [];
+          const barrierInfo = hasBarrierAtPosition(teams, tile.number);
+          const colorHex = getTeamColorHex(tile.zone);
 
           return (
             <g
-              key={coord.number}
-              onMouseEnter={() => setHoveredSquare(coord.number)}
+              key={tile.number}
+              onMouseEnter={() => setHoveredSquare(tile.number)}
               onMouseLeave={() => setHoveredSquare(null)}
               onClick={() => {
-                const def = SQUARES_CATALOG.find((s) => s.number === coord.number);
+                const def = SQUARES_CATALOG.find((s) => s.number === tile.number);
                 if (def && onInspectSquare) onInspectSquare(def);
               }}
               className="cursor-pointer transition-all"
             >
-              {/* Celda */}
+              {/* Cuerpo de la casilla de propiedad */}
               <rect
-                x={coord.x}
-                y={coord.y}
-                width={coord.width}
-                height={coord.height}
-                fill={isHovered ? "#F8FAFC" : bgFill}
-                stroke={isHovered ? zoneColor : "#334155"}
-                strokeWidth={isHovered ? "2.5" : "1.2"}
+                x={tile.x}
+                y={tile.y}
+                width={tile.width}
+                height={tile.height}
+                fill={isHovered ? "#f8fafc" : "#ffffff"}
+                stroke={isHovered ? "#3b82f6" : "#334155"}
+                strokeWidth={isHovered ? "3" : "1.5"}
+                rx="3"
               />
 
-              {/* Borde de zona de color */}
-              <line
-                x1={coord.x}
-                y1={coord.y + 1}
-                x2={coord.x + coord.width}
-                y2={coord.y + 1}
-                stroke={zoneColor}
-                strokeWidth="3"
+              {/* Banda de color tipo propiedad de Monopolio */}
+              <rect
+                x={tile.headerBar.x}
+                y={tile.headerBar.y}
+                width={tile.headerBar.width}
+                height={tile.headerBar.height}
+                fill={colorHex}
               />
 
-              {/* Número del Casillero */}
-              <text
-                x={coord.x + 5}
-                y={coord.y + 13}
-                fill="#475569"
-                fontSize="9"
-                fontWeight="800"
-              >
-                {coord.number}
-              </text>
+              {/* Número y Etiqueta en la casilla */}
+              {tile.isCorner ? (
+                /* Diseño especial para las 4 esquinas icónicas */
+                <g>
+                  <text
+                    x={tile.centerX}
+                    y={tile.centerY - 10}
+                    textAnchor="middle"
+                    fill="#0f172a"
+                    fontSize="13"
+                    fontWeight="900"
+                  >
+                    #{tile.number} {tile.shortTitle}
+                  </text>
+                  <text
+                    x={tile.centerX}
+                    y={tile.centerY + 16}
+                    textAnchor="middle"
+                    fontSize="24"
+                  >
+                    {tile.number === 5
+                      ? "🚩"
+                      : tile.number === 22
+                      ? "🌱"
+                      : tile.number === 39
+                      ? "⚖️"
+                      : "🌊"}
+                  </text>
+                </g>
+              ) : (
+                /* Casilla de borde regular */
+                <g>
+                  {/* Número de Casillero */}
+                  <text
+                    x={tile.side === "LEFT" || tile.side === "RIGHT" ? tile.centerX : tile.centerX}
+                    y={
+                      tile.side === "BOTTOM"
+                        ? tile.y + 17
+                        : tile.side === "TOP"
+                        ? tile.y + 102
+                        : tile.centerY - 8
+                    }
+                    textAnchor="middle"
+                    fill="#ffffff"
+                    fontSize="10"
+                    fontWeight="900"
+                  >
+                    #{tile.number}
+                  </text>
 
-              {/* Íconos visuales de tipo de casillero */}
-              {coord.isInclusive && (
-                <text
-                  x={coord.centerX + 7}
-                  y={coord.y + 14}
-                  textAnchor="middle"
-                  fontSize="12"
-                >
-                  <title>Zona Inclusiva</title>
-                  🤝
-                </text>
-              )}
-              {coord.isReturnToStart && (
-                <text
-                  x={coord.centerX + 7}
-                  y={coord.y + 14}
-                  textAnchor="middle"
-                  fontSize="12"
-                >
-                  <title>Retrocede al inicio</title>
-                  ⚠️
-                </text>
-              )}
-              {coord.isCuriosity && (
-                <text
-                  x={coord.centerX + 7}
-                  y={coord.y + 14}
-                  textAnchor="middle"
-                  fontSize="12"
-                >
-                  <title>Dato curioso</title>
-                  💡
-                </text>
-              )}
-              {coord.isSpecialAdvance && (
-                <text
-                  x={coord.centerX + 7}
-                  y={coord.y + 14}
-                  textAnchor="middle"
-                  fontSize="12"
-                >
-                  <title>Avanza 2</title>
-                  🚀
-                </text>
-              )}
-              {coord.isActivity && (
-                <text
-                  x={coord.centerX + 7}
-                  y={coord.y + 14}
-                  textAnchor="middle"
-                  fontSize="12"
-                >
-                  <title>Actividad grupal</title>
-                  🎭
-                </text>
+                  {/* Ícono de tipo de casillero */}
+                  <text
+                    x={tile.centerX}
+                    y={tile.centerY + (tile.side === "LEFT" || tile.side === "RIGHT" ? 14 : 6)}
+                    textAnchor="middle"
+                    fontSize="13"
+                  >
+                    {tile.isInclusive && "🤝"}
+                    {tile.isReturnToStart && "⚠️"}
+                    {tile.isCuriosity && "💡"}
+                    {tile.isSpecialAdvance && "🚀"}
+                    {tile.isActivity && "🎭"}
+                  </text>
+                </g>
               )}
 
-              {/* BARRERA CONTRA LA DISCRIMINACIÓN */}
+              {/* BARRERA CONTRA LA DISCRIMINACIÓN (Efecto Escudo Monopolio) */}
               {barrierInfo.hasBarrier && (
                 <g>
                   <circle
-                    cx={coord.centerX}
-                    cy={coord.centerY}
-                    r={CELL_SIZE * 0.45}
+                    cx={tile.centerX}
+                    cy={tile.centerY}
+                    r="24"
                     fill="none"
                     stroke="#EF4444"
-                    strokeWidth="2.5"
-                    strokeDasharray="3 2"
+                    strokeWidth="3"
+                    strokeDasharray="4 2"
                     className="animate-spin"
                   />
                   <rect
-                    x={coord.x + 2}
-                    y={coord.y + coord.height - 13}
-                    width={coord.width - 4}
-                    height="11"
-                    rx="3"
+                    x={tile.centerX - 24}
+                    y={tile.centerY - 8}
+                    width="48"
+                    height="16"
+                    rx="4"
                     fill="#DC2626"
                   />
                   <text
-                    x={coord.centerX}
-                    y={coord.y + coord.height - 4}
+                    x={tile.centerX}
+                    y={tile.centerY + 4}
                     textAnchor="middle"
-                    fill="#FFFFFF"
-                    fontSize="7"
+                    fill="#ffffff"
+                    fontSize="8"
                     fontWeight="900"
                   >
                     BARRERA
@@ -375,7 +581,7 @@ export const ParchisBoard: React.FC<ParchisBoardProps> = ({
                 </g>
               )}
 
-              {/* Render de Fichas en este Casillero */}
+              {/* FICHAS DE JUEGO (Tokens 3D de Monopolio) */}
               {pawnsHere.length > 0 && (
                 <g>
                   {pawnsHere.map((pawn, pIdx) => {
@@ -383,14 +589,14 @@ export const ParchisBoard: React.FC<ParchisBoardProps> = ({
                     const isActive = activePawnId === pawn.id;
                     const pColor = getTeamColorHex(pawn.teamColor);
 
-                    // Desplazamiento si hay múltiples fichas (convivencia pacífica)
-                    let px = coord.centerX;
-                    let py = coord.centerY + 4;
+                    // Posicionamiento de tokens
+                    let px = tile.centerX;
+                    let py = tile.centerY + 10;
                     if (pawnsHere.length === 2) {
-                      px = coord.centerX + (pIdx === 0 ? -9 : 9);
+                      px = tile.centerX + (pIdx === 0 ? -12 : 12);
                     } else if (pawnsHere.length > 2) {
-                      px = coord.centerX + (pIdx % 2 === 0 ? -8 : 8);
-                      py = coord.centerY + (pIdx < 2 ? 0 : 8);
+                      px = tile.centerX + (pIdx % 2 === 0 ? -10 : 10);
+                      py = tile.centerY + (pIdx < 2 ? 0 : 16);
                     }
 
                     return (
@@ -401,37 +607,37 @@ export const ParchisBoard: React.FC<ParchisBoardProps> = ({
                           if (isSelectable) onPawnClick(pawn);
                         }}
                         className={`transition-all ${
-                          isSelectable
-                            ? "cursor-pointer hover:scale-125"
-                            : "cursor-default"
+                          isSelectable ? "cursor-pointer" : "cursor-default"
                         }`}
                       >
+                        {/* Brillo beacon si la ficha puede moverse */}
                         {isSelectable && (
                           <circle
                             cx={px}
                             cy={py}
-                            r={CELL_SIZE * 0.4}
+                            r="22"
                             fill="none"
                             stroke="#3B82F6"
-                            strokeWidth="3"
-                            className="animate-ping opacity-75"
+                            strokeWidth="3.5"
+                            className="animate-ping opacity-80"
                           />
                         )}
+                        {/* Token 3D */}
                         <circle
                           cx={px}
                           cy={py}
-                          r={pawnsHere.length > 1 ? 11 : 14}
+                          r={pawnsHere.length > 1 ? 12 : 15}
                           fill={pColor}
                           stroke="#FFFFFF"
-                          strokeWidth={isActive ? "3.5" : "2"}
+                          strokeWidth={isActive ? "4" : "2.5"}
                           filter="url(#pawnShadow)"
                         />
                         <text
                           x={px}
-                          y={py + 3.5}
+                          y={py + 4}
                           textAnchor="middle"
                           fill="#FFFFFF"
-                          fontSize={pawnsHere.length > 1 ? "9" : "11"}
+                          fontSize={pawnsHere.length > 1 ? "10" : "12"}
                           fontWeight="900"
                         >
                           {pawn.pawnNumber}
@@ -444,157 +650,6 @@ export const ParchisBoard: React.FC<ParchisBoardProps> = ({
             </g>
           );
         })}
-
-        {/* 3. RAMPAS PRIVADAS HACIA LA META (Pasillos de 7 casilleros de color) */}
-        {(["AMARILLO", "VERDE", "VIOLETA", "AZUL"] as TeamColor[]).map((color) => {
-          const ramps = RAMP_COORDS[color];
-          const colorHex = getTeamColorHex(color);
-          const lightHex = getTeamLightHex(color);
-
-          return (
-            <g key={`ramp-${color}`}>
-              {ramps.map((coord) => {
-                const pawnsInStep = pawnsByRamp[color][coord.step] || [];
-
-                return (
-                  <g key={`ramp-${color}-${coord.step}`}>
-                    <rect
-                      x={coord.x}
-                      y={coord.y}
-                      width={coord.width}
-                      height={coord.height}
-                      fill={lightHex}
-                      stroke={colorHex}
-                      strokeWidth="1.5"
-                    />
-                    <text
-                      x={coord.centerX}
-                      y={coord.centerY + 3}
-                      textAnchor="middle"
-                      fill={colorHex}
-                      fontSize="10"
-                      fontWeight="800"
-                    >
-                      {coord.step}
-                    </text>
-
-                    {/* Ficha en la rampa */}
-                    {pawnsInStep.map((pawn) => {
-                      const isSelectable = selectablePawnIds.includes(pawn.id);
-                      return (
-                        <g
-                          key={pawn.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (isSelectable) onPawnClick(pawn);
-                          }}
-                          className={isSelectable ? "cursor-pointer" : "cursor-default"}
-                        >
-                          <circle
-                            cx={coord.centerX}
-                            cy={coord.centerY}
-                            r="14"
-                            fill={colorHex}
-                            stroke="#FFFFFF"
-                            strokeWidth="2"
-                            filter="url(#pawnShadow)"
-                          />
-                          <text
-                            x={coord.centerX}
-                            y={coord.centerY + 4}
-                            textAnchor="middle"
-                            fill="#FFFFFF"
-                            fontSize="11"
-                            fontWeight="900"
-                          >
-                            {pawn.pawnNumber}
-                          </text>
-                        </g>
-                      );
-                    })}
-                  </g>
-                );
-              })}
-            </g>
-          );
-        })}
-
-        {/* 4. META CENTRAL (3x3 con los 4 sectores y emblema inclusivo) */}
-        <g>
-          {/* Triángulo Norte (Amarillo) */}
-          <polygon
-            points={`${CENTER_META_BOUNDS.x},${CENTER_META_BOUNDS.y} ${
-              CENTER_META_BOUNDS.x + CENTER_META_BOUNDS.width
-            },${CENTER_META_BOUNDS.y} ${CENTER_META_BOUNDS.centerX},${
-              CENTER_META_BOUNDS.centerY
-            }`}
-            fill="#FEF08A"
-            stroke="#CA8A04"
-            strokeWidth="2"
-          />
-          {/* Triángulo Este (Verde) */}
-          <polygon
-            points={`${CENTER_META_BOUNDS.x + CENTER_META_BOUNDS.width},${
-              CENTER_META_BOUNDS.y
-            } ${CENTER_META_BOUNDS.x + CENTER_META_BOUNDS.width},${
-              CENTER_META_BOUNDS.y + CENTER_META_BOUNDS.height
-            } ${CENTER_META_BOUNDS.centerX},${CENTER_META_BOUNDS.centerY}`}
-            fill="#BBF7D0"
-            stroke="#16A34A"
-            strokeWidth="2"
-          />
-          {/* Triángulo Sur (Violeta) */}
-          <polygon
-            points={`${CENTER_META_BOUNDS.x + CENTER_META_BOUNDS.width},${
-              CENTER_META_BOUNDS.y + CENTER_META_BOUNDS.height
-            } ${CENTER_META_BOUNDS.x},${
-              CENTER_META_BOUNDS.y + CENTER_META_BOUNDS.height
-            } ${CENTER_META_BOUNDS.centerX},${CENTER_META_BOUNDS.centerY}`}
-            fill="#DDD6FE"
-            stroke="#9333EA"
-            strokeWidth="2"
-          />
-          {/* Triángulo Oeste (Azul) */}
-          <polygon
-            points={`${CENTER_META_BOUNDS.x},${
-              CENTER_META_BOUNDS.y + CENTER_META_BOUNDS.height
-            } ${CENTER_META_BOUNDS.x},${CENTER_META_BOUNDS.y} ${
-              CENTER_META_BOUNDS.centerX
-            },${CENTER_META_BOUNDS.centerY}`}
-            fill="#BAE6FD"
-            stroke="#0284C7"
-            strokeWidth="2"
-          />
-
-          {/* Círculo central brillante con emblema de meta */}
-          <circle
-            cx={CENTER_META_BOUNDS.centerX}
-            cy={CENTER_META_BOUNDS.centerY}
-            r={CELL_SIZE * 0.9}
-            fill="url(#metaGlow)"
-            stroke="#1E293B"
-            strokeWidth="3"
-          />
-          <text
-            x={CENTER_META_BOUNDS.centerX}
-            y={CENTER_META_BOUNDS.centerY - 6}
-            textAnchor="middle"
-            fontSize="22"
-          >
-            🏆
-          </text>
-          <text
-            x={CENTER_META_BOUNDS.centerX}
-            y={CENTER_META_BOUNDS.centerY + 14}
-            textAnchor="middle"
-            fill="#0F172A"
-            fontSize="9"
-            fontWeight="900"
-            letterSpacing="1"
-          >
-            META
-          </text>
-        </g>
       </svg>
     </div>
   );

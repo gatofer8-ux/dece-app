@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type {
   Team,
   TeamColor,
@@ -8,7 +8,6 @@ import type {
   SquareDefinition,
   ParchisGameState,
   BonusChoice,
-  FiveChoice,
 } from "@/lib/parchis/types";
 import {
   createInitialGameState,
@@ -19,7 +18,7 @@ import {
   advanceToNextTeam,
   applyRollOffResults,
   TEAM_CONFIG,
-  META_POSITION,
+  CIRCUIT_SIZE,
 } from "@/lib/parchis/parchisEngine";
 import { getSquareByNumber, OFFICIAL_CREDIT } from "@/lib/parchis/parchisCatalog";
 import { loadParchisState, saveParchisState, clearParchisState } from "@/lib/parchis/parchisStorage";
@@ -41,6 +40,9 @@ export default function ParchisInclusivoApp() {
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
   const [inspectModalSquare, setInspectModalSquare] = useState<SquareDefinition | null>(null);
   const [isRollingAnimation, setIsRollingAnimation] = useState<boolean>(false);
+  const [isHopping, setIsHopping] = useState<boolean>(false);
+
+  const hoppingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Guardar estado en localStorage al cambiar
   useEffect(() => {
@@ -54,19 +56,24 @@ export default function ParchisInclusivoApp() {
     }
   }, [state.turnPhase]);
 
+  // Limpiar timer de salto al desmontar
+  useEffect(() => {
+    return () => {
+      if (hoppingTimerRef.current) clearInterval(hoppingTimerRef.current);
+    };
+  }, []);
+
   const currentTeam = state.teams[state.currentTeamIndex] || state.teams[0];
 
   // Determinar qué fichas del equipo activo son seleccionables
   const getSelectablePawnIds = (): string[] => {
-    if (state.turnPhase !== "SELECTING_PAWN" || state.diceValue === null) return [];
+    if (isHopping || state.turnPhase !== "SELECTING_PAWN" || state.diceValue === null) return [];
 
     const dice = state.diceValue;
     return currentTeam.pawns
       .filter((p) => {
         if (p.isAtGoal) return false;
-        // Si está en base, solo puede salir si sacó 5
         if (p.isAtBase) return dice === 5;
-        // Si está en el tablero o rampa, siempre puede moverse
         return true;
       })
       .map((p) => p.id);
@@ -76,6 +83,7 @@ export default function ParchisInclusivoApp() {
 
   // 1. Manejo del tiro de dado
   const handleRollDice = (outcome: number) => {
+    if (isHopping) return;
     setIsRollingAnimation(false);
 
     let nextConsecutive = outcome === 6 ? state.consecutiveSixes + 1 : 0;
@@ -90,8 +98,6 @@ export default function ParchisInclusivoApp() {
     // REGLA 9: Si es el 3er seis consecutivo -> se cede el avance al equipo en desventaja
     if (nextConsecutive >= 3) {
       const disadvantaged = getDisadvantagedTeams(state.teams, currentTeam.color);
-      const targetTeam = disadvantaged[0] || state.teams.find((t) => t.color !== currentTeam.color);
-
       const bonusChoice: BonusChoice = {
         type: "TRIPLE_SIX",
         fromTeamColor: currentTeam.color,
@@ -130,7 +136,6 @@ export default function ParchisInclusivoApp() {
     });
 
     if (canMovePawns.length === 0) {
-      // Ninguna ficha puede moverse (ej: todas en base y no sacó 5)
       updatedLogs = addLog(
         state,
         currentTeam.color,
@@ -148,7 +153,6 @@ export default function ParchisInclusivoApp() {
       return;
     }
 
-    // Si solo hay una ficha que puede moverse, o si hay varias
     setState({
       ...state,
       diceValue: outcome,
@@ -160,7 +164,7 @@ export default function ParchisInclusivoApp() {
 
   // 2. Selección de ficha para mover
   const handleSelectPawn = (pawn: PawnState) => {
-    if (state.turnPhase !== "SELECTING_PAWN" || state.diceValue === null) return;
+    if (isHopping || state.turnPhase !== "SELECTING_PAWN" || state.diceValue === null) return;
     if (pawn.teamColor !== currentTeam.color) return;
 
     // REGLA 5: Si sacó 5 y la ficha está en el tablero, opción de avanzar 5 o reiniciar en inicio
@@ -174,8 +178,8 @@ export default function ParchisInclusivoApp() {
           pawnId: pawn.id,
           advanceOption: {
             pawnId: pawn.id,
-            targetSquare: (pawn.position - 1 + 5) % 68 + 1,
-            description: `Avanzar 5 casilleros hacia el #${(pawn.position - 1 + 5) % 68 + 1}`,
+            targetSquare: (pawn.position - 1 + 5) % CIRCUIT_SIZE + 1,
+            description: `Avanzar 5 casilleros hacia el #${(pawn.position - 1 + 5) % CIRCUIT_SIZE + 1}`,
           },
           startOption: {
             pawnId: pawn.id,
@@ -187,16 +191,78 @@ export default function ParchisInclusivoApp() {
       return;
     }
 
-    executePawnMove(pawn, state.diceValue);
+    startHoppingAnimation(pawn, state.diceValue);
   };
 
-  // Ejecución física del movimiento de la ficha
-  const executePawnMove = (pawn: PawnState, steps: number) => {
-    parchisAudio.playStep();
-
+  // 3. Animación de salto casilla por casilla (Pawn Hop - Dinámica de Monopolio Moderno)
+  const startHoppingAnimation = (pawn: PawnState, totalSteps: number) => {
+    setIsHopping(true);
     const originalPos = pawn.position;
-    const moveResult = calculateNextPosition(currentTeam, pawn, steps);
-    const landing = evaluateLanding(state, currentTeam, pawn, moveResult.newPosition, steps);
+
+    // Si está saliendo de base (con 5)
+    if (pawn.isAtBase || pawn.position === 0) {
+      parchisAudio.playStep();
+      const targetPos = currentTeam.startSquare;
+
+      const updatedTeams = state.teams.map((t) => {
+        if (t.color === currentTeam.color) {
+          return {
+            ...t,
+            pawns: t.pawns.map((p) =>
+              p.id === pawn.id ? { ...p, position: targetPos, isAtBase: false } : p
+            ),
+          };
+        }
+        return t;
+      });
+
+      setIsHopping(false);
+      finishLanding({ ...state, teams: updatedTeams }, pawn, targetPos, originalPos, 5);
+      return;
+    }
+
+    // Si ya está en juego: animar salto paso a paso
+    let currentStepIndex = 0;
+    let currentPos = pawn.position;
+
+    hoppingTimerRef.current = setInterval(() => {
+      currentStepIndex++;
+      currentPos = (currentPos % CIRCUIT_SIZE) + 1;
+      parchisAudio.playStep();
+
+      // Actualizar posición intermedia visual en el tablero
+      setState((prev) => ({
+        ...prev,
+        teams: prev.teams.map((t) => {
+          if (t.color === currentTeam.color) {
+            return {
+              ...t,
+              pawns: t.pawns.map((p) => (p.id === pawn.id ? { ...p, position: currentPos } : p)),
+            };
+          }
+          return t;
+        }),
+      }));
+
+      if (currentStepIndex >= totalSteps) {
+        if (hoppingTimerRef.current) clearInterval(hoppingTimerRef.current);
+        setIsHopping(false);
+
+        // Evaluar aterrizaje final
+        finishLanding(state, pawn, currentPos, originalPos, totalSteps);
+      }
+    }, 160); // 160ms por salto (efecto rebote fluido)
+  };
+
+  // 4. Conclusión del aterrizaje y apertura de Reto Monopolio
+  const finishLanding = (
+    currentState: ParchisGameState,
+    pawn: PawnState,
+    targetSquare: number,
+    originalPos: number,
+    diceRoll: number
+  ) => {
+    const landing = evaluateLanding(currentState, currentTeam, pawn, targetSquare, diceRoll);
 
     if (landing.isBouncedByBarrier) {
       parchisAudio.playBarrier();
@@ -205,7 +271,7 @@ export default function ParchisInclusivoApp() {
     }
 
     // Actualizar fichas de los equipos
-    let updatedTeams = state.teams.map((t) => {
+    let updatedTeams = currentState.teams.map((t) => {
       // Si este equipo tuvo una ficha capturada por acto discriminatorio
       if (landing.capturedPawn && t.color === landing.capturedTeam) {
         return {
@@ -224,14 +290,11 @@ export default function ParchisInclusivoApp() {
           ...t,
           pawns: t.pawns.map((p) => {
             if (p.id === pawn.id) {
-              const finalPos = landing.finalPosition;
-              const isGoal = finalPos === META_POSITION;
               return {
                 ...p,
-                position: finalPos,
-                stepsMoved: moveResult.newStepsMoved + landing.bonusAdvance,
+                position: landing.finalPosition,
+                stepsMoved: p.stepsMoved + diceRoll + landing.bonusAdvance,
                 isAtBase: false,
-                isAtGoal: isGoal,
               };
             }
             return p;
@@ -241,99 +304,21 @@ export default function ParchisInclusivoApp() {
       return t;
     });
 
-    let updatedLogs = [...state.logs];
+    let updatedLogs = [...currentState.logs];
     landing.logs.forEach((l) => {
-      updatedLogs = addLog({ ...state, logs: updatedLogs }, currentTeam.color, l.message, l.type);
+      updatedLogs = addLog(
+        { ...currentState, logs: updatedLogs },
+        currentTeam.color,
+        l.message,
+        l.type
+      );
     });
 
-    // Caso A: Llegó a la META central (Regla 10 y 11)
-    if (landing.finalPosition === META_POSITION) {
-      const teamAfter = updatedTeams.find((t) => t.color === currentTeam.color)!;
-      const goalsNow = teamAfter.pawns.filter((p) => p.isAtGoal).length;
-      teamAfter.goalsFinished = goalsNow;
-
-      if (goalsNow >= teamAfter.pawns.length) {
-        // Victoria absoluta
-        setState({
-          ...state,
-          teams: updatedTeams,
-          turnPhase: "GAME_OVER",
-          winnerTeam: currentTeam.color,
-          logs: addLog(
-            { ...state, logs: updatedLogs },
-            currentTeam.color,
-            `🏆 ¡${currentTeam.name} ha llevado todas sus fichas a la meta y gana la partida!`,
-            "GOAL"
-          ),
-        });
-        return;
-      }
-
-      // Ofrecer bono de 10 casilleros
-      const disadvantaged = getDisadvantagedTeams(updatedTeams, currentTeam.color);
-      const otherPawns = teamAfter.pawns.filter((p) => !p.isAtGoal);
-
-      const bonusChoice: BonusChoice = {
-        type: "GOAL_TEN",
-        fromTeamColor: currentTeam.color,
-        availableOptions: [
-          ...otherPawns.map((p) => ({
-            targetTeamColor: currentTeam.color,
-            targetPawnId: p.id,
-            description: `Avanzar +10 casilleros con la ficha #${p.pawnNumber}`,
-            isDisadvantaged: false,
-          })),
-          ...updatedTeams
-            .filter((t) => t.color !== currentTeam.color)
-            .map((t) => ({
-              targetTeamColor: t.color,
-              description: `Ceder +10 casilleros de solidaridad a ${t.name}`,
-              isDisadvantaged: disadvantaged.some((d) => d.color === t.color),
-            })),
-        ],
-      };
-
-      setState({
-        ...state,
-        teams: updatedTeams,
-        turnPhase: "CELEBRATING_GOAL",
-        bonusChoice,
-        logs: updatedLogs,
-      });
-      return;
-    }
-
-    // Caso B: Si está en rampa (101..107), no hay reto ni tarjeta, pasa o repite si sacó 6
-    if (landing.finalPosition >= 101 && landing.finalPosition <= 107) {
-      if (state.diceValue === 6 && state.consecutiveSixes < 3) {
-        setState({
-          ...state,
-          teams: updatedTeams,
-          turnPhase: "WAITING_ROLL",
-          diceValue: null,
-          logs: addLog(
-            { ...state, logs: updatedLogs },
-            currentTeam.color,
-            `¡Sacó 6 en la rampa! Vuelve a lanzar el dado.`,
-            "ROLL"
-          ),
-        });
-      } else {
-        const nextState = advanceToNextTeam({
-          ...state,
-          teams: updatedTeams,
-          logs: updatedLogs,
-        });
-        setState(nextState);
-      }
-      return;
-    }
-
-    // Caso C: Cayó en un casillero del circuito (1..68) -> Abrir Modal de Reto/Pregunta
+    // Abrir Modal de Reto de Monopolio para el casillero
     const targetSq = getSquareByNumber(landing.finalPosition);
     if (targetSq) {
       setState({
-        ...state,
+        ...currentState,
         teams: updatedTeams,
         activePawnId: pawn.id,
         positionBeforeTurn: originalPos,
@@ -342,9 +327,8 @@ export default function ParchisInclusivoApp() {
         logs: updatedLogs,
       });
     } else {
-      // Fallback si no hay casillero
       const nextState = advanceToNextTeam({
-        ...state,
+        ...currentState,
         teams: updatedTeams,
         logs: updatedLogs,
       });
@@ -352,7 +336,7 @@ export default function ParchisInclusivoApp() {
     }
   };
 
-  // 3. Resolución de Reto: Éxito
+  // 5. Resolución de Reto: Éxito
   const handleQuestionSuccess = (square: SquareDefinition) => {
     let updatedLogs = addLog(
       state,
@@ -387,7 +371,7 @@ export default function ParchisInclusivoApp() {
       );
     }
 
-    // Manejar bonificación especial de avance (ej: +2 en casilleros especiales)
+    // Manejar bonificación especial de avance (ej: +2)
     if (square.advanceBonus && !square.returnToStart && state.activePawnId) {
       const activePawn = currentTeam.pawns.find((p) => p.id === state.activePawnId);
       if (activePawn) {
@@ -432,7 +416,6 @@ export default function ParchisInclusivoApp() {
         ),
       });
     } else {
-      // Pasa al siguiente equipo
       const nextState = advanceToNextTeam({
         ...state,
         teams: updatedTeams,
@@ -442,7 +425,7 @@ export default function ParchisInclusivoApp() {
     }
   };
 
-  // 4. Resolución de Reto: Fallo (la ficha se queda donde estaba antes del tiro)
+  // 6. Resolución de Reto: Fallo
   const handleQuestionFail = () => {
     let updatedLogs = addLog(
       state,
@@ -451,7 +434,6 @@ export default function ParchisInclusivoApp() {
       "QUESTION"
     );
 
-    // Revertir posición de la ficha al valor previo al tiro
     const updatedTeams = state.teams.map((t) => {
       if (t.color === currentTeam.color) {
         return {
@@ -479,12 +461,11 @@ export default function ParchisInclusivoApp() {
     setState(nextState);
   };
 
-  // 5. Aplicar bonificación (+10 de meta o triple seis a equipo en desventaja)
+  // 7. Aplicar bono de solidaridad
   const handleApplyBonus = (targetTeamColor: TeamColor, targetPawnId?: string) => {
     const bonusSteps = state.bonusChoice?.type === "GOAL_TEN" ? 10 : 6;
     const targetTeam = state.teams.find((t) => t.color === targetTeamColor)!;
 
-    // Buscar qué ficha mover
     let pawnToMove = targetTeam.pawns.find((p) => p.id === targetPawnId);
     if (!pawnToMove) {
       pawnToMove = targetTeam.pawns.find((p) => !p.isAtGoal);
@@ -535,7 +516,7 @@ export default function ParchisInclusivoApp() {
     }
   };
 
-  // 6. Iniciar partida desde el modal de setup
+  // 8. Iniciar partida desde el modal de setup
   const handleStartGame = (
     selectedColors: TeamColor[],
     pawnsCount: number,
@@ -548,7 +529,7 @@ export default function ParchisInclusivoApp() {
     setSetupModalOpen(false);
   };
 
-  // 7. Reiniciar partida
+  // 9. Reiniciar partida
   const handleResetGame = () => {
     clearParchisState();
     const fresh = createInitialGameState();
@@ -573,23 +554,23 @@ export default function ParchisInclusivoApp() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col justify-between text-slate-900 pb-8">
-      {/* 1. BARRA SUPERIOR DE FACILITACIÓN */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 md:px-8 py-3 shadow-xs">
+    <div className="min-h-screen bg-slate-950 flex flex-col justify-between text-slate-100 pb-8">
+      {/* 1. BARRA SUPERIOR DE FACILITACIÓN MONOPOLIO */}
+      <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-amber-400/30 px-4 md:px-8 py-3 shadow-lg">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">🎲</span>
+            <span className="text-3xl animate-pulse">🎲</span>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-lg md:text-xl font-black text-slate-900 tracking-tight">
-                  Parchís Inclusivo
+                <h1 className="text-lg md:text-xl font-black text-amber-300 tracking-tight flex items-center gap-2">
+                  <span>Parchís Inclusivo</span>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                    Edición Monopolio Moderno
+                  </span>
                 </h1>
-                <span className="hidden sm:inline px-2.5 py-0.5 rounded-full text-2xs font-extrabold bg-blue-100 text-blue-800 border border-blue-200">
-                  Respiramos Inclusión
-                </span>
               </div>
-              <p className="text-xs text-slate-500">
-                Herramienta digital de facilitación en vivo para talleres DECE
+              <p className="text-xs text-slate-400">
+                Programa «Respiramos Inclusión» — Herramienta digital en vivo para talleres DECE
               </p>
             </div>
           </div>
@@ -599,7 +580,7 @@ export default function ParchisInclusivoApp() {
             <button
               type="button"
               onClick={handleToggleFullScreen}
-              className="p-2 md:px-3.5 md:py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all flex items-center gap-1.5"
+              className="p-2 md:px-3.5 md:py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all flex items-center gap-1.5"
               title="Pantalla Completa para Proyector (16:9)"
             >
               <span>🖥️</span>
@@ -609,7 +590,7 @@ export default function ParchisInclusivoApp() {
             <button
               type="button"
               onClick={handleToggleSound}
-              className="p-2 md:px-3 md:py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all"
+              className="p-2 md:px-3 md:py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all"
               title="Activar / Desactivar Sonido"
             >
               {state.soundEnabled ? "🔊" : "🔇"}
@@ -618,100 +599,100 @@ export default function ParchisInclusivoApp() {
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
-              className="px-3.5 py-2 rounded-xl text-xs font-black bg-blue-600 text-white hover:bg-blue-700 shadow-xs transition-all flex items-center gap-1.5"
+              className="px-3.5 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-md transition-all flex items-center gap-1.5"
             >
               <span>🧰</span>
-              <span className="hidden sm:inline">Caja de Herramientas</span>
+              <span className="hidden sm:inline">Herramientas</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* 2. ÁREA PRINCIPAL: TABLERO + PANEL DE TURNO EN VIVO */}
+      {/* 2. ÁREA PRINCIPAL: TABLERO MONOPOLIO + PANEL DE ACCIÓN */}
       <main className="max-w-7xl mx-auto w-full px-4 md:px-8 py-6 flex-1">
-        {/* BANNER DE TURNO GUIADO PASO A PASO */}
-        <div className="mb-6 p-4 md:p-5 rounded-3xl bg-white border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+        {/* BANNER DE TURNO ESTILO MONOPOLIO */}
+        <div className="mb-6 p-4 md:p-5 rounded-3xl bg-slate-900 border-2 border-amber-400/40 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4 w-full md:w-auto">
             <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white text-xl shadow-md flex-shrink-0"
+              className="w-14 h-14 rounded-2xl flex items-center justify-center font-black text-white text-2xl shadow-xl flex-shrink-0 border-2 border-white/40"
               style={{ backgroundColor: currentTeam.colorHex }}
             >
               {currentTeam.color[0]}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  Turno Activo:
+                <span className="text-2xs font-black text-amber-400 uppercase tracking-widest">
+                  TURNO ACTUAL:
                 </span>
                 <span
-                  className="px-2.5 py-0.5 rounded-full text-xs font-extrabold"
+                  className="px-2.5 py-0.5 rounded-full text-xs font-black"
                   style={{
-                    backgroundColor: `${currentTeam.colorHex}20`,
+                    backgroundColor: `${currentTeam.colorHex}25`,
                     color: currentTeam.colorHex,
                   }}
                 >
                   {currentTeam.color}
                 </span>
               </div>
-              <h2 className="text-lg md:text-xl font-black text-slate-900 leading-tight">
+              <h2 className="text-xl md:text-2xl font-black text-white leading-tight">
                 {currentTeam.name}
               </h2>
             </div>
           </div>
 
-          {/* Guía de acción esperada */}
+          {/* Guía interactiva de paso */}
           <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-            <div className="px-4 py-2 rounded-2xl bg-slate-50 border border-slate-200 text-xs md:text-sm font-bold text-slate-700 flex items-center gap-2">
-              {state.turnPhase === "WAITING_ROLL" && (
+            <div className="px-5 py-2.5 rounded-2xl bg-slate-800 border border-slate-700 text-xs md:text-sm font-bold text-slate-200 flex items-center gap-2.5">
+              {isHopping ? (
+                <>
+                  <span className="animate-bounce text-emerald-400">🏃</span>
+                  <span className="text-emerald-300 font-extrabold">Avanzando casilleros...</span>
+                </>
+              ) : state.turnPhase === "WAITING_ROLL" ? (
                 <>
                   <span className="animate-bounce">🎲</span>
-                  <span>Lanza el dado para comenzar tu turno</span>
+                  <span>Tira el dado para iniciar tu jugada</span>
                 </>
-              )}
-              {state.turnPhase === "SELECTING_PAWN" && (
+              ) : state.turnPhase === "SELECTING_PAWN" ? (
                 <>
-                  <span className="animate-pulse text-blue-600">👆</span>
-                  <span>Selecciona en el tablero la ficha que deseas mover</span>
+                  <span className="animate-pulse text-blue-400">👆</span>
+                  <span>Selecciona en el tablero la ficha que saltará</span>
                 </>
-              )}
-              {state.turnPhase === "RESOLVING_QUESTION" && (
+              ) : state.turnPhase === "RESOLVING_QUESTION" ? (
                 <>
                   <span>📖</span>
-                  <span>Lean en voz alta la pregunta del casillero</span>
+                  <span>Resuelvan en equipo el reto de la casilla</span>
                 </>
-              )}
-              {state.turnPhase === "CHOOSING_FIVE_ACTION" && (
+              ) : state.turnPhase === "CHOOSING_FIVE_ACTION" ? (
                 <>
                   <span>🎯</span>
-                  <span>Sacó 5: Elige avanzar 5 o reiniciar en inicio</span>
+                  <span>Sacó 5: Elige avanzar 5 o poner ficha en Inicio</span>
                 </>
-              )}
-              {state.turnPhase === "CELEBRATING_GOAL" && (
+              ) : state.turnPhase === "CELEBRATING_GOAL" ? (
                 <>
                   <span>🎉</span>
-                  <span>¡Canten su barra inclusiva y elijan su bono de +10!</span>
+                  <span>¡Canten la barra inclusiva y elijan su bono de +10!</span>
                 </>
-              )}
-              {state.turnPhase === "GAME_OVER" && (
+              ) : (
                 <>
                   <span>🏆</span>
-                  <span>¡Partida finalizada con éxito!</span>
+                  <span>¡Gran victoria comunitaria!</span>
                 </>
               )}
             </div>
           </div>
         </div>
 
-        {/* DIÁLOGO ESPECIAL DE ELECCIÓN AL SACAR 5 */}
+        {/* DIÁLOGO AL SACAR 5 */}
         {state.turnPhase === "CHOOSING_FIVE_ACTION" && state.fiveChoice && (
-          <div className="mb-6 p-5 rounded-2xl bg-amber-50 border-2 border-amber-300 shadow-md animate-fade-in flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="mb-6 p-5 rounded-2xl bg-amber-500/10 border-2 border-amber-400 text-white shadow-xl animate-fade-in flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
-              <h3 className="text-sm font-black text-amber-950 flex items-center gap-2">
+              <h3 className="text-sm font-black text-amber-300 flex items-center gap-2">
                 <span>🎯</span> Regla Oficial #5: ¡Sacaste un 5!
               </h3>
-              <p className="text-xs text-amber-800">
-                Puedes elegir entre avanzar 5 casilleros con tu ficha, o colocar/reiniciar la ficha en el
-                casillero de inicio #{currentTeam.startSquare}.
+              <p className="text-xs text-slate-300 mt-1">
+                Puedes elegir entre avanzar 5 casilleros, o colocar/reiniciar tu ficha en la casilla de
+                inicio #{currentTeam.startSquare}.
               </p>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -719,9 +700,9 @@ export default function ParchisInclusivoApp() {
                 type="button"
                 onClick={() => {
                   const pawn = currentTeam.pawns.find((p) => p.id === state.fiveChoice!.pawnId);
-                  if (pawn) executePawnMove(pawn, 5);
+                  if (pawn) startHoppingAnimation(pawn, 5);
                 }}
-                className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-black bg-blue-600 text-white hover:bg-blue-700 shadow-xs"
+                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-xs font-black bg-blue-600 hover:bg-blue-500 text-white shadow-md"
               >
                 Avanzar 5 casilleros
               </button>
@@ -751,7 +732,7 @@ export default function ParchisInclusivoApp() {
                     setState(next);
                   }
                 }}
-                className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs"
+                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white shadow-md"
               >
                 Colocar en Inicio (#{currentTeam.startSquare})
               </button>
@@ -759,9 +740,9 @@ export default function ParchisInclusivoApp() {
           </div>
         )}
 
-        {/* LAYOUT PRINCIPAL: TABLERO (COLUMNA IZQUIERDA/CENTRO) Y PANEL DE ACCIONES (COLUMNA DERECHA) */}
+        {/* CUADRÍCULA: TABLERO MONOPOLIO (IZQUIERDA) + DADO Y REGISTRO (DERECHA) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* TABLERO HERO */}
+          {/* TABLERO MONOPOLIO HERO */}
           <div className="lg:col-span-8 flex flex-col items-center">
             <ParchisBoard
               teams={state.teams}
@@ -773,76 +754,60 @@ export default function ParchisInclusivoApp() {
             />
           </div>
 
-          {/* PANEL DERECHO: DADO + EQUIPOS + HISTORIAL */}
+          {/* PANEL LATERAL DE MONOPOLIO */}
           <div className="lg:col-span-4 space-y-6">
-            {/* DADO INTERACTIVO */}
+            {/* DADO MONOPOLIO 3D */}
             <ParchisDice
               value={state.diceValue}
               isRolling={isRollingAnimation}
-              disabled={state.turnPhase !== "WAITING_ROLL"}
+              disabled={isHopping || state.turnPhase !== "WAITING_ROLL"}
               consecutiveSixes={state.consecutiveSixes}
               onRoll={handleRollDice}
             />
 
-            {/* LISTA DE EQUIPOS Y PROGRESO DE FICHAS */}
-            <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-3">
-              <h3 className="text-xs font-black text-slate-500 uppercase tracking-wider">
-                Estado de los Equipos
+            {/* LEADERBOARD DE EQUIPOS Y FICHAS */}
+            <div className="bg-slate-900 p-5 rounded-3xl border border-slate-800 shadow-xl space-y-3">
+              <h3 className="text-2xs font-black text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
+                <span>🏆</span> Equipos en Competencia Inclusiva
               </h3>
               <div className="space-y-2.5">
                 {state.teams.map((t, idx) => {
                   const isCurrent = idx === state.currentTeamIndex;
-                  const goals = t.pawns.filter((p) => p.isAtGoal).length;
 
                   return (
                     <div
                       key={t.color}
-                      className={`p-3 rounded-2xl border transition-all ${
+                      className={`p-3.5 rounded-2xl border transition-all ${
                         isCurrent
-                          ? "bg-slate-50 border-slate-400 ring-2 ring-blue-500/20 shadow-xs"
-                          : "bg-white border-slate-200"
+                          ? "bg-slate-800/90 border-amber-400/50 shadow-md ring-1 ring-amber-400/30"
+                          : "bg-slate-950/60 border-slate-800"
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <span
-                            className="w-3.5 h-3.5 rounded-full"
+                            className="w-4 h-4 rounded-full border border-white"
                             style={{ backgroundColor: t.colorHex }}
                           />
-                          <span className="text-xs font-extrabold text-slate-800">
-                            {t.name}
-                          </span>
+                          <span className="text-xs font-black text-white">{t.name}</span>
                         </div>
-                        <span className="text-2xs font-bold text-slate-500">
-                          {goals}/{t.pawns.length} en Meta
-                        </span>
                       </div>
 
-                      {/* Fichas individuales de este equipo */}
+                      {/* Estado de cada ficha */}
                       <div className="flex items-center gap-1.5">
                         {t.pawns.map((p) => {
-                          let label = `P${p.pawnNumber}`;
-                          let locText = p.isAtGoal
-                            ? "🏆"
-                            : p.isAtBase
-                            ? "Base"
-                            : p.position >= 101
-                            ? `R${p.position - 100}`
-                            : `#${p.position}`;
-
+                          const isOut = !p.isAtBase && !p.isAtGoal;
                           return (
                             <div
                               key={p.id}
-                              className={`px-2 py-0.5 rounded-lg text-2xs font-black border flex items-center gap-1 ${
-                                p.isAtGoal
-                                  ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                                  : p.isAtBase
-                                  ? "bg-slate-100 text-slate-500 border-slate-200"
-                                  : "bg-white text-slate-800 border-slate-300"
+                              className={`px-2.5 py-1 rounded-xl text-2xs font-black border flex items-center gap-1 ${
+                                isOut
+                                  ? "bg-blue-950 text-blue-300 border-blue-600/40"
+                                  : "bg-slate-800 text-slate-400 border-slate-700"
                               }`}
                             >
-                              <span>{label}:</span>
-                              <span>{locText}</span>
+                              <span>#{p.pawnNumber}:</span>
+                              <span>{isOut ? `Casilla ${p.position}` : "Base"}</span>
                             </div>
                           );
                         })}
@@ -853,16 +818,16 @@ export default function ParchisInclusivoApp() {
               </div>
             </div>
 
-            {/* HISTORIAL DE ACCIONES EN VIVO */}
-            <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-3">
-              <h3 className="text-xs font-black text-slate-500 uppercase tracking-wider">
-                Registro de la Dinámica
+            {/* HISTORIAL DE SUCESOS */}
+            <div className="bg-slate-900 p-5 rounded-3xl border border-slate-800 shadow-xl space-y-3">
+              <h3 className="text-2xs font-black text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
+                <span>📜</span> Registro del Taller
               </h3>
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1 text-xs">
                 {state.logs.map((log) => (
                   <div
                     key={log.id}
-                    className="p-2 rounded-xl bg-slate-50 border border-slate-200/70 text-slate-700 leading-snug"
+                    className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-300"
                   >
                     <div className="flex items-center justify-between text-2xs text-slate-400 mb-0.5">
                       <span className="font-bold" style={{ color: TEAM_CONFIG[log.teamColor]?.colorHex }}>
@@ -870,7 +835,7 @@ export default function ParchisInclusivoApp() {
                       </span>
                       <span>{log.timestamp}</span>
                     </div>
-                    <p className="font-medium text-slate-800">{log.message}</p>
+                    <p className="font-medium">{log.message}</p>
                   </div>
                 ))}
               </div>
@@ -879,17 +844,17 @@ export default function ParchisInclusivoApp() {
         </div>
       </main>
 
-      {/* 3. PIE DE PÁGINA OBLIGATORIO CON CRÉDITOS */}
+      {/* 3. PIE DE PÁGINA CON CRÉDITOS */}
       <footer className="max-w-7xl mx-auto w-full px-4 md:px-8 pt-4">
-        <div className="p-4 rounded-2xl bg-white border border-slate-200 text-center shadow-xs">
-          <p className="text-2xs md:text-xs text-slate-500 leading-relaxed max-w-4xl mx-auto">
+        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-center shadow-md">
+          <p className="text-2xs md:text-xs text-slate-400 leading-relaxed max-w-4xl mx-auto">
             {OFFICIAL_CREDIT}
           </p>
         </div>
       </footer>
 
-      {/* 4. MODALES DEL JUEGO */}
-      {/* Modal de Pregunta / Reto del casillero */}
+      {/* 4. MODALES */}
+      {/* Modal de Reto / Pregunta */}
       {state.activeSquare && (
         <ParchisQuestionModal
           square={state.activeSquare}
@@ -900,7 +865,7 @@ export default function ParchisInclusivoApp() {
         />
       )}
 
-      {/* Modal de Inspección rápida de casillero al hacer clic en el tablero */}
+      {/* Inspección rápida */}
       {inspectModalSquare && (
         <ParchisQuestionModal
           square={inspectModalSquare}
@@ -911,13 +876,10 @@ export default function ParchisInclusivoApp() {
         />
       )}
 
-      {/* Modal de Configuración Inicial y Desempate */}
-      <ParchisSetupModal
-        isOpen={setupModalOpen}
-        onStartGame={handleStartGame}
-      />
+      {/* Configuración Inicial */}
+      <ParchisSetupModal isOpen={setupModalOpen} onStartGame={handleStartGame} />
 
-      {/* Modal de Celebración de Meta o Solidaridad */}
+      {/* Celebración */}
       <ParchisCelebrationModal
         isOpen={
           state.turnPhase === "CELEBRATING_GOAL" ||
@@ -938,7 +900,7 @@ export default function ParchisInclusivoApp() {
         onRestartGame={handleResetGame}
       />
 
-      {/* Cajón lateral de herramientas del facilitador */}
+      {/* Cajón de herramientas */}
       <ParchisFacilitatorDrawer
         isOpen={drawerOpen}
         soundEnabled={state.soundEnabled}
