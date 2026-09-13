@@ -43,6 +43,13 @@ export default function TalleresPage() {
 
         <div className="flex flex-wrap items-center gap-2">
           <Link
+            href="/parchis-inclusivo"
+            className="px-3.5 py-2 rounded-xl text-xs font-black bg-amber-400 hover:bg-amber-300 text-slate-950 border border-amber-500 shadow-xs flex items-center gap-1.5 transition-all"
+          >
+            <span>🎲</span>
+            <span>Lanzar Parchís Inclusivo Digital</span>
+          </Link>
+          <Link
             href="/actividades/informe-taller/nuevo"
             className="btn-primary text-xs px-3.5 py-2 flex items-center gap-1.5 shadow-xs"
           >
@@ -57,6 +64,28 @@ export default function TalleresPage() {
             <span>Plan de Acción (POA)</span>
           </Link>
         </div>
+      </div>
+
+      {/* Banner de Herramienta Digital en Vivo */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white border border-amber-400/40 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="text-3xl">🎲</span>
+          <div>
+            <div className="flex items-center gap-2">
+              <strong className="text-amber-300 font-black text-sm">Dinámica de Taller en Vivo: Parchís Inclusivo</strong>
+              <span className="text-2xs bg-emerald-500 text-white px-2 py-0.5 rounded-full font-bold">Interactivo</span>
+            </div>
+            <p className="text-xs text-slate-300">
+              Proyecta el juego digital en pantalla grande o tablet para conducir la dinámica de Respiramos Inclusión.
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/parchis-inclusivo"
+          className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shrink-0 shadow-xs"
+        >
+          Iniciar Juego →
+        </Link>
       </div>
 
       {/* Banner Informativo de Autoría y Descargas */}

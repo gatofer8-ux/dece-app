@@ -15,6 +15,7 @@ export const NAV_ITEMS: NavItem[] = [
 
   // Principal
   { href: "/dashboard", label: "Panel general", icon: "📊", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
+  { href: "/parchis-inclusivo", label: "Parchís Inclusivo (Juego)", icon: "🎲", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD", "DOCENTE"], group: "Principal" },
   { href: "/chat", label: "Mensajería / Chat", icon: "💬", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD", "DOCENTE"], group: "Principal" },
   { href: "/estudiantes", label: "Estudiantes", icon: "🎓", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
   { href: "/casos", label: "Casos y fichas", icon: "📁", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
@@ -30,7 +31,6 @@ export const NAV_ITEMS: NavItem[] = [
   // Acompañamiento y prevención
   { href: "/actividades", label: "Promoción y prevención", icon: "🌱", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD", "DOCENTE"], group: "Acompañamiento y prevención" },
   { href: "/talleres", label: "Talleres y guiones", icon: "📚", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD", "DOCENTE"], group: "Acompañamiento y prevención" },
-  { href: "/parchis-inclusivo", label: "Parchís Inclusivo", icon: "🎲", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD", "DOCENTE"], group: "Acompañamiento y prevención" },
   { href: "/circulos-restaurativos", label: "Círculos restaurativos", icon: "⭕", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Acompañamiento y prevención" },
   { href: "/circulos-restaurativos/fichas", label: "Fichas de círculo restaurativo", icon: "🗒️", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Acompañamiento y prevención" },
   { href: "/actas-reunion", label: "Actas de reunión", icon: "📝", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Acompañamiento y prevención" },

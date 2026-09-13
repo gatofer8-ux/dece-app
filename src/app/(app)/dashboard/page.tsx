@@ -200,6 +200,9 @@ export default async function DashboardPage() {
         }
         action={
           <div className="flex flex-wrap items-center gap-2">
+            <Link href="/parchis-inclusivo" className="btn-secondary text-xs flex items-center gap-1 bg-amber-50 border-amber-300 text-amber-900 font-bold hover:bg-amber-100">
+              <span>🎲</span> Parchís Inclusivo
+            </Link>
             <Link href="/casos/nuevo" className="btn-primary text-xs flex items-center gap-1">
               <span>➕</span> Nuevo Caso
             </Link>
@@ -215,6 +218,36 @@ export default async function DashboardPage() {
           </div>
         }
       />
+
+      {/* Acceso Destacado al Parchís Inclusivo */}
+      <div className="p-4 md:p-5 rounded-3xl bg-gradient-to-r from-blue-900 via-indigo-900 to-purple-900 text-white shadow-lg border-2 border-amber-400/40 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-2xl shadow-md flex-shrink-0 font-black">
+            🎲
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-black text-base text-amber-300">
+                Parchís Inclusivo Digital — Edición Monopolio Moderno
+              </h3>
+              <span className="px-2 py-0.5 rounded-full text-2xs font-extrabold bg-emerald-500 text-white">
+                NUEVO
+              </span>
+            </div>
+            <p className="text-xs text-slate-200 mt-0.5">
+              Herramienta interactiva jugable en vivo para talleres DECE, ferias y dinámicas comunitarias
+              (Respiramos Inclusión — World Vision / ACNUR).
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/parchis-inclusivo"
+          className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs uppercase tracking-wider text-center shadow-md transition-all flex items-center justify-center gap-1.5 shrink-0"
+        >
+          <span>🚀</span>
+          <span>Abrir Juego</span>
+        </Link>
+      </div>
 
       {/* Banner Preventivo de Casos en Riesgo de Abandono (>30 días sin conversación) */}
       {inactivitySummary.alertCasesCount > 0 && (
