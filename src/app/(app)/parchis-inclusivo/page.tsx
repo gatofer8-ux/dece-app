@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 export default async function ParchisInclusivoPage() {
   const session = await requireSession();
 
-  // Accesible para roles DECE, ADMIN, SUPERADMIN, AUTORIDAD y DOCENTE
-  const allowedRoles = ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD", "DOCENTE"];
+  // Accesible para todos los roles de la comunidad educativa y distrito
+  const allowedRoles = ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD", "DOCENTE", "DISTRITO"];
   if (!allowedRoles.includes(session.user.role)) {
     redirect(roleHomePath(session.user.role));
   }
