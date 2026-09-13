@@ -144,7 +144,7 @@ export const ParchisDice: React.FC<ParchisDiceProps> = ({
               {/* Cara 1 (Frontal - Punto rojo central) */}
               <div
                 className="absolute inset-0 bg-white border-2 border-slate-400 rounded-2xl shadow-md flex items-center justify-center"
-                style={{ transform: "rotateY(0deg) translateZ(40px)" }}
+                style={{ transform: "rotateY(0deg) translateZ(40px)", backfaceVisibility: "hidden" }}
               >
                 <span className="w-5 h-5 rounded-full bg-rose-600 ring-2 ring-rose-300 shadow-sm" />
               </div>
@@ -152,7 +152,7 @@ export const ParchisDice: React.FC<ParchisDiceProps> = ({
               {/* Cara 6 (Trasera - 6 puntos) */}
               <div
                 className="absolute inset-0 bg-white border-2 border-slate-400 rounded-2xl shadow-md grid grid-cols-2 grid-rows-3 p-2 place-items-center"
-                style={{ transform: "rotateY(180deg) translateZ(40px)" }}
+                style={{ transform: "rotateY(180deg) translateZ(40px)", backfaceVisibility: "hidden" }}
               >
                 {renderPip()}
                 {renderPip()}
@@ -165,7 +165,7 @@ export const ParchisDice: React.FC<ParchisDiceProps> = ({
               {/* Cara 2 (Derecha - 2 puntos) */}
               <div
                 className="absolute inset-0 bg-white border-2 border-slate-400 rounded-2xl shadow-md flex justify-between p-2.5"
-                style={{ transform: "rotateY(90deg) translateZ(40px)" }}
+                style={{ transform: "rotateY(90deg) translateZ(40px)", backfaceVisibility: "hidden" }}
               >
                 {renderPip()}
                 <span className="self-end">{renderPip()}</span>
@@ -174,7 +174,7 @@ export const ParchisDice: React.FC<ParchisDiceProps> = ({
               {/* Cara 3 (Izquierda - 3 puntos) */}
               <div
                 className="absolute inset-0 bg-white border-2 border-slate-400 rounded-2xl shadow-md flex justify-between p-2.5"
-                style={{ transform: "rotateY(-90deg) translateZ(40px)" }}
+                style={{ transform: "rotateY(-90deg) translateZ(40px)", backfaceVisibility: "hidden" }}
               >
                 {renderPip()}
                 <span className="self-center">{renderPip()}</span>
@@ -184,7 +184,7 @@ export const ParchisDice: React.FC<ParchisDiceProps> = ({
               {/* Cara 4 (Superior - 4 puntos) */}
               <div
                 className="absolute inset-0 bg-white border-2 border-slate-400 rounded-2xl shadow-md grid grid-cols-2 p-2.5 place-items-center gap-2"
-                style={{ transform: "rotateX(90deg) translateZ(40px)" }}
+                style={{ transform: "rotateX(90deg) translateZ(40px)", backfaceVisibility: "hidden" }}
               >
                 {renderPip()}
                 {renderPip()}
@@ -194,8 +194,8 @@ export const ParchisDice: React.FC<ParchisDiceProps> = ({
 
               {/* Cara 5 (Inferior - 5 puntos) */}
               <div
-                className="absolute inset-0 bg-white border-2 border-slate-400 rounded-2xl shadow-md relative p-2.5"
-                style={{ transform: "rotateX(-90deg) translateZ(40px)" }}
+                className="absolute inset-0 bg-white border-2 border-slate-400 rounded-2xl shadow-md p-2.5"
+                style={{ transform: "rotateX(-90deg) translateZ(40px)", backfaceVisibility: "hidden" }}
               >
                 <div className="grid grid-cols-2 h-full place-items-center gap-2">
                   {renderPip()}
