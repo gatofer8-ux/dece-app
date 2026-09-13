@@ -15,6 +15,7 @@ export const NAV_ITEMS: NavItem[] = [
 
   // Principal
   { href: "/dashboard", label: "Panel general", icon: "📊", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
+  { href: "/parchis-inclusivo", label: "Parchís Inclusivo (Juego)", icon: "🎲", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD", "DOCENTE", "DISTRITO"], group: "Principal" },
   { href: "/chat", label: "Mensajería / Chat", icon: "💬", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD", "DOCENTE"], group: "Principal" },
   { href: "/estudiantes", label: "Estudiantes", icon: "🎓", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
   { href: "/casos", label: "Casos y fichas", icon: "📁", roles: ["SUPERADMIN", "ADMIN", "DECE"], group: "Principal" },
