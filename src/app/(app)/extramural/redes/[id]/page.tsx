@@ -3,6 +3,9 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import { saveSupportNetwork } from "../actions";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+
+const LocationPicker = dynamic(() => import("@/components/LocationPicker"), { ssr: false });
 
 export default async function SupportNetworkFormPage({ params }: { params: { id: string } }) {
   const session = await requireRole(["ADMIN", "DECE"]);
@@ -108,32 +111,7 @@ export default async function SupportNetworkFormPage({ params }: { params: { id:
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Latitud (opcional - para el mapa)
-            </label>
-            <input
-              type="number"
-              step="any"
-              name="latitude"
-              defaultValue={network?.latitude || ""}
-              className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Longitud (opcional - para el mapa)
-            </label>
-            <input
-              type="number"
-              step="any"
-              name="longitude"
-              defaultValue={network?.longitude || ""}
-              className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-        </div>
+        <LocationPicker defaultLat={network?.latitude} defaultLng={network?.longitude} />
 
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">

@@ -3,6 +3,9 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import { saveCommunityRisk } from "../actions";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+
+const LocationPicker = dynamic(() => import("@/components/LocationPicker"), { ssr: false });
 
 export default async function CommunityRiskFormPage({ params }: { params: { id: string } }) {
   const session = await requireRole(["ADMIN", "DECE"]);
@@ -90,37 +93,7 @@ export default async function CommunityRiskFormPage({ params }: { params: { id: 
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Latitud (requerida para el mapa)
-            </label>
-            <input
-              type="number"
-              step="any"
-              name="latitude"
-              defaultValue={risk?.latitude || ""}
-              required
-              className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Longitud (requerida para el mapa)
-            </label>
-            <input
-              type="number"
-              step="any"
-              name="longitude"
-              defaultValue={risk?.longitude || ""}
-              required
-              className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-        </div>
-        <p className="text-xs text-slate-500 mt-2">
-          Para encontrar coordenadas, puedes buscar el lugar en Google Maps, hacer clic derecho sobre el punto y copiar los números (Ej. -0.1806, -78.4678).
-        </p>
+        <LocationPicker defaultLat={risk?.latitude} defaultLng={risk?.longitude} required />
 
         <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
           <Link href="/extramural/riesgos" className="btn-secondary">
