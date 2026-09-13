@@ -151,6 +151,7 @@ export default async function AuditoriaPage({
               <th className="text-left px-4 py-3">Usuario</th>
               <th className="text-left px-4 py-3">Acción</th>
               <th className="text-left px-4 py-3">Entidad</th>
+              <th className="text-left px-4 py-3">Desde dónde</th>
               <th className="text-left px-4 py-3">Detalles</th>
             </tr>
           </thead>
@@ -170,11 +171,14 @@ export default async function AuditoriaPage({
                 <td className="px-4 py-3 text-slate-600 font-medium">
                   {l.entity_type} {l.entity_id ? <span className="font-mono text-[10px] text-slate-400">({l.entity_id.slice(0, 8)})</span> : ""}
                 </td>
+                <td className="px-4 py-3 text-slate-500 font-mono whitespace-nowrap" title={l.user_agent || undefined}>
+                  {l.ip_address || "—"}
+                </td>
                 <td className="px-4 py-3 text-slate-500 max-w-md leading-relaxed">{l.details || "—"}</td>
               </tr>
             ))}
             {logs.length === 0 && (
-              <tr><td colSpan={canViewAllInstitutions ? 6 : 5} className="px-4 py-8 text-center text-slate-400">Sin registros de auditoría encontrados.</td></tr>
+              <tr><td colSpan={canViewAllInstitutions ? 7 : 6} className="px-4 py-8 text-center text-slate-400">Sin registros de auditoría encontrados.</td></tr>
             )}
           </tbody>
         </table>

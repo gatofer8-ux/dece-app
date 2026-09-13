@@ -1154,6 +1154,8 @@ export interface AuditLogRow {
   entity_id: string | null;
   details: string | null;
   timestamp: string;
+  ip_address: string | null;
+  user_agent: string | null;
 }
 
 export interface RiskMatrixEntryRow {
