@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "node scripts/seed.js && next start -H 0.0.0.0",
+    "start": "node scripts/seed.js && cross-env NODE_ENV=production HOSTNAME=0.0.0.0 node server.js",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

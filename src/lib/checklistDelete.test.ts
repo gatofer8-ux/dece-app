@@ -36,6 +36,8 @@ vi.mock("./db", async () => {
       entity_id TEXT,
       details TEXT,
       institution_id TEXT,
+      ip_address TEXT,
+      user_agent TEXT,
       created_at TEXT
     );
   `);

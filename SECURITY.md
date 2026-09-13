@@ -47,6 +47,44 @@ protecciones adicionales. Como mínimo en producción:
 - Copia de seguridad periódica del volumen `/data` (cifrada, fuera del servidor).
 - Acceso restringido por IP / VPN si es viable.
 
+## Cifrado en reposo: a nivel de disco, no de la base de datos
+
+Se evaluó cifrar `data/dece.db` en la propia aplicación (SQLCipher, vía
+`better-sqlite3-multiple-ciphers`). Se descartó por ahora: esa librería no trae
+binarios precompilados para varias combinaciones comunes de Windows + Node
+recientes, y requiere compilar desde el código fuente con Python + herramientas
+de compilación — un requisito frágil para una instalación pensada para
+correr en el computador de cada profesional, no en un servidor con un entorno
+de build controlado.
+
+**Recomendación vigente: cifrado de disco completo del sistema operativo**
+(BitLocker en Windows Pro/Enterprise, FileVault en macOS, o VeraCrypt como
+alternativa gratuita si el Windows es Home). Cubre el mismo escenario que
+importa en este modelo de instalación local por profesional — que la laptop se
+pierda o la roben — sin depender de ninguna librería nativa, sin clave que
+gestionar dentro de la aplicación, y sin riesgo de dejar la base de datos
+ilegible por una clave perdida. Actívalo en cada equipo donde corra SADEX con
+datos reales.
+
+Queda pendiente, para más adelante, revisar si el cifrado a nivel de
+aplicación vale la pena una vez se resuelva el problema de compilación (por
+ejemplo, si una versión futura de la librería publica binarios precompilados,
+o instalando un entorno de compilación completo en la máquina de destino).
+
+## Bitácora de auditoría: quién, qué, cuándo y desde dónde
+
+`audit_logs` (tabla y `/auditoria` en la app) registra usuario, acción,
+entidad afectada y momento desde el inicio del proyecto. Ahora también
+registra `ip_address` y `user_agent` (migración `0037`), capturados
+automáticamente por `src/lib/audit.ts` en cada llamada a `logAudit()` — no fue
+necesario tocar los ~48 lugares que ya la invocan.
+
+La dirección IP real (no falsificable por el cliente) requiere el servidor
+personalizado en `server.js`, que la lee directamente del socket TCP antes de
+entregar la petición a Next.js. **Esto solo aplica a `npm start` (producción).**
+Corriendo con `npm run dev`, la columna de IP queda vacía — es una limitación
+conocida y aceptable, ya que el desarrollo no procesa datos reales.
+
 ## Cabeceras de seguridad
 
 Configuradas en `next.config.js`: HSTS, `X-Frame-Options: DENY`,
