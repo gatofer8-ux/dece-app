@@ -1337,3 +1337,63 @@ CREATE TABLE IF NOT EXISTS dece_coordinator_delegations (
 CREATE INDEX IF NOT EXISTS idx_delegations_inst ON dece_coordinator_delegations(institution_id);
 CREATE INDEX IF NOT EXISTS idx_delegations_active ON dece_coordinator_delegations(institution_id, is_active);
 
+-- ----------------------------------------------------------------------------
+-- Módulo Extramural: Visitas Domiciliarias
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS home_visits (
+  id                  TEXT PRIMARY KEY,
+  institution_id      TEXT NOT NULL REFERENCES institutions(id),
+  case_file_id        TEXT REFERENCES case_files(id) ON DELETE CASCADE,
+  student_id          TEXT NOT NULL REFERENCES students(id),
+  professional_id     TEXT NOT NULL REFERENCES users(id),
+  visit_date          TEXT NOT NULL DEFAULT (datetime('now')),
+  address             TEXT NOT NULL,
+  latitude            REAL,
+  longitude           REAL,
+  housing_conditions  TEXT,
+  family_dynamics     TEXT,
+  status              TEXT NOT NULL DEFAULT 'PROGRAMADA' CHECK (status IN ('PROGRAMADA','REALIZADA','SUSPENDIDA')),
+  offline_sync_status TEXT NOT NULL DEFAULT 'SYNCED' CHECK (offline_sync_status IN ('SYNCED','PENDING')),
+  created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_home_visits_institution ON home_visits(institution_id);
+CREATE INDEX IF NOT EXISTS idx_home_visits_case ON home_visits(case_file_id);
+
+-- ----------------------------------------------------------------------------
+-- Módulo Extramural: Redes de Apoyo Interinstitucional
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS support_networks (
+  id                  TEXT PRIMARY KEY,
+  institution_id      TEXT NOT NULL REFERENCES institutions(id),
+  name                TEXT NOT NULL,
+  type                TEXT NOT NULL CHECK (type IN ('SALUD','JUSTICIA','POLICIA','ONG','COMUNITARIA','OTRO')),
+  contact_name        TEXT,
+  phone               TEXT,
+  email               TEXT,
+  address             TEXT,
+  latitude            REAL,
+  longitude           REAL,
+  agreements          TEXT,
+  created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_support_networks_institution ON support_networks(institution_id);
+
+-- ----------------------------------------------------------------------------
+-- Módulo Extramural: Mapeo de Riesgos Comunitarios
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS community_risks (
+  id                  TEXT PRIMARY KEY,
+  institution_id      TEXT NOT NULL REFERENCES institutions(id),
+  title               TEXT NOT NULL,
+  risk_type           TEXT NOT NULL CHECK (risk_type IN ('DROGAS','DELINCUENCIA','VIALIDAD','PANDILLAS','VIOLENCIA','OTRO')),
+  description         TEXT,
+  severity            TEXT NOT NULL DEFAULT 'MEDIA' CHECK (severity IN ('ALTA','MEDIA','BAJA')),
+  latitude            REAL NOT NULL,
+  longitude           REAL NOT NULL,
+  created_by          TEXT NOT NULL REFERENCES users(id),
+  created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_community_risks_institution ON community_risks(institution_id);
