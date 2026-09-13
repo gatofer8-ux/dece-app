@@ -29,7 +29,6 @@ export default function SeguimientoPrintView({
   institution,
   professional,
   userMap,
-  representative,
 }: {
   caseFile: CaseFileRow;
   student: StudentRow;
@@ -41,9 +40,7 @@ export default function SeguimientoPrintView({
   representative: RepresentativeData;
 }) {
   // Opciones de visualización y optimización
-  const [showPerRowSign, setShowPerRowSign] = useState(false);
   const [blankRowsCount, setBlankRowsCount] = useState<number>(0);
-  const [includeStudentSignature, setIncludeStudentSignature] = useState(false);
   const [folioNumber, setFolioNumber] = useState<number>(1);
 
   // Selección de acciones a imprimir (para imprimir hojas de continuación si el padre regresa después de semanas)
@@ -76,9 +73,9 @@ export default function SeguimientoPrintView({
   function downloadWord() {
     const content = document.getElementById("printable-content");
     if (!content) return;
-    const title = `Bitacora_Seguimiento_${student.full_name.replace(/\s+/g, "_")}${folioNumber > 1 ? `_Folio_${folioNumber}` : ""}`;
+    const title = `Seguimiento_Atencion_Psicosocial_${student.full_name.replace(/\s+/g, "_")}${folioNumber > 1 ? `_Folio_${folioNumber}` : ""}`;
     const html = buildWordDocument(content.innerHTML, title);
-    const blob = new Blob(["\ufeff", html], { type: "application/msword" });
+    const blob = new Blob(["﻿", html], { type: "application/msword" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -97,11 +94,8 @@ export default function SeguimientoPrintView({
           <div>
             <span className="font-semibold text-xs text-slate-800 flex items-center gap-1.5">
               <span>📄</span>
-              <span>Formato Oficial de Seguimiento — Opciones de Impresión</span>
+              <span>Ficha Oficial de Seguimiento de la Atención Psicosocial — Opciones de Impresión</span>
             </span>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              El apartado de firmas siempre consta al final para conservar la armonía institucional del formato.
-            </p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -125,7 +119,7 @@ export default function SeguimientoPrintView({
 
         {/* Panel de Ajustes */}
         <div className="bg-white p-3 rounded border border-slate-200 space-y-2.5 text-xs">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex items-center gap-2">
               <label className="text-slate-700 font-medium whitespace-nowrap">Folio / Hoja N°:</label>
               <select
@@ -140,19 +134,6 @@ export default function SeguimientoPrintView({
               </select>
             </div>
 
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showPerRowSign}
-                onChange={(e) => setShowPerRowSign(e.target.checked)}
-                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-              />
-              <div>
-                <span className="font-medium text-slate-700">Firma en cada fila</span>
-                <p className="text-[10px] text-slate-400">Columna de firma por abordaje</p>
-              </div>
-            </label>
-
             <div className="flex items-center gap-2">
               <label className="text-slate-700 font-medium whitespace-nowrap">Filas en blanco:</label>
               <select
@@ -164,21 +145,9 @@ export default function SeguimientoPrintView({
                 <option value={3}>+3 filas para carpeta</option>
                 <option value={5}>+5 filas para carpeta</option>
                 <option value={8}>+8 filas (hoja completa)</option>
+                <option value={42}>+42 filas (formato físico completo)</option>
               </select>
             </div>
-
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={includeStudentSignature}
-                onChange={(e) => setIncludeStudentSignature(e.target.checked)}
-                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-              />
-              <div>
-                <span className="font-medium text-slate-700">Firma del estudiante</span>
-                <p className="text-[10px] text-slate-400">Al pie con el representante</p>
-              </div>
-            </label>
           </div>
 
           {/* Filtro rápido de acciones si hay más de 1 acción */}
@@ -190,7 +159,7 @@ export default function SeguimientoPrintView({
                   {displayedActions.length} de {actions.length}
                 </span>
                 <span className="text-[10px] text-slate-400 no-print">
-                  (Desmarca las acciones ya firmadas si estás imprimiendo una hoja de continuación)
+                  (Desmarca las acciones ya impresas si estás imprimiendo una hoja de continuación)
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -215,39 +184,31 @@ export default function SeguimientoPrintView({
         </div>
       </div>
 
-      {/* Contenido Imprimible */}
+      {/* Contenido Imprimible — calca fiel del formato oficial institucional */}
       <div id="printable-content" className="p-8 print:p-0 text-sm">
         <DocumentHeader
           title="Seguimiento de la Atención Psicosocial"
-          subtitle={
-            folioNumber > 1
-              ? `Bitácora Oficial — Hoja de Continuación N° ${folioNumber} — Departamento de Consejería Estudiantil (DECE)`
-              : "Bitácora Oficial — Departamento de Consejería Estudiantil (DECE)"
-          }
           institutionName={institution?.name}
           sealImage={institution?.seal_image}
         />
 
-        <section className="grid grid-cols-2 gap-x-8 gap-y-1.5 mb-4 text-xs mt-3 border border-slate-300 p-2.5 rounded bg-slate-50/50">
-          <div><strong>Estudiante:</strong> {student.full_name}</div>
-          <div><strong>Código de caso:</strong> {caseFile.code}</div>
-          <div><strong>C.I. Estudiante:</strong> {student.document_id || "s/n"}</div>
-          <div><strong>Curso:</strong> {studentGrade}</div>
-          <div><strong>Representante legal:</strong> {representative.name || student.representative || "No registra"}</div>
-          <div><strong>Teléfono contacto:</strong> {representative.phone || student.rep_phone || "No registra"}</div>
-          <div><strong>Profesional DECE responsable:</strong> {professional.name}</div>
-          <div>
-            <strong>Folio del expediente:</strong>{" "}
-            <span className="font-semibold text-slate-800">
-              {folioNumber === 1 ? "Hoja 1 (Apertura de seguimiento)" : `Hoja N° ${folioNumber} (Continuación)`}
-            </span>
-          </div>
-        </section>
+        <p className="text-center italic text-[11px] text-slate-600 mt-2 mb-3">
+          *La información registrada en este documento es confidencial y de uso exclusivo del Departamento de Consejería Estudiantil
+        </p>
 
-        <div className="flex items-center justify-between mb-1.5">
-          <p className="font-bold text-xs uppercase text-slate-800">
-            Acciones implementadas para la atención psicosocial {folioNumber > 1 ? `(Continuación ${folioNumber})` : ""}
-          </p>
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-1 mb-3 text-xs">
+          <div>
+            <strong>Nombre y Apellidos:</strong> {student.full_name}
+          </div>
+          <div>
+            <strong>Curso y Paralelo:</strong> {studentGrade}
+          </div>
+        </div>
+
+        <p className="text-center font-bold text-[13px] text-slate-900 mb-1.5">
+          Acciones implementadas para la atención psicosocial{folioNumber > 1 ? ` (Continuación ${folioNumber})` : ""}
+        </p>
+        <div className="flex justify-end mb-1.5">
           <span className="text-[10px] text-slate-500 no-print">
             {displayedActions.length} acción(es) visible(s) {blankRowsCount > 0 ? `+ ${blankRowsCount} filas en blanco` : ""}
           </span>
@@ -255,17 +216,18 @@ export default function SeguimientoPrintView({
 
         <table className="w-full text-xs border-collapse border border-slate-400 table-fixed">
           <thead>
-            <tr className="bg-slate-100 text-slate-800">
-              <th className="border border-slate-400 p-1.5 w-28 text-left">Tipo de intervención</th>
-              <th className="border border-slate-400 p-1.5 w-44 sm:w-48 text-left">Descripción de la atención psicosocial</th>
-              <th className="border border-slate-400 p-1.5 w-24 text-left">Profesional DECE</th>
-              <th className="border border-slate-400 p-1.5 w-20 text-center">Fecha</th>
-              <th className="border border-slate-400 p-1.5 text-left">Observaciones / Acuerdos</th>
-              {showPerRowSign && (
-                <th className="border border-slate-400 p-1.5 w-28 text-center bg-blue-50/70 text-blue-950 font-bold">
-                  Firma y C.I. del Representante
-                </th>
-              )}
+            <tr className="bg-[#D5DCE4] text-slate-900">
+              <th className="border border-slate-400 p-1.5 w-[13%] text-center">
+                Tipo de intervención realizada (individual, familiar o grupal, en crisis)
+              </th>
+              <th className="border border-slate-400 p-1.5 w-[24%] text-center">
+                Descripción de la atención psicosocial realizada
+              </th>
+              <th className="border border-slate-400 p-1.5 w-[11%] text-center">
+                Profesional que realiza la atención psicosocial
+              </th>
+              <th className="border border-slate-400 p-1.5 w-[9%] text-center">Fecha de atención</th>
+              <th className="border border-slate-400 p-1.5 text-center">Observaciones</th>
             </tr>
           </thead>
           <tbody>
@@ -295,18 +257,12 @@ export default function SeguimientoPrintView({
                 <td className="border border-slate-400 p-1.5 text-[11px] whitespace-pre-wrap leading-snug">
                   {a.observations || "—"}
                 </td>
-                {showPerRowSign && (
-                  <td className="border border-slate-400 p-1.5 text-center align-bottom bg-blue-50/20">
-                    <div className="h-10 border-b border-dotted border-slate-400 mb-1" />
-                    <span className="text-[9px] text-slate-500 block">Firma / C.I.</span>
-                  </td>
-                )}
               </tr>
             ))}
 
             {displayedActions.length === 0 && blankRowsCount === 0 && (
               <tr>
-                <td colSpan={showPerRowSign ? 6 : 5} className="border border-slate-400 p-4 text-center text-slate-400 italic">
+                <td colSpan={5} className="border border-slate-400 p-4 text-center text-slate-400 italic">
                   No hay acciones seleccionadas para imprimir. Marca las casillas de las acciones deseadas en el panel superior.
                 </td>
               </tr>
@@ -315,78 +271,17 @@ export default function SeguimientoPrintView({
             {/* Filas en blanco adicionales si se seleccionaron */}
             {Array.from({ length: blankRowsCount }).map((_, idx) => (
               <tr key={`blank-${idx}`} className="align-top">
-                <td className="border border-slate-400 p-1.5 h-14 text-[10px] text-slate-300">
+                <td className="border border-slate-400 p-1.5 h-8 text-[10px] text-slate-300">
                   <span className="no-print italic">Reg. #{displayedActions.length + idx + 1}</span>
                 </td>
-                <td className="border border-slate-400 p-1.5 h-14" />
-                <td className="border border-slate-400 p-1.5 h-14" />
-                <td className="border border-slate-400 p-1.5 h-14" />
-                <td className="border border-slate-400 p-1.5 h-14" />
-                {showPerRowSign && (
-                  <td className="border border-slate-400 p-1.5 text-center align-bottom bg-blue-50/10">
-                    <div className="h-10 border-b border-dotted border-slate-400 mb-1" />
-                    <span className="text-[9px] text-slate-400 block">Firma / C.I.</span>
-                  </td>
-                )}
+                <td className="border border-slate-400 p-1.5 h-8" />
+                <td className="border border-slate-400 p-1.5 h-8" />
+                <td className="border border-slate-400 p-1.5 h-8" />
+                <td className="border border-slate-400 p-1.5 h-8" />
               </tr>
             ))}
           </tbody>
         </table>
-
-        {/* Apartado de Firmas de Responsabilidad al Final — Siempre presente para preservar la armonía institucional */}
-        <section className="mt-10 pt-4 border-t border-slate-300 page-break-inside-avoid" style={{ pageBreakInside: "avoid" }}>
-          <p className="text-[11px] text-slate-600 mb-6 text-justify leading-relaxed">
-            <strong>CONSTANCIA DE SEGUIMIENTO Y ACOMPAÑAMIENTO:</strong> Para debida constancia de las atenciones psicosociales implementadas, así como de las orientaciones, acuerdos y compromisos asumidos para garantizar el bienestar integral, desarrollo socioemocional y permanencia escolar del/la estudiante, suscriben los comparecientes:
-          </p>
-
-          <div
-            className={`grid ${
-              includeStudentSignature ? "grid-cols-3" : "grid-cols-2"
-            } gap-8 text-xs text-center`}
-          >
-            {/* Firma Profesional DECE */}
-            <div className="flex flex-col items-center">
-              <div className="w-56 sm:w-64 border-t border-slate-800 pt-2 mt-14">
-                <p className="font-bold text-slate-800 uppercase">{professional.name}</p>
-                <p className="text-[11px] text-slate-600 uppercase font-medium">{professional.role || "PROFESIONAL DECE"}</p>
-                {professional.documentId && (
-                  <p className="text-[10px] text-slate-500">C.I.: {professional.documentId}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Firma Representante Legal — Diseño armónico y perfectamente alineado */}
-            <div className="flex flex-col items-center">
-              <div className="w-56 sm:w-64 border-t border-slate-800 pt-2 mt-14">
-                <p className="font-bold text-slate-800 uppercase">
-                  {representative.name || "REPRESENTANTE LEGAL"}
-                </p>
-                <p className="text-[11px] text-slate-600 uppercase font-medium">
-                  {representative.relationship || "MADRE / PADRE / REPRESENTANTE LEGAL"}
-                </p>
-                <p className="text-[10px] text-slate-500">
-                  C.I.: {representative.documentId || "______________________"}
-                </p>
-                {representative.phone && (
-                  <p className="text-[10px] text-slate-400">Tel: {representative.phone}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Firma Estudiante (Opcional) */}
-            {includeStudentSignature && (
-              <div className="flex flex-col items-center">
-                <div className="w-56 sm:w-64 border-t border-slate-800 pt-2 mt-14">
-                  <p className="font-bold text-slate-800 uppercase">{student.full_name}</p>
-                  <p className="text-[11px] text-slate-600 uppercase font-medium">ESTUDIANTE</p>
-                  {student.document_id && (
-                    <p className="text-[10px] text-slate-500">C.I.: {student.document_id}</p>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
 
         <div className="mt-8">
           <DocumentFooter institution={institution} />
