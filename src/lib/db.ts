@@ -819,6 +819,259 @@ function createConnection(): Database.Database {
     } catch {
       // ignorar si falla (p.ej. tabla no existe aún en instalaciones nuevas)
     }
+
+    try {
+      const staleConsents = db
+        .prepare(
+          `SELECT ca.id as action_id, c.representative_name
+           FROM case_actions ca
+           JOIN restorative_circle_consents c
+             ON c.case_file_id = ca.case_file_id AND c.consent_date = ca.date
+           WHERE ca.type = 'Intervención Restaurativa'
+             AND ca.description LIKE 'Emisión de consentimiento informado de círculo restaurativo para el estudiante %'`
+        )
+        .all() as { action_id: string; representative_name: string | null }[];
+
+      if (staleConsents.length > 0) {
+        const updateConsent = db.prepare(`UPDATE case_actions SET description = ? WHERE id = ?`);
+        for (const row of staleConsents) {
+          const description = `Consentimiento informado de círculo restaurativo suscrito con ${row.representative_name || "el representante legal"}.`;
+          updateConsent.run(description, row.action_id);
+        }
+        console.log(`[migraciones] reformateados ${staleConsents.length} consentimientos de círculo restaurativo en la bitácora del caso`);
+      }
+    } catch {
+      // ignorar si falla (p.ej. tabla no existe aún en instalaciones nuevas)
+    }
+
+    // A partir de aquí: filas cuya DESCRIPCIÓN ya era correcta y corta desde
+    // siempre, pero a las que la corrección original les faltaba llenar
+    // `observations` con un resumen (quedaban en "—"). Se completan tomando
+    // el dato correspondiente de la tabla fuente, sin tocar la descripción.
+    const excerpt = (text: string | null | undefined, max: number): string => {
+      const clean = (text || "").trim();
+      if (!clean) return "";
+      return clean.length > max ? `${clean.slice(0, max)}...` : clean;
+    };
+
+    try {
+      const staleOpenings = db
+        .prepare(
+          `SELECT ca.id as action_id, cf.description as case_description
+           FROM case_actions ca
+           JOIN case_files cf ON cf.id = ca.case_file_id
+           WHERE ca.type = 'Apertura de caso' AND ca.observations IS NULL`
+        )
+        .all() as { action_id: string; case_description: string | null }[];
+
+      if (staleOpenings.length > 0) {
+        const updateOpening = db.prepare(`UPDATE case_actions SET observations = ? WHERE id = ?`);
+        let applied = 0;
+        for (const row of staleOpenings) {
+          const obs = excerpt(row.case_description, 140);
+          if (obs) {
+            updateOpening.run(obs, row.action_id);
+            applied++;
+          }
+        }
+        if (applied > 0) console.log(`[migraciones] agregado resumen a ${applied} aperturas de caso en la bitácora del caso`);
+      }
+    } catch {
+      // ignorar si falla
+    }
+
+    try {
+      const staleObservationSheets = db
+        .prepare(
+          `SELECT ca.id as action_id, s.observations as sheet_observations
+           FROM case_actions ca
+           JOIN case_observation_sheets s
+             ON s.case_file_id = ca.case_file_id AND s.observation_date = ca.date
+           WHERE ca.type = 'Ficha de observación psicosocial' AND ca.observations IS NULL`
+        )
+        .all() as { action_id: string; sheet_observations: string | null }[];
+
+      if (staleObservationSheets.length > 0) {
+        const updateSheet = db.prepare(`UPDATE case_actions SET observations = ? WHERE id = ?`);
+        let applied = 0;
+        for (const row of staleObservationSheets) {
+          const obs = excerpt(row.sheet_observations, 200);
+          if (obs) {
+            updateSheet.run(obs, row.action_id);
+            applied++;
+          }
+        }
+        if (applied > 0) console.log(`[migraciones] agregado resumen a ${applied} fichas de observación psicosocial en la bitácora del caso`);
+      }
+    } catch {
+      // ignorar si falla
+    }
+
+    try {
+      const staleCarePlans = db
+        .prepare(
+          `SELECT ca.id as action_id, p.diagnosis_summary
+           FROM case_actions ca
+           JOIN case_care_plans p ON p.case_file_id = ca.case_file_id AND p.plan_date = ca.date
+           WHERE ca.type = 'Plan de atención' AND ca.observations IS NULL`
+        )
+        .all() as { action_id: string; diagnosis_summary: string | null }[];
+
+      if (staleCarePlans.length > 0) {
+        const updateCarePlan = db.prepare(`UPDATE case_actions SET observations = ? WHERE id = ?`);
+        let applied = 0;
+        for (const row of staleCarePlans) {
+          const obs = excerpt(row.diagnosis_summary, 140);
+          if (obs) {
+            updateCarePlan.run(obs, row.action_id);
+            applied++;
+          }
+        }
+        if (applied > 0) console.log(`[migraciones] agregado resumen a ${applied} planes de atención en la bitácora del caso`);
+      }
+    } catch {
+      // ignorar si falla
+    }
+
+    try {
+      const staleViolenceReports = db
+        .prepare(
+          `SELECT ca.id as action_id, v.summary
+           FROM case_actions ca
+           JOIN violence_reports v ON v.case_file_id = ca.case_file_id AND v.report_date = ca.date
+           WHERE ca.type = 'Reporte de hecho de violencia' AND ca.observations IS NULL`
+        )
+        .all() as { action_id: string; summary: string | null }[];
+
+      if (staleViolenceReports.length > 0) {
+        const updateViolenceReport = db.prepare(`UPDATE case_actions SET observations = ? WHERE id = ?`);
+        let applied = 0;
+        for (const row of staleViolenceReports) {
+          const obs = excerpt(row.summary, 140);
+          if (obs) {
+            updateViolenceReport.run(obs, row.action_id);
+            applied++;
+          }
+        }
+        if (applied > 0) console.log(`[migraciones] agregado resumen a ${applied} reportes de hecho de violencia en la bitácora del caso`);
+      }
+    } catch {
+      // ignorar si falla
+    }
+
+    try {
+      const staleSocializationActs = db
+        .prepare(
+          `SELECT ca.id as action_id, sa.psychosocial_strategies, sa.agreements
+           FROM case_actions ca
+           JOIN socialization_acts sa ON sa.case_file_id = ca.case_file_id AND sa.act_date = ca.date
+           WHERE ca.type = 'Acta de socialización' AND ca.observations IS NULL`
+        )
+        .all() as { action_id: string; psychosocial_strategies: string | null; agreements: string | null }[];
+
+      if (staleSocializationActs.length > 0) {
+        const updateSocializationAct = db.prepare(`UPDATE case_actions SET observations = ? WHERE id = ?`);
+        let applied = 0;
+        for (const row of staleSocializationActs) {
+          let source = row.psychosocial_strategies;
+          if (!source || !source.trim()) {
+            try {
+              const parsed = JSON.parse(row.agreements || "[]");
+              if (Array.isArray(parsed) && parsed.length > 0) source = String(parsed[0]);
+            } catch {
+              // ignorar JSON inválido
+            }
+          }
+          const obs = excerpt(source, 140);
+          if (obs) {
+            updateSocializationAct.run(obs, row.action_id);
+            applied++;
+          }
+        }
+        if (applied > 0) console.log(`[migraciones] agregado resumen a ${applied} actas de socialización en la bitácora del caso`);
+      }
+    } catch {
+      // ignorar si falla
+    }
+
+    try {
+      const staleAdvisoryActs = db
+        .prepare(
+          `SELECT ca.id as action_id, aa.conclusion
+           FROM case_actions ca
+           JOIN authority_advisory_acts aa ON aa.case_file_id = ca.case_file_id AND aa.act_date = ca.date
+           WHERE ca.type = 'Asesoramiento a máxima autoridad' AND ca.observations IS NULL`
+        )
+        .all() as { action_id: string; conclusion: string | null }[];
+
+      if (staleAdvisoryActs.length > 0) {
+        const updateAdvisoryAct = db.prepare(`UPDATE case_actions SET observations = ? WHERE id = ?`);
+        let applied = 0;
+        for (const row of staleAdvisoryActs) {
+          const obs = excerpt(row.conclusion, 140);
+          if (obs) {
+            updateAdvisoryAct.run(obs, row.action_id);
+            applied++;
+          }
+        }
+        if (applied > 0) console.log(`[migraciones] agregado resumen a ${applied} actas de asesoramiento a máxima autoridad en la bitácora del caso`);
+      }
+    } catch {
+      // ignorar si falla
+    }
+
+    try {
+      const staleSituationalReports = db
+        .prepare(
+          `SELECT ca.id as action_id, sr.conclusions
+           FROM case_actions ca
+           JOIN situational_reports sr ON sr.case_file_id = ca.case_file_id AND sr.report_date = ca.date
+           WHERE ca.type = 'Informe situacional' AND ca.observations IS NULL`
+        )
+        .all() as { action_id: string; conclusions: string | null }[];
+
+      if (staleSituationalReports.length > 0) {
+        const updateSituationalReport = db.prepare(`UPDATE case_actions SET observations = ? WHERE id = ?`);
+        let applied = 0;
+        for (const row of staleSituationalReports) {
+          const obs = excerpt(row.conclusions, 140);
+          if (obs) {
+            updateSituationalReport.run(obs, row.action_id);
+            applied++;
+          }
+        }
+        if (applied > 0) console.log(`[migraciones] agregado resumen a ${applied} informes situacionales en la bitácora del caso`);
+      }
+    } catch {
+      // ignorar si falla
+    }
+
+    try {
+      const staleReferrals = db
+        .prepare(
+          `SELECT ca.id as action_id, r.reason, r.current_situation_history
+           FROM case_actions ca
+           JOIN referrals r ON r.case_file_id = ca.case_file_id
+           WHERE ca.type = 'Derivación' AND ca.observations IS NULL
+             AND (SELECT COUNT(*) FROM referrals r2 WHERE r2.case_file_id = ca.case_file_id) = 1`
+        )
+        .all() as { action_id: string; reason: string | null; current_situation_history: string | null }[];
+
+      if (staleReferrals.length > 0) {
+        const updateReferral = db.prepare(`UPDATE case_actions SET observations = ? WHERE id = ?`);
+        let applied = 0;
+        for (const row of staleReferrals) {
+          const obs = excerpt(row.reason || row.current_situation_history, 140);
+          if (obs) {
+            updateReferral.run(obs, row.action_id);
+            applied++;
+          }
+        }
+        if (applied > 0) console.log(`[migraciones] agregado resumen a ${applied} derivaciones en la bitácora del caso`);
+      }
+    } catch {
+      // ignorar si falla
+    }
   } catch {
     // ignorar si fallan los índices en caliente
   }

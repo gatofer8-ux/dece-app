@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DocumentHeader from "@/components/DocumentHeader";
 import DocumentFooter from "@/components/DocumentFooter";
 import { formatDate } from "@/components/ui";
@@ -51,6 +51,20 @@ export default function SeguimientoPrintView({
 
   const displayedActions = actions.filter((a) => selectedIds.has(a.id));
 
+  // Esta ficha es una tabla ancha (5-6 columnas de texto largo): se imprime y
+  // exporta en horizontal. La regla @page es global al documento, así que se
+  // inyecta/retira dinámicamente solo mientras esta página está montada, sin
+  // afectar la orientación (vertical) del resto de documentos de la app.
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.id = "seguimiento-print-landscape";
+    style.innerHTML = `@media print { @page { size: landscape; margin: 8mm 10mm; } }`;
+    document.head.appendChild(style);
+    return () => {
+      style.remove();
+    };
+  }, []);
+
   function selectAll() {
     setSelectedIds(new Set(actions.map((a) => a.id)));
   }
@@ -75,7 +89,7 @@ export default function SeguimientoPrintView({
     const content = document.getElementById("printable-content");
     if (!content) return;
     const title = `Seguimiento_Atencion_Psicosocial_${student.full_name.replace(/\s+/g, "_")}${folioNumber > 1 ? `_Folio_${folioNumber}` : ""}`;
-    const html = buildWordDocument(content.innerHTML, title);
+    const html = buildWordDocument(content.innerHTML, title, { landscape: true });
     const blob = new Blob(["﻿", html], { type: "application/msword" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -90,7 +104,7 @@ export default function SeguimientoPrintView({
   const colCount = showPerRowSign ? 6 : 5;
 
   return (
-    <div className="max-w-4xl mx-auto bg-white">
+    <div className="max-w-4xl print:max-w-none mx-auto bg-white">
       {/* Barra de Controles y Opciones (Oculta al Imprimir) */}
       <div className="no-print p-4 bg-slate-50 border-b border-slate-200 rounded-t-lg space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
