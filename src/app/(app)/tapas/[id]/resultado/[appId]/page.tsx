@@ -32,9 +32,17 @@ export default async function TapasResultPage({ params }: { params: { id: string
         title={`Perfil de talentos — ${app.student_name}`}
         description={`${s.title} · ${[app.course_snapshot, app.parallel_snapshot].filter(Boolean).join(" ")}`}
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link href={`/tapas/${s.id}`} className="btn-secondary text-xs">← Volver</Link>
-            <a href={`/tapas/${s.id}/informe/${app.id}`} className="btn-primary text-xs">📄 Informe</a>
+            <a href={`/tapas/${s.id}/informe/${app.id}`} className="btn-secondary text-xs">📄 Informe TaPas</a>
+            {app.student_id ? (
+              <Link
+                href={`/ovp/consolidado/${app.student_id}`}
+                className="btn-primary text-xs flex items-center gap-1 font-bold bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                <span>🧠</span> Informe Consolidado
+              </Link>
+            ) : null}
           </div>
         }
       />

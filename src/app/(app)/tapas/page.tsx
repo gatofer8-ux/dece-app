@@ -30,10 +30,16 @@ export default async function TapasPage() {
         description="Herramienta de Orientación Vocacional y Profesional (Proyecto TaPas – VVOB / MinEduc). El estudiante clasifica 74 arquetipos, arma sus grupos de talentos y los ordena. Se juega por un enlace, sin cuenta."
         action={
           canManage ? (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href="/ovp/consolidado"
+                className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-800 rounded-lg text-xs font-bold flex items-center gap-1.5"
+              >
+                <span>🧠</span> Informes Consolidados OVP
+              </Link>
               <Link href="/tapas/manual" className="btn-secondary text-xs">📘 Manual</Link>
               <Link href="/tapas/cartillas" className="btn-secondary text-xs">🃏 Cartillas</Link>
-              <Link href="/tapas/nueva" className="btn-primary flex items-center gap-1.5">
+              <Link href="/tapas/nueva" className="btn-primary flex items-center gap-1.5 text-xs">
                 <span>➕</span> Nueva aplicación
               </Link>
             </div>

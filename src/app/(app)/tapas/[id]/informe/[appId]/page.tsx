@@ -29,7 +29,17 @@ export default async function TapasInformePage({ params }: { params: { id: strin
     <div className="max-w-3xl mx-auto bg-white">
       <div className="no-print p-3 bg-slate-100 border-b flex items-center justify-between mb-4 rounded-lg">
         <Link href={`/tapas/${s.id}/resultado/${app.id}`} className="text-xs text-slate-600 font-semibold">← Volver</Link>
-        <PrintButton hideWordButton />
+        <div className="flex items-center gap-2">
+          {app.student_id ? (
+            <Link
+              href={`/ovp/consolidado/${app.student_id}`}
+              className="text-xs bg-indigo-50 border border-indigo-200 text-indigo-800 px-3 py-1.5 rounded font-semibold hover:bg-indigo-100 flex items-center gap-1"
+            >
+              <span>🧠</span> Consolidado
+            </Link>
+          ) : null}
+          <PrintButton hideWordButton />
+        </div>
       </div>
 
       <div id="printable-content" className="p-6 print:p-0 font-serif text-black">

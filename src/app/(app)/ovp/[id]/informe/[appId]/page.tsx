@@ -48,6 +48,14 @@ export default async function OvpInformePage({
           >
             {showTecnico ? "Ocultar desglose técnico" : "Incluir desglose técnico"}
           </a>
+          {app.student_id ? (
+            <Link
+              href={`/ovp/consolidado/${app.student_id}`}
+              className="text-xs bg-indigo-50 border border-indigo-200 text-indigo-800 px-3 py-1.5 rounded font-semibold hover:bg-indigo-100 flex items-center gap-1"
+            >
+              <span>🧠</span> Consolidado
+            </Link>
+          ) : null}
           <PrintButton hideWordButton />
         </div>
       </div>

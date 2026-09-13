@@ -14,6 +14,8 @@ import {
   type AppointmentRow,
   type TeacherAlertRow,
   type DailyAttentionRow,
+  type TapasApplicationRow,
+  type OvpApplicationRow,
 } from "@/lib/types";
 import { toggleStudentActive, deleteStudent, enrollStudentInYearAction } from "../actions";
 import { NEE_TYPE_LABELS, LIVES_WITH_LABELS, LEGAL_GUARDIAN_LABELS, EDUCATION_LEVEL_LABELS, parseJsonArray } from "@/lib/student";
@@ -80,6 +82,19 @@ export default async function EstudianteDetallePage({ params }: { params: { id: 
   // 5. Historial de Matrículas / Años Lectivos
   const enrollmentHistory = getStudentEnrollmentHistory(student.id);
   const schoolYears = listSchoolYears(institutionId);
+
+  // 6. Orientación Vocacional (OVP / TaPas)
+  const tapasApp = db
+    .prepare(
+      "SELECT * FROM tapas_applications WHERE institution_id = ? AND (student_id = ? OR student_name = ?) AND status = 'FINALIZADA' ORDER BY finished_at DESC LIMIT 1"
+    )
+    .get(institutionId, student.id, student.full_name) as TapasApplicationRow | undefined;
+
+  const ippjApp = db
+    .prepare(
+      "SELECT * FROM ovp_applications WHERE institution_id = ? AND (student_id = ? OR student_name = ?) AND status = 'FINALIZADA' ORDER BY finished_at DESC LIMIT 1"
+    )
+    .get(institutionId, student.id, student.full_name) as OvpApplicationRow | undefined;
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -543,6 +558,66 @@ export default async function EstudianteDetallePage({ params }: { params: { id: 
             </table>
           </div>
         )}
+      </div>
+
+      {/* Orientación Vocacional y Profesional (OVP) */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+            <span>🧠</span> Orientación Vocacional y Profesional (OVP)
+          </h2>
+          <Link
+            href={`/ovp/consolidado/${student.id}`}
+            className="text-xs text-indigo-700 font-bold hover:underline flex items-center gap-1"
+          >
+            <span>📜</span> Ver Informe Consolidado OVP
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="card p-4 border border-slate-200">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase text-slate-600">Juego de Arquetipos (TaPas)</span>
+              {tapasApp ? <Badge color="green">Finalizado</Badge> : <Badge color="slate">Pendiente</Badge>}
+            </div>
+            {tapasApp ? (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs text-slate-600">Evaluado el: {formatDate(tapasApp.finished_at)}</p>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/tapas/${tapasApp.session_id}/resultado/${tapasApp.id}`}
+                    className="text-xs text-indigo-700 font-semibold hover:underline"
+                  >
+                    Ver perfil de talentos →
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 mt-2">No se ha registrado aplicación finalizada de TaPas.</p>
+            )}
+          </div>
+
+          <div className="card p-4 border border-slate-200">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase text-slate-600">Cuestionario IPPJ (Holland RIASEC)</span>
+              {ippjApp ? <Badge color="green">Finalizado</Badge> : <Badge color="slate">Pendiente</Badge>}
+            </div>
+            {ippjApp ? (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs text-slate-600">Evaluado el: {formatDate(ippjApp.finished_at)}</p>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/ovp/${ippjApp.session_id}/resultado/${ippjApp.id}`}
+                    className="text-xs text-indigo-700 font-semibold hover:underline"
+                  >
+                    Ver perfil RIASEC →
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 mt-2">No se ha registrado aplicación finalizada de IPPJ.</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
