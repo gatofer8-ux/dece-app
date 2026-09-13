@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import DocumentHeader from "@/components/DocumentHeader";
 import DocumentFooter from "@/components/DocumentFooter";
 import { formatDate } from "@/components/ui";
-import { buildWordDocument } from "@/lib/wordExportStyles";
 import { INTERVENTION_TYPE_LABELS } from "@/lib/types";
 import type { CaseFileRow, StudentRow, CaseActionRow, InstitutionRow } from "@/lib/types";
 
@@ -85,21 +84,18 @@ export default function SeguimientoPrintView({
     setSelectedIds(next);
   }
 
-  function downloadWord() {
-    const content = document.getElementById("printable-content");
-    if (!content) return;
-    const title = `Seguimiento_Atencion_Psicosocial_${student.full_name.replace(/\s+/g, "_")}${folioNumber > 1 ? `_Folio_${folioNumber}` : ""}`;
-    const html = buildWordDocument(content.innerHTML, title, { landscape: true });
-    const blob = new Blob(["﻿", html], { type: "application/msword" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${title}.doc`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
+  // Descarga en Word real (.docx, generado en el servidor con la librería `docx`):
+  // reemplaza el truco anterior de re-empaquetar el HTML de la vista impresa,
+  // que no podía incrustar el logo del Ministerio (ruta relativa) ni forzar de
+  // forma confiable la orientación horizontal en todos los lectores de Word.
+  const wordExportHref = (() => {
+    const params = new URLSearchParams();
+    params.set("folio", String(folioNumber));
+    params.set("blank", String(blankRowsCount));
+    if (showPerRowSign) params.set("sign", "1");
+    params.set("ids", displayedActions.map((a) => a.id).join(","));
+    return `/api/casos/${caseFile.id}/seguimiento/export-word?${params.toString()}`;
+  })();
 
   const colCount = showPerRowSign ? 6 : 5;
 
@@ -115,14 +111,13 @@ export default function SeguimientoPrintView({
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={downloadWord}
+            <a
+              href={wordExportHref}
               className="btn-secondary text-xs !py-1.5"
               title="Descargar versión editable en Word"
             >
               ⬇️ Word editable
-            </button>
+            </a>
             <button
               type="button"
               onClick={() => window.print()}
