@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import { useEffect, useState } from "react";
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import type { LeafletEvent } from "leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -22,6 +22,19 @@ function ClickToPick({ onPick }: { onPick: (lat: number, lng: number) => void })
       onPick(e.latlng.lat, e.latlng.lng);
     },
   });
+  return null;
+}
+
+// react-leaflet solo usa `center`/`zoom` al montar el mapa: si la posición
+// cambia después (p. ej. al usar la geolocalización), el mapa no se mueve
+// solo y el marcador queda fuera de la vista, como si "no hiciera nada".
+function Recenter({ position }: { position: [number, number] | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (position) {
+      map.setView(position, Math.max(map.getZoom(), 15));
+    }
+  }, [position, map]);
   return null;
 }
 
@@ -93,6 +106,7 @@ export default function LocationPicker({
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <ClickToPick onPick={(lat, lng) => setPosition([lat, lng])} />
+          <Recenter position={position} />
           {position && (
             <Marker
               position={position}
