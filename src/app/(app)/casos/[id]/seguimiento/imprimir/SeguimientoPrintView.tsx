@@ -42,6 +42,7 @@ export default function SeguimientoPrintView({
   // Opciones de visualización y optimización
   const [blankRowsCount, setBlankRowsCount] = useState<number>(0);
   const [folioNumber, setFolioNumber] = useState<number>(1);
+  const [showPerRowSign, setShowPerRowSign] = useState(false);
 
   // Selección de acciones a imprimir (para imprimir hojas de continuación si el padre regresa después de semanas)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
@@ -86,6 +87,8 @@ export default function SeguimientoPrintView({
     URL.revokeObjectURL(url);
   }
 
+  const colCount = showPerRowSign ? 6 : 5;
+
   return (
     <div className="max-w-4xl mx-auto bg-white">
       {/* Barra de Controles y Opciones (Oculta al Imprimir) */}
@@ -119,7 +122,7 @@ export default function SeguimientoPrintView({
 
         {/* Panel de Ajustes */}
         <div className="bg-white p-3 rounded border border-slate-200 space-y-2.5 text-xs">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="flex items-center gap-2">
               <label className="text-slate-700 font-medium whitespace-nowrap">Folio / Hoja N°:</label>
               <select
@@ -148,6 +151,19 @@ export default function SeguimientoPrintView({
                 <option value={42}>+42 filas (formato físico completo)</option>
               </select>
             </div>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showPerRowSign}
+                onChange={(e) => setShowPerRowSign(e.target.checked)}
+                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <div>
+                <span className="font-medium text-slate-700">Firma en cada fila</span>
+                <p className="text-[10px] text-slate-400">Añade una columna de firma para el registro físico</p>
+              </div>
+            </label>
           </div>
 
           {/* Filtro rápido de acciones si hay más de 1 acción */}
@@ -184,7 +200,13 @@ export default function SeguimientoPrintView({
         </div>
       </div>
 
-      {/* Contenido Imprimible — calca fiel del formato oficial institucional */}
+      {/* Contenido Imprimible — calca fiel del formato oficial institucional.
+          Nota: los colores, anchos y tamaños de fuente de esta sección van como
+          estilos inline (no clases de Tailwind con valores arbitrarios) a propósito:
+          la descarga "Word editable" extrae este innerHTML y lo re-empaqueta con una
+          hoja de estilos de reemplazo (wordExportStyles.ts) que no puede traducir
+          clases como bg-[#D5DCE4] o w-[13%] — solo los estilos inline sobreviven
+          intactos en ambos formatos (vista impresa y .doc exportado). */}
       <div id="printable-content" className="p-8 print:p-0 text-sm">
         <DocumentHeader
           title="Seguimiento de la Atención Psicosocial"
@@ -192,7 +214,10 @@ export default function SeguimientoPrintView({
           sealImage={institution?.seal_image}
         />
 
-        <p className="text-center italic text-[11px] text-slate-600 mt-2 mb-3">
+        <p
+          className="text-center mt-2 mb-3"
+          style={{ fontStyle: "italic", fontSize: "11px", color: "#475569" }}
+        >
           *La información registrada en este documento es confidencial y de uso exclusivo del Departamento de Consejería Estudiantil
         </p>
 
@@ -205,7 +230,10 @@ export default function SeguimientoPrintView({
           </div>
         </div>
 
-        <p className="text-center font-bold text-[13px] text-slate-900 mb-1.5">
+        <p
+          className="text-center mb-1.5"
+          style={{ fontWeight: "bold", fontSize: "13px", color: "#0f172a" }}
+        >
           Acciones implementadas para la atención psicosocial{folioNumber > 1 ? ` (Continuación ${folioNumber})` : ""}
         </p>
         <div className="flex justify-end mb-1.5">
@@ -214,26 +242,56 @@ export default function SeguimientoPrintView({
           </span>
         </div>
 
-        <table className="w-full text-xs border-collapse border border-slate-400 table-fixed">
+        <table
+          className="w-full border-collapse"
+          style={{ tableLayout: "fixed", fontSize: "11px", border: "1px solid #94a3b8" }}
+        >
           <thead>
-            <tr className="bg-[#D5DCE4] text-slate-900">
-              <th className="border border-slate-400 p-1.5 w-[13%] text-center">
+            <tr style={{ backgroundColor: "#D5DCE4", color: "#0f172a" }}>
+              <th
+                className="text-center"
+                style={{ border: "1px solid #94a3b8", padding: "6px", width: "13%" }}
+              >
                 Tipo de intervención realizada (individual, familiar o grupal, en crisis)
               </th>
-              <th className="border border-slate-400 p-1.5 w-[24%] text-center">
+              <th
+                className="text-center"
+                style={{ border: "1px solid #94a3b8", padding: "6px", width: "23%" }}
+              >
                 Descripción de la atención psicosocial realizada
               </th>
-              <th className="border border-slate-400 p-1.5 w-[11%] text-center">
+              <th
+                className="text-center"
+                style={{ border: "1px solid #94a3b8", padding: "6px", width: "11%" }}
+              >
                 Profesional que realiza la atención psicosocial
               </th>
-              <th className="border border-slate-400 p-1.5 w-[9%] text-center">Fecha de atención</th>
-              <th className="border border-slate-400 p-1.5 text-center">Observaciones</th>
+              <th
+                className="text-center"
+                style={{ border: "1px solid #94a3b8", padding: "6px", width: "9%" }}
+              >
+                Fecha de atención
+              </th>
+              <th
+                className="text-center"
+                style={{ border: "1px solid #94a3b8", padding: "6px", width: showPerRowSign ? "31%" : "44%" }}
+              >
+                Observaciones
+              </th>
+              {showPerRowSign && (
+                <th
+                  className="text-center"
+                  style={{ border: "1px solid #94a3b8", padding: "6px", width: "13%", backgroundColor: "#dbeafe", color: "#1e3a8a" }}
+                >
+                  Firma
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
             {displayedActions.map((a) => (
-              <tr key={a.id} className="align-top">
-                <td className="border border-slate-400 p-1.5 text-[11px]">
+              <tr key={a.id} style={{ verticalAlign: "top" }}>
+                <td style={{ border: "1px solid #94a3b8", padding: "6px" }}>
                   <div className="flex items-start gap-1">
                     <input
                       type="checkbox"
@@ -245,24 +303,34 @@ export default function SeguimientoPrintView({
                     <span>{a.intervention_type ? INTERVENTION_TYPE_LABELS[a.intervention_type] || a.intervention_type : a.type}</span>
                   </div>
                 </td>
-                <td className="border border-slate-400 p-1.5 text-[11px] whitespace-pre-wrap leading-snug">
+                <td style={{ border: "1px solid #94a3b8", padding: "6px", whiteSpace: "pre-wrap", lineHeight: 1.3 }}>
                   {a.description}
                 </td>
-                <td className="border border-slate-400 p-1.5 text-[11px]">
+                <td style={{ border: "1px solid #94a3b8", padding: "6px" }}>
                   {userMap[a.author_id] || professional.name}
                 </td>
-                <td className="border border-slate-400 p-1.5 text-[11px] text-center whitespace-nowrap">
+                <td style={{ border: "1px solid #94a3b8", padding: "6px", textAlign: "center", whiteSpace: "nowrap" }}>
                   {formatDate(a.date)}
                 </td>
-                <td className="border border-slate-400 p-1.5 text-[11px] whitespace-pre-wrap leading-snug">
+                <td style={{ border: "1px solid #94a3b8", padding: "6px", whiteSpace: "pre-wrap", lineHeight: 1.3 }}>
                   {a.observations || "—"}
                 </td>
+                {showPerRowSign && (
+                  <td style={{ border: "1px solid #94a3b8", padding: "6px", textAlign: "center", verticalAlign: "bottom" }}>
+                    <div style={{ height: "28px", borderBottom: "1px dotted #94a3b8", marginBottom: "4px" }} />
+                    <span style={{ fontSize: "9px", color: "#64748b" }}>Firma / C.I.</span>
+                  </td>
+                )}
               </tr>
             ))}
 
             {displayedActions.length === 0 && blankRowsCount === 0 && (
               <tr>
-                <td colSpan={5} className="border border-slate-400 p-4 text-center text-slate-400 italic">
+                <td
+                  colSpan={colCount}
+                  className="text-center italic"
+                  style={{ border: "1px solid #94a3b8", padding: "16px", color: "#94a3b8" }}
+                >
                   No hay acciones seleccionadas para imprimir. Marca las casillas de las acciones deseadas en el panel superior.
                 </td>
               </tr>
@@ -270,14 +338,17 @@ export default function SeguimientoPrintView({
 
             {/* Filas en blanco adicionales si se seleccionaron */}
             {Array.from({ length: blankRowsCount }).map((_, idx) => (
-              <tr key={`blank-${idx}`} className="align-top">
-                <td className="border border-slate-400 p-1.5 h-8 text-[10px] text-slate-300">
+              <tr key={`blank-${idx}`} style={{ verticalAlign: "top" }}>
+                <td style={{ border: "1px solid #94a3b8", padding: "6px", height: "32px", fontSize: "10px", color: "#cbd5e1" }}>
                   <span className="no-print italic">Reg. #{displayedActions.length + idx + 1}</span>
                 </td>
-                <td className="border border-slate-400 p-1.5 h-8" />
-                <td className="border border-slate-400 p-1.5 h-8" />
-                <td className="border border-slate-400 p-1.5 h-8" />
-                <td className="border border-slate-400 p-1.5 h-8" />
+                <td style={{ border: "1px solid #94a3b8", padding: "6px", height: "32px" }} />
+                <td style={{ border: "1px solid #94a3b8", padding: "6px", height: "32px" }} />
+                <td style={{ border: "1px solid #94a3b8", padding: "6px", height: "32px" }} />
+                <td style={{ border: "1px solid #94a3b8", padding: "6px", height: "32px" }} />
+                {showPerRowSign && (
+                  <td style={{ border: "1px solid #94a3b8", padding: "6px", height: "32px" }} />
+                )}
               </tr>
             ))}
           </tbody>
