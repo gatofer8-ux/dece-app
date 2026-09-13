@@ -63,6 +63,7 @@ COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/templates ./templates
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/next.config.js ./next.config.js
+COPY --from=builder /app/server.js ./server.js
 
 # Fuentes personalizadas para los membretes oficiales
 RUN mkdir -p /usr/share/fonts/truetype/custom \
