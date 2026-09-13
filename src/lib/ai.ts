@@ -11,7 +11,14 @@ import {
   detectPreventionThemes,
   getPreventionSeedRowForTheme,
 } from "./strategicPlanBianual";
-import type { ActionPlanItem, StrategicBianualAxisItem } from "./types";
+import {
+  DEBIDA_DILIGENCIA_TEXT,
+  getDefaultBodyIntro,
+  getOficioTypeLabel,
+  normalizeOficioType,
+  requiresDebidaDiligencia,
+} from "./oficios";
+import type { ActionPlanItem, OficioType, StrategicBianualAxisItem } from "./types";
 
 // Asistente de redacción con IA para los documentos técnicos del DECE.
 // Usa Groq (modelos Llama 70B, gratis) como proveedor de IA principal,
@@ -2560,4 +2567,192 @@ REGLAS:
   const res = await generateWithFallback({ prompt, temperature: 0.6, maxOutputTokens: 900 });
   if ("error" in res) return { error: res.error };
   return { text: res.text };
+}
+
+// ───────────────────────────── OFICIOS INSTITUCIONALES ─────────────────────────────
+
+export interface DraftedOficio {
+  asunto: string;
+  body_intro: string;
+  body_content: string;
+}
+
+/** Encabezado del ASUNTO por tipo de oficio, con la estructura del modelo institucional. */
+const OFICIO_ASUNTO_PREFIX: Record<OficioType, string> = {
+  INFORME_RIESGO_VIOLENCIA: "INFORME TÉCNICO SITUACIONAL POR",
+  SOLICITUD_APROBACION_ACTIVIDAD: "SOLICITUD DE AUTORIZACIÓN PARA",
+  COORDINACION_ORGANISMO_EXTERNO: "SOLICITUD DE COORDINACIÓN INTERINSTITUCIONAL PARA",
+  NOTIFICACION_INFORMATIVA: "NOTIFICACIÓN INFORMATIVA SOBRE",
+  OTRO: "OFICIO SOBRE",
+};
+
+/** Tono y finalidad que la IA debe respetar según la circunstancia del oficio. */
+const OFICIO_TONE_GUIDE: Record<OficioType, string> = {
+  INFORME_RIESGO_VIOLENCIA:
+    'Tono técnico-jurídico y de máxima formalidad. El oficio pone en conocimiento de la máxima autoridad una presunta situación de riesgo psicosocial o de violencia y SOLICITA que se active la ruta y los protocolos correspondientes (poner en conocimiento de la Junta Cantonal de Protección de Derechos y de la Dirección Distrital de Educación). El párrafo de encuadre DEBE citar el Art. 63.4.- Debida Diligencia. Usa siempre la fórmula "presunta situación" y no afirmes responsabilidades.',
+  SOLICITUD_APROBACION_ACTIVIDAD:
+    "Tono formal pero cordial, de solicitud de autorización. El oficio pide a la rectora o rector que autorice la ejecución de una actividad de promoción y prevención (taller, charla, campaña, jornada). NO se cita ninguna norma de violencia ni de debida diligencia: el encuadre es el rol de promoción y prevención del DECE. Debe quedar explícita la petición de autorización y la disposición a coordinar con las autoridades.",
+  COORDINACION_ORGANISMO_EXTERNO:
+    "Tono formal, cordial y de articulación interinstitucional. El oficio coordina con una entidad externa (MSP, Junta Cantonal de Protección de Derechos, DINAPEN, una ONG u otra institución pública) una actividad, derivación o intervención conjunta. NO se cita ninguna norma de violencia ni de debida diligencia. Debe quedar explícita la petición concreta de coordinación y la apertura al diálogo.",
+  NOTIFICACION_INFORMATIVA:
+    "Tono formal e informativo. El oficio comunica a la máxima autoridad una situación, decisión o proceso del departamento, sin exigir necesariamente una acción. No cites normas de violencia ni de debida diligencia.",
+  OTRO:
+    "Tono formal institucional neutro. No incorpores ninguna cita legal por tu cuenta; el párrafo de encuadre debe limitarse a un saludo formal y a la razón general por la que se dirige el oficio, según lo que indiquen las notas del usuario.",
+};
+
+/** Verbos de cierre del cuerpo, coherentes con la finalidad de cada tipo. */
+const OFICIO_FALLBACK_REQUEST: Record<OficioType, string> = {
+  INFORME_RIESGO_VIOLENCIA:
+    "Con este antecedente, a través del presente solicito a su autoridad poner el caso en conocimiento de la Junta Cantonal de Protección de Derechos y de la Dirección Distrital de Educación correspondiente, activando de esta manera las rutas y protocolos establecidos por el Ministerio de Educación.",
+  SOLICITUD_APROBACION_ACTIVIDAD:
+    "Con este antecedente, a través del presente solicito a su autoridad autorizar la ejecución de la actividad descrita, así como disponer las facilidades logísticas y de coordinación con el personal docente que sean necesarias para su desarrollo.",
+  COORDINACION_ORGANISMO_EXTERNO:
+    "Con este antecedente, a través del presente solicito a su autoridad la coordinación interinstitucional descrita, a fin de definir de manera conjunta fechas, responsables y condiciones logísticas para su ejecución.",
+  NOTIFICACION_INFORMATIVA:
+    "Particular que pongo en su conocimiento para los fines institucionales que estime pertinentes.",
+  OTRO: "",
+};
+
+/**
+ * Redacta un oficio institucional del DECE (asunto + párrafo de encuadre +
+ * párrafo de petición/notificación) a partir de las notas libres que el/la
+ * profesional escribió o dictó.
+ *
+ * Patrón de dos niveles, igual que draftActionPlanItem / draftAutonomousActionPlan:
+ *   1. Si hay proveedor de IA configurado, se pide la redacción al modelo.
+ *   2. Si no hay clave o la IA falla, una plantilla determinista por tipo de
+ *      oficio produce igualmente un documento coherente y correctamente
+ *      encuadrado, reutilizando literalmente las notas del usuario.
+ *
+ * La IA NO inventa hechos, nombres, fechas ni instituciones: solo aporta la
+ * estructura de prosa y el encuadre institucional alrededor del contenido que
+ * el usuario ya escribió.
+ */
+export async function draftOficio(opts: {
+  oficioType: OficioType | string;
+  institutionName: string;
+  addresseeRole: string;
+  studentsContext?: string;
+  caseContext?: string;
+  userDraftNotes: string;
+  professionalName: string;
+}): Promise<DraftedOficio | { error: string }> {
+  const type = normalizeOficioType(opts.oficioType);
+  const notes = (opts.userDraftNotes || "").trim();
+
+  if (!notes) {
+    return {
+      error:
+        "Escribe o dicta una descripción breve de la situación o actividad para que la IA pueda redactar el oficio.",
+    };
+  }
+
+  const institutionName = opts.institutionName?.trim() || "la institución educativa";
+  const addresseeRole = opts.addresseeRole?.trim() || "RECTORA";
+  const contextLines = [
+    opts.caseContext?.trim() ? `Contexto del caso vinculado: ${opts.caseContext.trim()}` : "",
+    opts.studentsContext?.trim() ? `Contexto de estudiantes: ${opts.studentsContext.trim()}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  // ── Nivel 1: redacción asistida por IA ──
+  if (isAiConfigured()) {
+    try {
+      const legalRule = requiresDebidaDiligencia(type)
+        ? `El párrafo "body_intro" DEBE iniciar con un saludo formal y citar de forma fiel el Art. 63.4.- Debida Diligencia, cuyo texto normativo es el siguiente (puedes parafrasearlo fielmente, sin alterar su sentido ni sus plazos):\n"""${DEBIDA_DILIGENCIA_TEXT}"""`
+        : `El párrafo "body_intro" NO debe contener NINGUNA cita del Art. 63.4 de Debida Diligencia ni ninguna otra norma sobre violencia o vulneración de derechos. Debe limitarse a un saludo formal y al encuadre institucional propio de esta circunstancia.`;
+
+      const prompt = `Eres un/a profesional del Departamento de Consejería Estudiantil (DECE) del Ministerio de Educación del Ecuador y redactas la correspondencia oficial saliente del departamento.
+
+Debes redactar un OFICIO institucional dirigido a la máxima autoridad o a una entidad externa.
+
+CIRCUNSTANCIA DEL OFICIO: ${getOficioTypeLabel(type)}
+TONO Y FINALIDAD OBLIGATORIOS: ${OFICIO_TONE_GUIDE[type]}
+
+DATOS INSTITUCIONALES:
+   - Institución educativa: ${institutionName}
+   - Cargo de la persona destinataria: ${addresseeRole}
+   - Profesional que suscribe: ${opts.professionalName || "Profesional DECE"}
+${contextLines ? `\nCONTEXTO DISPONIBLE:\n${contextLines}\n` : ""}
+NOTAS DEL PROFESIONAL (contenido específico, escrito o dictado por la persona usuaria — es la ÚNICA fuente de hechos):
+"""${notes}"""
+
+REGLA CENTRAL (inviolable): reformula en lenguaje técnico institucional SIN INVENTAR HECHOS. No agregues nombres propios, fechas, cifras, cursos, jornadas, diagnósticos, instituciones ni actuaciones que no aparezcan en las notas del profesional o en el contexto. Si un dato no consta, redacta de forma genérica o usa una fórmula neutra; jamás lo completes por tu cuenta. Tu aporte es la ESTRUCTURA DE PROSA y el ENCUADRE institucional/legal correcto, no el contenido factual.
+
+${legalRule}
+
+REGLAS DE REDACCIÓN:
+- Español formal ecuatoriano, texto plano, sin markdown, sin viñetas, sin títulos.
+- "asunto": una sola línea EN MAYÚSCULAS, sin punto final, que resuma el objeto del oficio comenzando por "${OFICIO_ASUNTO_PREFIX[type]}". Máximo 240 caracteres.
+- "body_intro": UN solo párrafo de encuadre (saludo formal + marco normativo o institucional que corresponda a esta circunstancia).
+- "body_content": UN solo párrafo con el contenido específico y la petición o notificación concreta, construido a partir de las notas del profesional. Debe cerrar indicando con claridad qué se solicita o qué se informa.
+- No incluyas la línea de ciudad y fecha, ni el número de oficio, ni el bloque del destinatario, ni la despedida "Atentamente", ni la firma: esas partes las genera el sistema.
+
+Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta:
+{"asunto": "...", "body_intro": "...", "body_content": "..."}`;
+
+      const res = await generateWithFallback({
+        prompt,
+        systemInstruction:
+          "Eres un/a profesional DECE del Ministerio de Educación del Ecuador especializado/a en la redacción de correspondencia oficial (oficios) dirigida a autoridades institucionales y entidades de la red de protección de derechos. Nunca inventas hechos, nombres ni fechas.",
+        temperature: 0.3,
+        maxOutputTokens: 2048,
+      });
+
+      if ("text" in res && res.text) {
+        const jsonMatch = res.text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]) as Partial<DraftedOficio>;
+          const asunto = String(parsed.asunto || "").replace(/\s+/g, " ").trim();
+          const bodyIntro = String(parsed.body_intro || "").trim();
+          const bodyContent = String(parsed.body_content || "").trim();
+
+          if (asunto && bodyContent) {
+            return {
+              asunto: asunto.toUpperCase().slice(0, 240),
+              // Si la IA omitió el encuadre, se cae a la plantilla oficial del tipo.
+              body_intro: bodyIntro || getDefaultBodyIntro(type),
+              body_content: bodyContent,
+            };
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[draftOficio ai error]", err);
+    }
+  }
+
+  // ── Nivel 2: plantilla determinista (funciona sin ninguna clave de IA) ──
+  const firstSentence =
+    notes
+      .replace(/\s+/g, " ")
+      .split(/(?<=[.;])\s+/)[0]
+      ?.replace(/[.;]\s*$/, "")
+      .trim() || notes.replace(/\s+/g, " ").trim();
+
+  const asuntoSubject = firstSentence.slice(0, 180).replace(/\s+\S*$/, (m) =>
+    firstSentence.length > 180 ? "" : m
+  );
+
+  const asunto = `${OFICIO_ASUNTO_PREFIX[type]} ${asuntoSubject} DE LA ${institutionName.toUpperCase()}`
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase()
+    .slice(0, 240);
+
+  const requestSentence = OFICIO_FALLBACK_REQUEST[type];
+  const bodyContent = [
+    notes.replace(/\s+/g, " ").trim(),
+    contextLines ? contextLines.replace(/\s+/g, " ").trim() : "",
+    requestSentence,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return {
+    asunto,
+    body_intro: getDefaultBodyIntro(type),
+    body_content: bodyContent,
+  };
 }
