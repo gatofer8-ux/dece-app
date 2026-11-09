@@ -83,6 +83,7 @@ import {
   deleteBimonthlyReport,
   deleteCaseClosureReport,
 } from "../actions";
+import { deleteQuestionInterview } from "./entrevistas-preguntas/actions";
 import { createReferral, updateReferralStatus, deleteReferral } from "../../derivaciones/actions";
 import VoiceDictationButton from "@/components/VoiceDictationButton";
 import AIAssistButton from "@/components/AIAssistButton";
@@ -162,6 +163,9 @@ export default async function CasoDetallePage({
   const interviews = db
     .prepare("SELECT * FROM case_interviews WHERE case_file_id = ? ORDER BY created_at DESC")
     .all(caseFile.id) as CaseInterviewRow[];
+  const questionInterviews = db
+    .prepare("SELECT id, interviewee_name, application_date, created_at FROM student_question_interviews WHERE case_file_id = ? ORDER BY created_at DESC")
+    .all(caseFile.id) as { id: string; interviewee_name: string | null; application_date: string | null; created_at: string }[];
   const observationSheets = db
     .prepare("SELECT * FROM case_observation_sheets WHERE case_file_id = ? ORDER BY observation_date DESC, created_at DESC")
     .all(caseFile.id) as CaseObservationSheetRow[];
@@ -843,6 +847,45 @@ export default async function CasoDetallePage({
                 </div>
               ))}
               {interviews.length === 0 && <p className="text-sm text-slate-400">Sin entrevistas registradas.</p>}
+            </div>
+          </section>
+
+          {/* Entrevistas a estudiantes (formato por preguntas, configurable por institución) */}
+          <section className="card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-slate-700">Entrevistas a estudiantes (por preguntas)</h2>
+              <Link href={`/casos/${caseFile.id}/entrevistas-preguntas/nueva`} className="text-xs text-brand-700 hover:underline">
+                + Nueva entrevista
+              </Link>
+            </div>
+            <div className="space-y-2">
+              {questionInterviews.map((qi) => (
+                <div key={qi.id} className="text-sm border-b border-slate-100 pb-2 flex justify-between items-center">
+                  <div>
+                    <div className="font-medium">{qi.interviewee_name || "Sin nombre registrado"}</div>
+                    <div className="text-xs text-slate-400">{formatDate(qi.application_date || qi.created_at)}</div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <a
+                      href={`/api/casos/${caseFile.id}/entrevistas-preguntas/${qi.id}/export-word`}
+                      className="text-xs text-blue-700 hover:underline whitespace-nowrap font-medium"
+                    >
+                      📄 Word
+                    </a>
+                    <Link href={`/casos/${caseFile.id}/entrevistas-preguntas/${qi.id}/editar`} className="text-xs text-slate-600 hover:underline whitespace-nowrap">
+                      ✏️ Editar
+                    </Link>
+                    <DeleteButton
+                      onDelete={async () => {
+                        "use server";
+                        await deleteQuestionInterview(qi.id, caseFile.id);
+                      }}
+                      confirmMessage="¿Borrar esta entrevista? Esta acción no se puede deshacer."
+                    />
+                  </div>
+                </div>
+              ))}
+              {questionInterviews.length === 0 && <p className="text-sm text-slate-400">Sin entrevistas registradas.</p>}
             </div>
           </section>
 
