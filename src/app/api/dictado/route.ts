@@ -1,12 +1,18 @@
 ﻿import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { GoogleGenAI } from "@google/genai";
-import { processDictationPunctuation } from "@/lib/dictation";
+import { filterWhisperSegments, hasKnownHallucination, processDictationPunctuation } from "@/lib/dictation";
 
 export const maxDuration = 30;
 
-// Vocabulario y contexto del dominio DECE (Ecuador) para sesgar la transcripción
-// hacia terminología técnica, siglas y patrones de nombres propios frecuentes.
+// Pista para Whisper: SOLO vocabulario, sin instrucciones ni listas de títulos.
+// Whisper trata la pista como texto previo de la conversación: si es una orden
+// ("Dictado formal en español...") o una lista de abreviaturas ("Lcda., Mgtr."),
+// con audio vacío o ruidoso la repite en bucle en vez de transcribir.
+const WHISPER_PROMPT =
+  "Consejería estudiantil, acompañamiento psicosocial, representante legal, junta de curso, acta de reunión.";
+
+// Contexto del dominio DECE (Ecuador) para el respaldo con Gemini, que sí entiende instrucciones.
 const DECE_DOMAIN_HINT =
   "Departamento de Consejería Estudiantil (DECE), Ministerio de Educación del Ecuador. " +
   "Vocabulario frecuente: acompañamiento psicosocial, riesgo psicosocial, vulneración de derechos, " +
@@ -38,6 +44,7 @@ export async function POST(req: Request) {
   const mimeType = audioFile.type || "audio/webm";
 
   let transcription = "";
+  let groqAnswered = false;
 
   // 1. Intentar Groq Whisper si GROQ_API_KEY está configurada (velocidad <400ms)
   const groqApiKey = process.env.GROQ_API_KEY?.trim();
@@ -50,10 +57,8 @@ export async function POST(req: Request) {
       groqBody.append("model", "whisper-large-v3-turbo");
       groqBody.append("language", "es");
       groqBody.append("temperature", "0.0");
-      groqBody.append(
-        "prompt",
-        `Dictado formal en español ecuatoriano. ${DECE_DOMAIN_HINT} Respeta signos de puntuación, mayúsculas y redacción técnica educativa.`
-      );
+      groqBody.append("response_format", "verbose_json"); // trae no_speech_prob y avg_logprob por segmento
+      groqBody.append("prompt", WHISPER_PROMPT);
 
       const groqRes = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
         method: "POST",
@@ -65,9 +70,9 @@ export async function POST(req: Request) {
 
       if (groqRes.ok) {
         const groqData = (await groqRes.json()) as any;
-        if (groqData?.text && typeof groqData.text === "string" && groqData.text.trim()) {
-          transcription = groqData.text.trim();
-        }
+        groqAnswered = true;
+        // Descarta silencio, bucles repetitivos y texto inventado (p. ej. la propia pista).
+        transcription = filterWhisperSegments(groqData ?? {}, WHISPER_PROMPT);
       } else {
         const errText = await groqRes.text().catch(() => "");
         console.warn("[dictado] Groq Whisper error:", errText);
@@ -77,7 +82,12 @@ export async function POST(req: Request) {
     }
   }
 
-  // 2. Si no se obtuvo con Groq, intentar con Gemini (multimodal audio)
+  // Si Groq respondió pero no halló voz real, es silencio: no se insiste con Gemini (inventaría texto).
+  if (groqAnswered && !transcription) {
+    return NextResponse.json({ text: "", rawText: "", noSpeech: true });
+  }
+
+  // 2. Si Groq no está disponible o falló, intentar con Gemini (multimodal audio)
   if (!transcription) {
     const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
     if (geminiApiKey) {
@@ -115,6 +125,9 @@ export async function POST(req: Request) {
             });
 
             const text = response.text?.trim();
+            if (text && hasKnownHallucination(text)) {
+              return NextResponse.json({ text: "", rawText: "", noSpeech: true });
+            }
             if (text) {
               transcription = text;
               break;
