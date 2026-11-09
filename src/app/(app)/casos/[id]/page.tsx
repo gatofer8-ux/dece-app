@@ -166,6 +166,22 @@ export default async function CasoDetallePage({
   const questionInterviews = db
     .prepare("SELECT id, interviewee_name, application_date, created_at FROM student_question_interviews WHERE case_file_id = ? ORDER BY created_at DESC")
     .all(caseFile.id) as { id: string; interviewee_name: string | null; application_date: string | null; created_at: string }[];
+  const allInterviews = [
+    ...interviews.map((iv) => ({
+      kind: "semi" as const,
+      id: iv.id,
+      name: iv.interviewee_full_name,
+      date: iv.application_date || iv.created_at,
+      created: iv.created_at,
+    })),
+    ...questionInterviews.map((qi) => ({
+      kind: "preguntas" as const,
+      id: qi.id,
+      name: qi.interviewee_name,
+      date: qi.application_date || qi.created_at,
+      created: qi.created_at,
+    })),
+  ].sort((a, b) => (a.created < b.created ? 1 : a.created > b.created ? -1 : 0));
   const observationSheets = db
     .prepare("SELECT * FROM case_observation_sheets WHERE case_file_id = ? ORDER BY observation_date DESC, created_at DESC")
     .all(caseFile.id) as CaseObservationSheetRow[];
@@ -808,84 +824,71 @@ export default async function CasoDetallePage({
             </ol>
           </section>
 
-          {/* Entrevistas semiestructuradas */}
+          {/* Entrevistas: semiestructurada (oficial) y por preguntas (formato de la institución) */}
           <section className="card p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-slate-700">Entrevistas semiestructuradas</h2>
-              <Link href={`/casos/${caseFile.id}/entrevistas/nueva`} className="text-xs text-brand-700 hover:underline">
+              <h2 className="text-sm font-semibold text-slate-700">Entrevistas</h2>
+              <Link href={`/casos/${caseFile.id}/entrevistas/elegir`} className="text-xs text-brand-700 hover:underline">
                 + Nueva entrevista
               </Link>
             </div>
             <div className="space-y-2">
-              {interviews.map((iv) => (
-                <div key={iv.id} className="text-sm border-b border-slate-100 pb-2 flex justify-between items-center">
+              {allInterviews.map((it) => (
+                <div key={`${it.kind}-${it.id}`} className="text-sm border-b border-slate-100 pb-2 flex justify-between items-center">
                   <div>
-                    <div className="font-medium">{iv.interviewee_full_name || "Sin nombre registrado"}</div>
-                    <div className="text-xs text-slate-400">{formatDate(iv.application_date || iv.created_at)}</div>
+                    <div className="font-medium">{it.name || "Sin nombre registrado"}</div>
+                    <div className="text-xs text-slate-400 flex items-center gap-2">
+                      <span>{formatDate(it.date)}</span>
+                      <span className="rounded-full border border-slate-200 px-1.5 text-[10px] text-slate-500">
+                        {it.kind === "semi" ? "Semiestructurada" : "Por preguntas"}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <a
-                      href={`/api/casos/${caseFile.id}/entrevistas/${iv.id}/export-word`}
-                      className="text-xs text-blue-700 hover:underline whitespace-nowrap font-medium"
-                    >
-                      📄 Word
-                    </a>
-                    <Link href={`/casos/${caseFile.id}/entrevistas/${iv.id}/editar`} className="text-xs text-slate-600 hover:underline whitespace-nowrap">
-                      ✏️ Editar
-                    </Link>
-                    <Link href={`/casos/${caseFile.id}/entrevistas/${iv.id}/imprimir`} className="text-xs text-brand-700 hover:underline whitespace-nowrap">
-                      🖨️ Imprimir
-                    </Link>
-                    <DeleteButton
-                      onDelete={async () => {
-                        "use server";
-                        await deleteInterview(iv.id, caseFile.id);
-                      }}
-                      confirmMessage="¿Borrar esta entrevista? Esta acción no se puede deshacer."
-                    />
-                  </div>
+                  {it.kind === "semi" ? (
+                    <div className="flex items-center gap-3">
+                      <a
+                        href={`/api/casos/${caseFile.id}/entrevistas/${it.id}/export-word`}
+                        className="text-xs text-blue-700 hover:underline whitespace-nowrap font-medium"
+                      >
+                        📄 Word
+                      </a>
+                      <Link href={`/casos/${caseFile.id}/entrevistas/${it.id}/editar`} className="text-xs text-slate-600 hover:underline whitespace-nowrap">
+                        ✏️ Editar
+                      </Link>
+                      <Link href={`/casos/${caseFile.id}/entrevistas/${it.id}/imprimir`} className="text-xs text-brand-700 hover:underline whitespace-nowrap">
+                        🖨️ Imprimir
+                      </Link>
+                      <DeleteButton
+                        onDelete={async () => {
+                          "use server";
+                          await deleteInterview(it.id, caseFile.id);
+                        }}
+                        confirmMessage="¿Borrar esta entrevista? Esta acción no se puede deshacer."
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <a
+                        href={`/api/casos/${caseFile.id}/entrevistas-preguntas/${it.id}/export-word`}
+                        className="text-xs text-blue-700 hover:underline whitespace-nowrap font-medium"
+                      >
+                        📄 Word
+                      </a>
+                      <Link href={`/casos/${caseFile.id}/entrevistas-preguntas/${it.id}/editar`} className="text-xs text-slate-600 hover:underline whitespace-nowrap">
+                        ✏️ Editar
+                      </Link>
+                      <DeleteButton
+                        onDelete={async () => {
+                          "use server";
+                          await deleteQuestionInterview(it.id, caseFile.id);
+                        }}
+                        confirmMessage="¿Borrar esta entrevista? Esta acción no se puede deshacer."
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
-              {interviews.length === 0 && <p className="text-sm text-slate-400">Sin entrevistas registradas.</p>}
-            </div>
-          </section>
-
-          {/* Entrevistas a estudiantes (formato por preguntas, configurable por institución) */}
-          <section className="card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-slate-700">Entrevistas a estudiantes (por preguntas)</h2>
-              <Link href={`/casos/${caseFile.id}/entrevistas-preguntas/nueva`} className="text-xs text-brand-700 hover:underline">
-                + Nueva entrevista
-              </Link>
-            </div>
-            <div className="space-y-2">
-              {questionInterviews.map((qi) => (
-                <div key={qi.id} className="text-sm border-b border-slate-100 pb-2 flex justify-between items-center">
-                  <div>
-                    <div className="font-medium">{qi.interviewee_name || "Sin nombre registrado"}</div>
-                    <div className="text-xs text-slate-400">{formatDate(qi.application_date || qi.created_at)}</div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <a
-                      href={`/api/casos/${caseFile.id}/entrevistas-preguntas/${qi.id}/export-word`}
-                      className="text-xs text-blue-700 hover:underline whitespace-nowrap font-medium"
-                    >
-                      📄 Word
-                    </a>
-                    <Link href={`/casos/${caseFile.id}/entrevistas-preguntas/${qi.id}/editar`} className="text-xs text-slate-600 hover:underline whitespace-nowrap">
-                      ✏️ Editar
-                    </Link>
-                    <DeleteButton
-                      onDelete={async () => {
-                        "use server";
-                        await deleteQuestionInterview(qi.id, caseFile.id);
-                      }}
-                      confirmMessage="¿Borrar esta entrevista? Esta acción no se puede deshacer."
-                    />
-                  </div>
-                </div>
-              ))}
-              {questionInterviews.length === 0 && <p className="text-sm text-slate-400">Sin entrevistas registradas.</p>}
+              {allInterviews.length === 0 && <p className="text-sm text-slate-400">Sin entrevistas registradas.</p>}
             </div>
           </section>
 
