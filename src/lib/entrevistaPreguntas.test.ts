@@ -5,8 +5,10 @@ import {
   defaultLetterhead,
   pairQuestions,
   parseAnswers,
+  parseDistribution,
   parseLetterhead,
   parseStructure,
+  restorePlaceholders,
   visibleStructure,
 } from "./entrevistaPreguntas";
 import {
@@ -152,5 +154,27 @@ describe("plantilla propia", () => {
     zip.file("[Content_Types].xml", '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>');
     zip.file("word/document.xml", '<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>{{#secciones}} sin cerrar</w:t></w:r></w:p></w:body></w:document>');
     expect(validateTemplate(zip.generate({ type: "nodebuffer" }))).toContain("marcador");
+  });
+});
+
+
+describe("reparto del relato con IA", () => {
+  const ids = ["a1", "a2", "b1"];
+
+  it("lee el JSON aunque venga con texto alrededor y solo acepta preguntas conocidas", () => {
+    const raw = 'Aquí está:\n```json\n{"a1":"Refiere sentirse bien.","zz":"inventada","a2":"","b1":"Tiene amigos."}\n```';
+    expect(parseDistribution(raw, ids)).toEqual({ a1: "Refiere sentirse bien.", b1: "Tiene amigos." });
+  });
+
+  it("descarta respuestas vacías o de relleno y tolera JSON roto", () => {
+    expect(parseDistribution('{"a1":"Sin información","a2":"No se menciona.","b1":"  "}', ids)).toEqual({});
+    expect(parseDistribution("{no es json", ids)).toEqual({});
+    expect(parseDistribution("sin llaves", ids)).toEqual({});
+  });
+
+  it("repone los marcadores de privacidad con expresiones neutras", () => {
+    expect(restorePlaceholders("[estudiante] vive con [madre] y [padre] en [dirección] , llama al [teléfono] .")).toBe(
+      "el/la estudiante vive con la madre y el padre en el domicilio, llama al."
+    );
   });
 });

@@ -32,6 +32,7 @@ export default async function EditarEntrevistaPreguntasPage({
     <div className="space-y-4">
       <PageHeader title={structure.title} description={`Editar entrevista — ${row.interviewee_name || "estudiante"}`} />
       <PreguntasInterviewForm
+        caseId={params.id}
         structure={structure}
         answers={parseAnswers(row.answers_json)}
         defaults={{ name: row.interviewee_name || "", course: row.course || "", date: row.application_date || "" }}

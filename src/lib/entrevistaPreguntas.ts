@@ -190,3 +190,52 @@ export function parseAnswers(raw: unknown): Answers {
     return {};
   }
 }
+
+/* ------------------------------------------------------------------------- */
+/* Reparto del relato libre en las preguntas (IA)                            */
+/* ------------------------------------------------------------------------- */
+
+export const MAX_NARRATIVE = 8000;
+
+/** Marcadores que deja el seudonimizado y que no deben quedar en el texto final. */
+const PLACEHOLDERS: [RegExp, string][] = [
+  [/\[estudiante\]/gi, "el/la estudiante"],
+  [/\[representante\]/gi, "el representante"],
+  [/\[padre\]/gi, "el padre"],
+  [/\[madre\]/gi, "la madre"],
+  [/\[la instituci[oó]n\]/gi, "la institución"],
+  [/\[direcci[oó]n\]/gi, "el domicilio"],
+  [/\[(?:tel[eé]fono|correo|documento|ruc)\]/gi, ""],
+];
+
+export function restorePlaceholders(text: string): string {
+  let out = text;
+  for (const [re, rep] of PLACEHOLDERS) out = out.replace(re, rep);
+  return out.replace(/[ \t]{2,}/g, " ").replace(/\s+([.,;:])/g, "$1").trim();
+}
+
+/**
+ * Lee la respuesta de la IA (un objeto JSON {idPregunta: texto}) y se queda solo con
+ * preguntas que existen y respuestas con contenido. Nunca lanza.
+ */
+export function parseDistribution(raw: string, allowedIds: string[]): Record<string, string> {
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (!match) return {};
+  let obj: unknown;
+  try {
+    obj = JSON.parse(match[0]);
+  } catch {
+    return {};
+  }
+  if (!obj || typeof obj !== "object") return {};
+  const allowed = new Set(allowedIds);
+  const out: Record<string, string> = {};
+  for (const [id, value] of Object.entries(obj as Record<string, unknown>)) {
+    if (!allowed.has(id) || typeof value !== "string") continue;
+    const text = restorePlaceholders(value.replace(/\r/g, "").trim()).slice(0, 2000);
+    // La IA a veces responde "No aplica"/"Sin información" para lo que no se dijo: se deja vacío.
+    if (!text || /^(?:sin informaci[oó]n|no se (?:menciona|refiere|indica)|n\/a|ninguno)\.?$/i.test(text)) continue;
+    out[id] = text;
+  }
+  return out;
+}

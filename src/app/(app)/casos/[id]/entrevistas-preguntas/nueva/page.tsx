@@ -27,6 +27,7 @@ export default async function NuevaEntrevistaPreguntasPage({ params }: { params:
         <Link href="/institucion/formatos" className="text-brand-700 underline">Cambiar formato</Link>
       </p>
       <PreguntasInterviewForm
+        caseId={caseFile.id}
         structure={format.structure}
         answers={{}}
         defaults={{

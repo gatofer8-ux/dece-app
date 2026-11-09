@@ -7,7 +7,11 @@ import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { requireOwnedCase } from "@/lib/scopedDb";
 import { logAudit } from "@/lib/audit";
-import { parseStructure } from "@/lib/entrevistaPreguntas";
+import { MAX_NARRATIVE, parseDistribution, parseStructure } from "@/lib/entrevistaPreguntas";
+import { generateWithFallback, isAiConfigured, sanitizeAiText } from "@/lib/ai";
+import { isHeightenedConfidentiality, pseudonymize } from "@/lib/aiPrivacy";
+import { caseEntities } from "@/lib/caseContext";
+import type { CaseFileRow, StudentRow } from "@/lib/types";
 import { getInterviewFormat } from "@/lib/entrevistaPreguntasFormat";
 
 function text(fd: FormData, key: string, max = 200): string | null {
@@ -105,4 +109,79 @@ export async function deleteQuestionInterview(interviewId: string, caseId: strin
   );
   logAudit({ userId: session.user.id, action: "BORRAR", entityType: "StudentQuestionInterview", entityId: interviewId, institutionId });
   revalidatePath(`/casos/${caseId}`);
+}
+
+/**
+ * Reparte un relato libre (escrito o dictado) en las preguntas de la entrevista.
+ * - Solo usa lo que dice el relato: lo que no se mencionó queda vacío.
+ * - El relato sale seudonimizado (nombres, cédulas, teléfonos) y los casos de
+ *   confidencialidad reforzada no se envían a la IA.
+ */
+export async function distributeNarrativeAi(
+  caseId: string,
+  narrative: string,
+  questions: { id: string; text: string }[]
+): Promise<{ answers?: Record<string, string>; error?: string }> {
+  const session = await requireRole(["ADMIN", "DECE"]);
+  const institutionId = requireInstitutionId(session);
+
+  if (!isAiConfigured()) return { error: "La ayuda de IA todavía no está configurada en este sistema." };
+
+  try {
+    requireOwnedCase(caseId, institutionId);
+  } catch (err: any) {
+    return { error: err?.message || "Caso no encontrado." };
+  }
+
+  const text = (narrative || "").trim();
+  if (text.length < 20) return { error: "Escribe o dicta un relato más completo antes de repartirlo." };
+  if (text.length > MAX_NARRATIVE) return { error: "El relato es demasiado largo (máximo 8000 caracteres)." };
+
+  const qs = (Array.isArray(questions) ? questions : [])
+    .slice(0, 60)
+    .filter((q) => q && typeof q.id === "string" && typeof q.text === "string" && /^[A-Za-z0-9_]{1,20}$/.test(q.id))
+    .map((q) => ({ id: q.id, text: q.text.slice(0, 600) }));
+  if (qs.length === 0) return { error: "No hay preguntas para completar." };
+
+  const caseFile = db.prepare("SELECT * FROM case_files WHERE id = ?").get(caseId) as CaseFileRow | undefined;
+  if (!caseFile) return { error: "Caso no encontrado." };
+  if (isHeightenedConfidentiality(caseFile.risk_type)) {
+    return { error: "Este caso es de confidencialidad reforzada: por protección, la IA no recibe el relato. Completa las respuestas a mano." };
+  }
+  const student = db.prepare("SELECT * FROM students WHERE id = ?").get(caseFile.student_id) as StudentRow | undefined;
+
+  const safeNarrative = pseudonymize(text, caseEntities(caseFile, student));
+  const list = qs.map((q) => `- "${q.id}": ${q.text}`).join("\n");
+
+  const prompt = `Eres un profesional del Departamento de Consejería Estudiantil (DECE) del Ministerio de Educación del Ecuador. Tienes el relato de una entrevista con un estudiante y debes ubicar lo dicho en las preguntas del formato institucional.
+
+RELATO DE LA ENTREVISTA:
+"""
+${safeNarrative}
+"""
+
+PREGUNTAS (identificador: pregunta):
+${list}
+
+REGLAS ESTRICTAS:
+1. Usa ÚNICAMENTE información que esté en el relato. No inventes, no supongas, no agregues diagnósticos ni recomendaciones.
+2. Si el relato no dice nada sobre una pregunta, devuelve "" (cadena vacía) para ella.
+3. Redacta cada respuesta en tercera persona, con lenguaje formal, claro y neutro (por ejemplo "Refiere que...", "Manifiesta que..."). Conserva el sentido y los hechos tal como se dijeron.
+4. Cada idea del relato va en la pregunta más relacionada y no se repite en varias. Si una idea no corresponde claramente a ninguna pregunta, omítela en lugar de forzarla.
+5. Mantén los marcadores entre corchetes como [estudiante] sin modificarlos.
+6. Responde ÚNICAMENTE con un objeto JSON válido, sin markdown, con exactamente estas claves: ${qs.map((q) => `"${q.id}"`).join(", ")}.`;
+
+  const res = await generateWithFallback({ prompt, temperature: 0.2, maxOutputTokens: 3000 });
+  if ("error" in res) return { error: res.error };
+
+  const parsed = parseDistribution(res.text, qs.map((q) => q.id));
+  const answers: Record<string, string> = {};
+  for (const [id, value] of Object.entries(parsed)) {
+    const clean = sanitizeAiText(value);
+    if (clean) answers[id] = clean;
+  }
+  if (Object.keys(answers).length === 0) {
+    return { error: "La IA no encontró información para las preguntas. Revisa el relato o complétalas a mano." };
+  }
+  return { answers };
 }
