@@ -7,6 +7,10 @@ import {
   getDocumentStandards,
   getDocumentStandardTexts,
   attentionRegisterKind,
+  stripStandardLevel,
+  getActivityStandards,
+  ACTIVITY_AXIS_STANDARDS as _AXES,
+  type DocumentKind,
 } from "./documentStandards";
 import { auditStandardCoverage, baseStandardCode } from "./documentStandardsAudit";
 
@@ -111,5 +115,26 @@ describe("contraste con el documento oficial de Estándares de Calidad DECE", ()
 
   it("los códigos del catálogo llevan nivel de logro válido (a-d) o ninguno", () => {
     for (const c of DECE_QUALITY_STANDARDS) expect(c.code).toMatch(/^E\.D\d\.C\d\.DE\d+(\.[a-d])?$/);
+  });
+});
+
+describe("el nivel de logro (.a-.d) no se imprime en los documentos: lo determina el auditor", () => {
+  const LEVEL = /E\.D\d\.C\d\.DE\d+\.[a-dA-D]\b/;
+
+  it("ningún tipo de documento ni eje de actividad imprime la letra de nivel", () => {
+    for (const kind of Object.keys(DOCUMENT_STANDARDS) as DocumentKind[]) {
+      for (const line of getDocumentStandardTexts(kind)) expect(line, kind).not.toMatch(LEVEL);
+    }
+    for (const axis of Object.keys(_AXES) as (keyof typeof _AXES)[]) {
+      for (const s of getActivityStandards(axis)) expect(s.code).not.toMatch(LEVEL);
+    }
+  });
+
+  it("stripStandardLevel quita la letra y respeta lo demás", () => {
+    expect(stripStandardLevel("E.D3.C1.DE13.c")).toBe("E.D3.C1.DE13");
+    expect(stripStandardLevel("E.D3.C1.DE13.c.")).toBe("E.D3.C1.DE13.");
+    expect(stripStandardLevel("E.D1.C1.DE1.d y E.D3.C1.DE12.B")).toBe("E.D1.C1.DE1 y E.D3.C1.DE12");
+    expect(stripStandardLevel("E.D3.C1.DE12")).toBe("E.D3.C1.DE12");
+    expect(stripStandardLevel("sin código")).toBe("sin código");
   });
 });

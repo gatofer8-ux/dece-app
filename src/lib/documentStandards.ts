@@ -129,3 +129,12 @@ export function getActivityStandards(axis: keyof typeof ACTIVITY_AXIS_STANDARDS)
 export function getDocumentStandardTexts(kind: DocumentKind): string[] {
   return getDocumentStandards(kind).map((s) => `${s.code} ${s.text}`);
 }
+
+/**
+ * Quita la letra de nivel de logro (".c", ".d"...) de los códigos de estándar
+ * de un texto. En los documentos va solo el código base: el nivel lo determina
+ * el auditor, no quien elabora el documento.
+ */
+export function stripStandardLevel(text: string): string {
+  return text.replace(/(E\.D\d\.C\d\.DE\d+)\.[a-dA-D]\b/g, "$1");
+}

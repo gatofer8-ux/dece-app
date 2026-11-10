@@ -8,6 +8,7 @@ import AIAssistButton from "@/components/AIAssistButton";
 import DualSignatureModal, { type DualSignatureData } from "@/components/DualSignatureModal";
 import type { AuthorityAdvisoryActRow } from "@/lib/types";
 import { parseJsonArray, type ParticipantEntry } from "@/lib/authorityAdvisory";
+import { stripStandardLevel } from "@/lib/documentStandards";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -162,8 +163,8 @@ export default function AuthorityAdvisoryEditForm({
             <label className="label text-xs">Código de estándar DECE (opcional)</label>
             <input
               name="standard_code"
-              defaultValue={act.standard_code || ""}
-              placeholder="Ej. D3.C1.DO9.b"
+              defaultValue={act.standard_code ? stripStandardLevel(act.standard_code) : ""}
+              placeholder="Ej. E.D3.C1.DE13"
               className="input"
             />
           </div>
