@@ -4,8 +4,10 @@ import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { injectStandardsIntoDocx } from "./docxStandards";
 import type { CaseAlertNotificationRow } from "./types";
+import { currentSchoolYearText } from "./schoolYearText";
 
 export interface AlertDocxData {
+  anio_lectivo: string;
   nombre_estudiante: string;
   cedula_estudiante: string;
   fecha_nacimiento_estudiante: string;
@@ -52,6 +54,7 @@ export function formatAlertTemplateData(alert: Partial<CaseAlertNotificationRow>
   const isVespertina = (alert.jornada || "").toUpperCase().includes("VESP");
 
   return {
+    anio_lectivo: currentSchoolYearText(),
     nombre_estudiante: (alert.student_name || "").toUpperCase().trim() || "________________________",
     cedula_estudiante: (alert.student_id_num || "").trim() || "__________",
     fecha_nacimiento_estudiante: (alert.student_birth_date || "").trim() || "__________",
