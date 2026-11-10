@@ -535,7 +535,7 @@ const OBSERVATION_CONTEXTS: ObservationContext[] = ["AULA", "ENTREVISTA", "OTRO"
 const OBSERVATION_SUBNIVELES: ObservationSubnivel[] = ["ELEMENTAL", "BASICA_MEDIA", "SUPERIOR_BACHILLERATO"];
 const OBSERVATION_RISK_LEVELS: ObservationRiskLevel[] = ["BAJO", "MEDIO", "ALTO", "CRITICO"];
 
-/** Registra una Ficha de Observación Psicosocial (E.D3.C1.DE11.c.) vinculada al caso. */
+/** Registra una Ficha de Observación Psicosocial (E.D3.C1.DE11.) vinculada al caso. */
 export async function createObservationSheet(
   caseId: string,
   subnivel: string,
