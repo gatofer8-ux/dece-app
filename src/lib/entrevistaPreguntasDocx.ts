@@ -45,7 +45,7 @@ export interface InterviewDocData {
 
 /* ---------------- Imagen (logo) ---------------- */
 
-function dataUriToBuffer(uri: string | null): { buf: Buffer; type: "png" | "jpg" | "gif" } | null {
+export function dataUriToBuffer(uri: string | null): { buf: Buffer; type: "png" | "jpg" | "gif" } | null {
   if (!uri) return null;
   const m = uri.match(/^data:image\/(png|jpe?g|gif);base64,([A-Za-z0-9+/=\s]+)$/i);
   if (!m) return null;
@@ -53,7 +53,7 @@ function dataUriToBuffer(uri: string | null): { buf: Buffer; type: "png" | "jpg"
   return { buf: Buffer.from(m[2].replace(/\s/g, ""), "base64"), type: kind === "png" ? "png" : kind === "gif" ? "gif" : "jpg" };
 }
 
-function imageSize(buf: Buffer, type: "png" | "jpg" | "gif"): { w: number; h: number } | null {
+export function imageSize(buf: Buffer, type: "png" | "jpg" | "gif"): { w: number; h: number } | null {
   try {
     if (type === "png") return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
     if (type === "gif") return { w: buf.readUInt16LE(6), h: buf.readUInt16LE(8) };

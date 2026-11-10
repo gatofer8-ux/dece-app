@@ -3,6 +3,7 @@ import PizZip from "pizzip";
 import {
   DEFAULT_STRUCTURE,
   defaultLetterhead,
+  isoToDmy,
   pairQuestions,
   parseAnswers,
   parseDistribution,
@@ -176,5 +177,116 @@ describe("reparto del relato con IA", () => {
     expect(restorePlaceholders("[estudiante] vive con [madre] y [padre] en [dirección] , llama al [teléfono] .")).toBe(
       "el/la estudiante vive con la madre y el padre en el domicilio, llama al."
     );
+  });
+});
+
+import { buildInterviewTable, generateMineducInterviewDocx } from "./entrevistaPreguntasMineduc";
+
+// PNG de 2x3 px (para probar el ajuste de proporción del logo)
+const PNG_2x3 =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAYAAAC56t6BAAAAEUlEQVR4nGP4z8Dwn4EBBgAV/QH+PzqVoQAAAABJRU5ErkJggg==";
+
+const partText = (buf: Buffer, part: string) => new PizZip(buf).file(part)?.asText() || "";
+const plain = (xml: string) => [...xml.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)].map((m) => m[1]).join(" | ");
+
+describe("formato institucional (copia del documento del colegio)", () => {
+  it("arma el encabezado con los textos de la institución y conserva las imágenes del Ministerio", () => {
+    const buf = generateMineducInterviewDocx(sampleData());
+    const zip = new PizZip(buf);
+    const header = plain(zip.file("word/header1.xml")!.asText());
+    expect(header).toContain("UNIDAD EDUCATIVA PRUEBA");
+    expect(header).toContain("Lema de prueba");
+    expect(header).toContain("DEPARTAMENTO DE CONSEJERÍA ESTUDIANTIL");
+    expect(header).toContain("Año Lectivo 2026 - 2027");
+    // banner del Ministerio (encabezado) y bloque de dirección (pie)
+    expect(zip.file("word/media/image2.png")).toBeTruthy();
+    expect(zip.file("word/media/image3.png")).toBeTruthy();
+    expect(zip.file("word/footer1.xml")).toBeTruthy();
+  });
+
+  it("no deja marcadores sin reemplazar ni datos de la muestra original", () => {
+    const buf = generateMineducInterviewDocx(sampleData());
+    for (const part of ["word/document.xml", "word/header1.xml", "word/footer1.xml"]) {
+      const xml = partText(buf, part);
+      expect(xml).not.toContain("@@TABLA@@");
+      expect(xml).not.toContain("{{");
+    }
+    const all = ["word/document.xml", "word/header1.xml", "docProps/core.xml"].map((p) => partText(buf, p)).join(" ");
+    expect(all).not.toMatch(/Jonathan|Lucero|Rumi[ñn]ahui|Jácome|Santana/i);
+  });
+
+  it("la tabla conserva las medidas, colores y estructura del formato original", () => {
+    const table = buildInterviewTable(sampleData());
+    expect(table).toContain('<w:tblW w:w="8504" w:type="dxa"/>');
+    expect(table).toContain('<w:gridCol w:w="4399"/><w:gridCol w:w="4105"/>');
+    expect(table).toContain('w:fill="BDD7EE"'); // título
+    expect(table).toContain('w:fill="D9D9D9"'); // secciones
+    expect(table).toContain("Times New Roman");
+    // Con la estructura estándar son las mismas 32 filas que el documento original.
+    expect(table.match(/<w:tr>/g)!.length).toBe(32);
+  });
+
+  it("coloca los datos y las respuestas en su lugar y respeta saltos de línea", () => {
+    const data = sampleData({ answers: { a1: "Primera línea\nSegunda línea", b1: "Se siente bien" }, student: "María & José" });
+    const body = plain(partText(generateMineducInterviewDocx(data), "word/document.xml"));
+    expect(body).toContain("NOMBRES Y APELLIDOS:");
+    expect(body).toContain("María &amp; José");
+    expect(body).toContain("CURSO/PARALELO/ JORNADA:");
+    expect(body).toContain("FECHA:");
+    expect(body).toContain("Primera línea | Segunda línea");
+    expect(body).toContain("Se siente bien");
+    expect(body).toContain("Nombres y Apellidos del estudiante");
+    expect(body).toContain("Psic. Ana Prueba");
+  });
+
+  it("respeta secciones y preguntas ocultas, y los textos editados", () => {
+    const data = sampleData();
+    data.structure.sections[1].visible = false; // B
+    data.structure.sections[0].questions[0].text = "Pregunta propia";
+    data.structure.sections[0].questions[3].visible = false; // quedan 3 en A: un par + una sola
+    const body = plain(partText(generateMineducInterviewDocx(data), "word/document.xml"));
+    expect(body).not.toContain("B.- ADAPTACIÓN");
+    expect(body).toContain("Pregunta propia");
+    expect(body).not.toContain("¿Has tratado de solucionar el problema?");
+  });
+
+  it("quita del encabezado lo que la institución no usa", () => {
+    const data = sampleData();
+    data.letterhead.motto = "";
+    data.letterhead.showSchoolYear = false;
+    const header = plain(partText(generateMineducInterviewDocx(data), "word/header1.xml"));
+    expect(header).not.toContain("Año Lectivo");
+    expect(header).toContain("UNIDAD EDUCATIVA PRUEBA");
+  });
+
+  it("incrusta el logo de la institución ajustado a su proporción, y sin logo no deja imagen vacía", () => {
+    const withLogo = generateMineducInterviewDocx(sampleData({ logoDataUri: PNG_2x3 }));
+    const zip = new PizZip(withLogo);
+    expect(zip.file("word/media/logo.png")!.asNodeBuffer().length).toBeGreaterThan(70); // no es el marcador transparente
+    const header = zip.file("word/header1.xml")!.asText();
+    expect(header).toContain('r:embed="rId1"');
+    // proporción 2:3 dentro de la caja original (689610 x 828675)
+    expect(header).toMatch(/cx="552450" cy="828675"/);
+
+    const noLogo = partText(generateMineducInterviewDocx(sampleData({ logoDataUri: null })), "word/header1.xml");
+    expect(noLogo).not.toContain('r:embed="rId1"');
+  });
+
+  it("el paquete resultante es un .docx legible", async () => {
+    const Docxtemplater = (await import("docxtemplater")).default;
+    const buf = generateMineducInterviewDocx(sampleData({ logoDataUri: PNG_2x3 }));
+    expect(() => new Docxtemplater(new PizZip(buf), { delimiters: { start: "{{", end: "}}" } })).not.toThrow();
+    const ct = partText(buf, "[Content_Types].xml");
+    expect(ct).toContain('Extension="png"');
+  });
+});
+
+describe("fecha del documento", () => {
+  it("convierte fechas ISO a día/mes/año", () => {
+    expect(isoToDmy("2026-11-09")).toBe("09/11/2026");
+    expect(isoToDmy("2026-11-09T10:20:00")).toBe("09/11/2026");
+    expect(isoToDmy("")).toBe("");
+    expect(isoToDmy(null)).toBe("");
+    expect(isoToDmy("09 nov 2026")).toBe("");
   });
 });

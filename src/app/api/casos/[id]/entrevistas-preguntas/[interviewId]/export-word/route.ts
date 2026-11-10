@@ -3,10 +3,10 @@ import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
 import { currentSchoolYearSpaced } from "@/lib/schoolYearText";
-import { formatDate } from "@/components/ui";
-import { parseAnswers, parseStructure } from "@/lib/entrevistaPreguntas";
+import { isoToDmy, parseAnswers, parseStructure } from "@/lib/entrevistaPreguntas";
 import { getInterviewFormat, getInterviewTemplate } from "@/lib/entrevistaPreguntasFormat";
 import { fillCustomTemplate, generateDefaultInterviewDocx, type InterviewDocData } from "@/lib/entrevistaPreguntasDocx";
+import { generateMineducInterviewDocx } from "@/lib/entrevistaPreguntasMineduc";
 
 const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
@@ -49,7 +49,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string;
     answers: parseAnswers(row.answers_json),
     student: row.interviewee_name || "",
     course: row.course || "",
-    date: row.application_date ? formatDate(row.application_date) : "",
+    date: isoToDmy(row.application_date),
     professional: prof ? `${prof.title_prefix ? prof.title_prefix + " " : ""}${prof.name}` : session.user.name || "",
     professionalRole: prof?.job_title || "Profesional DECE",
     schoolYear: currentSchoolYearSpaced(),
@@ -58,9 +58,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string;
   const template = getInterviewTemplate(institutionId);
   let buffer: Buffer;
   try {
-    buffer = template ? fillCustomTemplate(template.data, data) : await generateDefaultInterviewDocx(data);
+    buffer = template ? fillCustomTemplate(template.data, data) : generateMineducInterviewDocx(data);
   } catch (e) {
-    console.error("[entrevista-preguntas] plantilla propia falló, se usa el formato del sistema:", e);
+    console.error("[entrevista-preguntas] no se pudo generar con el formato institucional, se usa el formato básico:", e);
     buffer = await generateDefaultInterviewDocx(data);
   }
 

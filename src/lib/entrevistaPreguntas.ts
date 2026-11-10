@@ -239,3 +239,9 @@ export function parseDistribution(raw: string, allowedIds: string[]): Record<str
   }
   return out;
 }
+
+/** 2026-11-09 -> 09/11/2026 (formato de fecha del documento institucional). Vacío si no es una fecha ISO. */
+export function isoToDmy(iso: string | null | undefined): string {
+  const m = (iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : "";
+}
