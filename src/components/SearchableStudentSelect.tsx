@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 
 export default function SearchableStudentSelect({
   students,
@@ -13,6 +13,12 @@ export default function SearchableStudentSelect({
 }) {
   const [search, setSearch] = useState("");
   const [value, setValue] = useState(defaultValue);
+  const valueRef = useRef<HTMLInputElement>(null);
+
+  // Mensaje del navegador mientras no haya estudiante elegido; se limpia al elegirlo.
+  useEffect(() => {
+    valueRef.current?.setCustomValidity(value ? "" : "Selecciona un estudiante de la lista.");
+  }, [value]);
 
   const selectedStudent = useMemo(() => students.find(s => s.id === value), [students, value]);
 
@@ -27,7 +33,19 @@ export default function SearchableStudentSelect({
 
   return (
     <div className="relative flex flex-col gap-2">
-      <input type="hidden" name={name} value={value} required />
+      {/* No es type="hidden": el navegador no valida campos ocultos y el formulario se enviaría sin estudiante.
+          Tampoco readOnly (queda exento de validación): se deja controlado con un onChange vacío. */}
+      <input
+        ref={valueRef}
+        type="text"
+        name={name}
+        value={value}
+        onChange={() => {}}
+        required
+        tabIndex={-1}
+        aria-hidden="true"
+        className="absolute left-0 top-0 h-px w-px opacity-0 pointer-events-none"
+      />
       
       {selectedStudent ? (
         <div className="flex items-center justify-between p-2.5 bg-brand-50 border border-brand-200 rounded-md">
