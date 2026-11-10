@@ -1120,7 +1120,7 @@ function runDemoSeed() {
       "10:00",
       "Rectorado U.E. Los Álamos",
       "DECE Institucional",
-      "E.D3.C1.DE13.c",
+      "E.D3.C1.DE13",
       JSON.stringify([
         { nombre: "Dr. Gonzalo Fernando Morales", cargo: "Rector", funcion: "Máxima Autoridad" },
         { nombre: "Mgs. Elena Rocío Paredes", cargo: "Coordinadora DECE", funcion: "Asesora Técnica" }
