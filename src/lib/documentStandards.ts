@@ -5,10 +5,25 @@
  * Se usa en el membrete de las vistas de impresión (DocumentHeader) y en los
  * exportes a Word, y alimenta la auditoría de cobertura de estándares.
  *
+ * Fuente oficial: "Estándares e Indicadores de Calidad Educativa – Profesionales
+ * del Departamento de Consejería Estudiantil" (Mineduc, 2025), pp. 5-27.
+ *
+ * Estructura del código  E.D3.C1.DE12.c :
+ *   E.    estándar
+ *   D3    dimensión: D1 Gestión · D2 Acompañamiento y Seguimiento Psicosocial ·
+ *         D3 Protección Integral · D4 Convivencia
+ *   C1    componente dentro de la dimensión (D1: Gestión Documental, Información
+ *         y Comunicación, Gestión Organizacional · D2: Consejería, Promoción y
+ *         Prevención, Inclusión Socioeducativa · D3: Atención Psicosocial ·
+ *         D4: Trabajo en Red)
+ *   DE12  desempeño esperado: el estándar mismo, numerado 1-14 en todo el marco
+ *   .c    nivel de logro: a No cumple · b En proceso · c Satisfactorio · d Destacado
+ *
  * Convención (tomada de los registros físicos del departamento): se imprime el
  * código base del estándar (E.D3.C1.DE12.) seguido de su enunciado en tercera
- * persona. La letra de nivel del catálogo (".c", ".d") NO se imprime en el
- * documento; sigue disponible en DECE_QUALITY_STANDARDS para el Plan de Acción.
+ * persona, tal como aparece en la columna ESTÁNDAR del documento oficial. La
+ * letra de nivel NO se imprime en el documento; sigue en DECE_QUALITY_STANDARDS
+ * para el Plan de Acción.
  *
  * La asignación documento -> estándar sale de los "insumos / medios de
  * verificación" que ya declara la plantilla oficial del Plan de Acción
@@ -23,14 +38,14 @@ export const STANDARD_PRINT_TEXT: Record<string, string> = {
   "E.D1.C2.DE4": "Genera dos espacios en el año lectivo para la socialización de políticas, lineamientos, planes, programas y estrategias inherentes a las funciones del Departamento de Consejería Estudiantil.",
   "E.D1.C3.DE5": "Ejecuta el Plan de Acción del Departamento de Consejería Estudiantil.",
   "E.D2.C1.DE6": "Implementa procesos y herramientas de intereses profesionales y vocacionales a estudiantes de forma individual y grupal, en función de los lineamientos emitidos por la Autoridad Educativa Nacional.",
-  "E.D2.C1.DE7": "Genera dos actividades de sensibilización, diálogo o capacitación, enfocadas en el ejercicio y la promoción de derechos del estudiantado, en cada grado o curso bajo su responsabilidad, por año lectivo.",
-  "E.D2.C2.DE8": "Asesora, dos veces durante el año lectivo, a docentes tutores de cada grado o curso bajo su responsabilidad, sobre la implementación de las recomendaciones para fortalecer el acompañamiento socioemocional en el aula.",
-  "E.D2.C2.DE9": "Genera dos espacios de sensibilización y diálogo, relacionados con las temáticas del eje de promoción y prevención, contemplados en el Plan Estratégico del departamento, con estudiantes de cada grado o curso, con otros profesionales de la institución educativa y con familias, por año lectivo.",
-  "E.D2.C3.DE10": "Implementa el Plan de atención y seguimiento psicosocial a estudiantes con necesidades educativas específicas asociadas y no asociadas a la discapacidad, derivados desde la Unidad Distrital de Apoyo a la Inclusión o profesionales avalados.",
-  "E.D3.C1.DE11": "Aplica dos técnicas y/o herramientas para la detección de estudiantes que requieren atención psicosocial.",
+  "E.D2.C1.DE7": "Genera actividades de sensibilización, diálogo o capacitación, enfocadas en el ejercicio y la promoción de derechos del estudiantado, en cada grado o curso bajo su responsabilidad, por año lectivo.",
+  "E.D2.C2.DE8": "Asesora a docentes tutores de cada grado o curso bajo su responsabilidad, sobre la implementación de las recomendaciones para fortalecer el acompañamiento socioemocional en el aula.",
+  "E.D2.C2.DE9": "Genera espacios de sensibilización y diálogo, relacionados con las temáticas del eje de promoción y prevención, contemplados en el Plan Estratégico del departamento, con estudiantes de cada grado o curso, con otros profesionales de la institución educativa y con familias, por año lectivo.",
+  "E.D2.C3.DE10": "Implementa el Plan de atención y seguimiento psicosocial a estudiantes con necesidades educativas específicas asociadas y no asociadas a la discapacidad, derivados desde la Unidad Distrital de Apoyo a la Inclusión o profesionales avalados que emitan un informe psicopedagógico.",
+  "E.D3.C1.DE11": "Aplica técnicas y/o herramientas para la detección de estudiantes que requieren atención psicosocial.",
   "E.D3.C1.DE12": "Realiza la intervención de estudiantes que requieren atención psicosocial.",
   "E.D3.C1.DE13": "Implementa las acciones contempladas en el Plan de acompañamiento y restitución a víctimas de violencia.",
-  "E.D4.C1.DE14": "Asesora a la autoridad institucional y a las instancias de solución alternativa de conflictos de las instituciones educativas en la generación de estrategias enmarcadas en una cultura de paz y no violencia.",
+  "E.D4.C1.DE14": "Asesora a la autoridad institucional y a las instancias de solución alternativa de conflictos de las instituciones educativas, en la generación de estrategias enmarcadas en una cultura de paz y no violencia.",
 };
 
 /**
@@ -45,22 +60,22 @@ export const DOCUMENT_STANDARDS = {
   checklist_expediente: ["E.D1.C1.DE1"],
   informe_situacional: ["E.D1.C1.DE1"],
   informe_cierre: ["E.D1.C1.DE1"],
-  informe_acompanamiento: ["E.D1.C1.DE1", "E.D3.C1.DE12"],
+  informe_acompanamiento: ["E.D3.C1.DE13"],
   registro_atencion_diaria: ["E.D1.C1.DE1", "E.D3.C1.DE12"],
   registro_atencion_docentes_autoridades: ["E.D1.C1.DE1", "E.D2.C2.DE8", "E.D4.C1.DE14"],
   alerta_notificacion: ["E.D1.C1.DE2"],
   hecho_violencia: ["E.D1.C1.DE2", "E.D3.C1.DE13"],
-  informe_bimensual: ["E.D1.C1.DE2"],
+  informe_bimensual: ["E.D3.C1.DE13", "E.D1.C1.DE2"],
   acta_identificacion_alertas: ["E.D1.C2.DE3"],
   junta_curso: ["E.D1.C2.DE3"],
   plan_accion: ["E.D1.C3.DE5"],
-  plan_estrategico: ["E.D1.C3.DE5"],
+  plan_estrategico: ["E.D1.C3.DE5", "E.D2.C2.DE9"],
   informe_gestion: ["E.D1.C3.DE5"],
   // Acompañamiento psicosocial (D2)
   ovp: ["E.D2.C1.DE6"],
   eneis: ["E.D2.C2.DE9"],
   // Atención psicosocial (D3)
-  ficha_observacion: ["E.D3.C1.DE11"],
+  ficha_observacion: ["E.D3.C1.DE11", "E.D3.C1.DE12"],
   entrevista_estudiante: ["E.D3.C1.DE11", "E.D3.C1.DE12"],
   entrevista_representante: ["E.D3.C1.DE11", "E.D3.C1.DE12"],
   plan_atencion: ["E.D3.C1.DE12"],

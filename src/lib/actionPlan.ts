@@ -13,101 +13,101 @@ export interface QualityStandardInfo {
 export const DECE_QUALITY_STANDARDS: QualityStandardInfo[] = [
   {
     "code": "E.D1.C1.DE1.d",
-    "dimension": "GESTIÓN DOCUMENTAL",
-    "component": "INFORMACIÓN Y COMUNICACIÓN",
+    "dimension": "GESTIÓN",
+    "component": "GESTIÓN DOCUMENTAL",
     "name": "Documentos de Acompañamiento",
-    "description": "Elaborar documentos sobre los procesos de acompañamiento y seguimiento psicosocial a la población estudiantil, correspondientes a los 4 ejes de acción del DECE."
+    "description": "Elabora documentos sobre los procesos de acompañamiento y seguimiento psicosocial a la población estudiantil, correspondientes a los ejes de acción del Departamento de Consejería Estudiantil."
   },
   {
     "code": "E.D1.C1.DE2.c",
-    "dimension": "GESTIÓN DOCUMENTAL",
-    "component": "INFORMACIÓN Y COMUNICACIÓN",
+    "dimension": "GESTIÓN",
+    "component": "GESTIÓN DOCUMENTAL",
     "name": "Registro de Riesgo Psicosocial",
-    "description": "Actualizar mensualmente el Registro de Casos de Riesgo Psicosocial de acuerdo con los casos presentados en la institución educativa."
+    "description": "Actualiza mensualmente el Registro de Casos de Riesgo Psicosocial de acuerdo con los casos presentados en la institución educativa."
   },
   {
     "code": "E.D1.C2.DE3.c",
     "dimension": "GESTIÓN",
     "component": "INFORMACIÓN Y COMUNICACIÓN",
     "name": "Reporte en Juntas de Curso",
-    "description": "Reportar, de manera específica, en la Junta de Docentes de Grado o Curso, las acciones tomadas a fin de garantizar la accesibilidad y exigibilidad de los derechos de la población estudiantil."
+    "description": "Reporta, de manera específica, en la Junta de Docentes de Grado o Curso, las acciones tomadas a fin de garantizar la accesibilidad y exigibilidad de los derechos de la población estudiantil."
   },
   {
     "code": "E.D1.C2.DE4.c",
     "dimension": "GESTIÓN",
     "component": "INFORMACIÓN Y COMUNICACIÓN",
     "name": "Socialización de Políticas y Planes",
-    "description": "Generar dos espacios en el año lectivo para la socialización de políticas, lineamientos, planes, programas y estrategias inherentes a las funciones del Departamento de Consejería Estudiantil."
+    "description": "Genera dos espacios en el año lectivo para la socialización de políticas, lineamientos, planes, programas y estrategias inherentes a las funciones del Departamento de Consejería Estudiantil."
   },
   {
     "code": "E.D1.C3.DE5",
     "dimension": "GESTIÓN",
     "component": "GESTIÓN ORGANIZACIONAL",
     "name": "Ejecución del Plan de Acción",
-    "description": "Ejecutar el Plan de Acción del Departamento de Consejería Estudiantil."
+    "description": "Ejecuta el Plan de Acción del Departamento de Consejería Estudiantil."
   },
   {
     "code": "E.D2.C1.DE6.c",
     "dimension": "ACOMPAÑAMIENTO Y SEGUIMIENTO PSICOSOCIAL",
-    "component": "EJE DE ACCIÓN - CONSEJERÍA",
+    "component": "CONSEJERÍA",
     "name": "Orientación Vocacional y Profesional (OVP)",
     "description": "Implementa procesos y herramientas de intereses profesionales y vocacionales a estudiantes de forma individual y grupal, en función de los lineamientos emitidos por la Autoridad Educativa Nacional."
   },
   {
     "code": "E.D2.C1.DE7.c",
     "dimension": "ACOMPAÑAMIENTO Y SEGUIMIENTO PSICOSOCIAL",
-    "component": "EJE DE ACCIÓN - CONSEJERÍA",
+    "component": "CONSEJERÍA",
     "name": "Promoción de Derechos Estudiantiles",
-    "description": "Genera, dos actividades de sensibilización, diálogo o capacitación, enfocadas en el ejercicio y la promoción de derechos del estudiantado, en cada grado o curso bajo su responsabilidad, por año lectivo."
+    "description": "Genera actividades de sensibilización, diálogo o capacitación, enfocadas en el ejercicio y la promoción de derechos del estudiantado, en cada grado o curso bajo su responsabilidad, por año lectivo."
   },
   {
     "code": "E.D2.C2.DE8.c",
     "dimension": "ACOMPAÑAMIENTO Y SEGUIMIENTO PSICOSOCIAL",
-    "component": "EJE DE ACCIÓN - PROMOCIÓN Y PREVENCIÓN",
+    "component": "PROMOCIÓN Y PREVENCIÓN",
     "name": "Asesoramiento Socioemocional a Tutores",
-    "description": "Asesorar, dos veces durante el año lectivo, a docentes tutores de cada grado o curso bajo su responsabilidad, sobre la implementación de las recomendaciones para fortalecer el acompañamiento socioemocional en el aula."
+    "description": "Asesora a docentes tutores de cada grado o curso bajo su responsabilidad, sobre la implementación de las recomendaciones para fortalecer el acompañamiento socioemocional en el aula."
   },
   {
     "code": "E.D2.C2.DE9.c",
     "dimension": "ACOMPAÑAMIENTO Y SEGUIMIENTO PSICOSOCIAL",
-    "component": "EJE DE ACCIÓN - PROMOCIÓN Y PREVENCIÓN",
+    "component": "PROMOCIÓN Y PREVENCIÓN",
     "name": "Sensibilización en Prevención de Riesgos",
-    "description": "Generar dos espacios de sensibilización y diálogo, relacionados con las temáticas del eje de promoción y prevención, contemplados en el Plan Estratégico del departamento, con estudiantes de cada grado o curso, con otros profesionales de la institución educativa y con familias, por año lectivo."
+    "description": "Genera espacios de sensibilización y diálogo, relacionados con las temáticas del eje de promoción y prevención, contemplados en el Plan Estratégico del departamento, con estudiantes de cada grado o curso, con otros profesionales de la institución educativa y con familias, por año lectivo."
   },
   {
     "code": "E.D2.C3.DE10.c",
     "dimension": "ACOMPAÑAMIENTO Y SEGUIMIENTO PSICOSOCIAL",
-    "component": "EJE DE ACCIÓN - INCLUSIÓN SOCIOEDUCATIVA",
+    "component": "INCLUSIÓN SOCIOEDUCATIVA",
     "name": "Inclusión y NEE",
-    "description": "Implementar el Plan de atención y seguimiento psicosocial a estudiantes con necesidades educativas específicas asociadas y no asociadas a la discapacidad, derivados desde la UDAI o profesionales avalados."
+    "description": "Implementa el Plan de atención y seguimiento psicosocial a estudiantes con necesidades educativas específicas asociadas y no asociadas a la discapacidad, derivados desde la Unidad Distrital de Apoyo a la Inclusión o profesionales avalados que emitan un informe psicopedagógico."
   },
   {
     "code": "E.D3.C1.DE11.c",
-    "dimension": "ACOMPAÑAMIENTO Y SEGUIMIENTO PSICOSOCIAL",
-    "component": "EJE DE ACCIÓN - ATENCIÓN PSICOSOCIAL",
+    "dimension": "PROTECCIÓN INTEGRAL",
+    "component": "ATENCIÓN PSICOSOCIAL",
     "name": "Detección Psicosocial",
-    "description": "Aplicar dos técnicas y/o herramientas para la detección de estudiantes que requieren atención psicosocial."
+    "description": "Aplica técnicas y/o herramientas para la detección de estudiantes que requieren atención psicosocial."
   },
   {
     "code": "E.D3.C1.DE12.c",
-    "dimension": "ACOMPAÑAMIENTO Y SEGUIMIENTO PSICOSOCIAL",
-    "component": "EJE DE ACCIÓN - ATENCIÓN PSICOSOCIAL",
+    "dimension": "PROTECCIÓN INTEGRAL",
+    "component": "ATENCIÓN PSICOSOCIAL",
     "name": "Intervención Psicosocial",
-    "description": "Realizar la intervención de estudiantes que requieren atención psicosocial."
+    "description": "Realiza la intervención de estudiantes que requieren atención psicosocial."
   },
   {
     "code": "E.D3.C1.DE13.c",
-    "dimension": "ACOMPAÑAMIENTO Y SEGUIMIENTO PSICOSOCIAL",
-    "component": "EJE DE ACCIÓN - ATENCIÓN PSICOSOCIAL",
+    "dimension": "PROTECCIÓN INTEGRAL",
+    "component": "ATENCIÓN PSICOSOCIAL",
     "name": "Restitución a Víctimas de Violencia",
-    "description": "Implementar las acciones contempladas en el Plan de acompañamiento y restitución a víctimas de violencia."
+    "description": "Implementa las acciones contempladas en el Plan de acompañamiento y restitución a víctimas de violencia."
   },
   {
     "code": "E.D4.C1.DE14.c",
     "dimension": "CONVIVENCIA",
     "component": "TRABAJO EN RED",
     "name": "Cultura de Paz y Redes Interinstitucionales",
-    "description": "Asesorar a la autoridad institucional y a las instancias de solución alternativa de conflictos de las instituciones educativas en la generación de estrategias enmarcadas en una cultura de paz y no violencia."
+    "description": "Asesora a la autoridad institucional y a las instancias de solución alternativa de conflictos de las instituciones educativas, en la generación de estrategias enmarcadas en una cultura de paz y no violencia."
   }
 ];
 
