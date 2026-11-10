@@ -22,6 +22,10 @@ type EnginePreference = "auto" | DictationMode;
 
 const ENGINE_PREFERENCE_STORAGE_KEY = "dece-dictation-engine-preference";
 
+// RMS del microfono (0 a 1). Voz normal con control automatico de ganancia: 0.05 a 0.2.
+const MIC_SILENCE_RMS = 0.012; // por debajo en toda la grabacion = silencio
+const MIC_QUIET_RMS = 0.004; // para avisar de que "no se oye nada"
+
 export default function VoiceDictationButton({
   targetId,
   lang = "es-EC",
@@ -40,6 +44,9 @@ export default function VoiceDictationButton({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [activeEngineLabel, setActiveEngineLabel] = useState<string>("");
   const [enginePreference, setEnginePreferenceState] = useState<EnginePreference>("auto");
+  const [interimText, setInterimText] = useState("");
+  const [micLevel, setMicLevel] = useState(0);
+  const [micSilentWarn, setMicSilentWarn] = useState(false);
 
   // Referencias para ciclo de vida de Web Speech
   const recognitionRef = useRef<any>(null);
@@ -52,6 +59,14 @@ export default function VoiceDictationButton({
   const audioChunksRef = useRef<Blob[]>([]);
   const recordIntervalRef = useRef<any>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+
+  // Medidor de nivel del micrófono
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const meterTimerRef = useRef<any>(null);
+  const meterStreamRef = useRef<MediaStream | null>(null);
+  const meterTokenRef = useRef(0);
+  const meterActiveRef = useRef(false);
+  const peakLevelRef = useRef(0);
 
   // Detección inicial de capacidades del navegador
   useEffect(() => {
@@ -87,8 +102,74 @@ export default function VoiceDictationButton({
     };
   }, []);
 
+  // Mide el volumen del micrófono. Sirve para (1) mostrarle al usuario si el micrófono capta algo y
+  // (2) no enviar al servidor un audio en silencio, que es lo que provoca texto inventado.
+  async function startLevelMeter(existing?: MediaStream) {
+    stopLevelMeter();
+    const token = ++meterTokenRef.current;
+    peakLevelRef.current = 0;
+    meterActiveRef.current = false;
+    setMicSilentWarn(false);
+    try {
+      let stream = existing;
+      if (!stream) {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (token !== meterTokenRef.current) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        meterStreamRef.current = stream;
+      }
+      const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!Ctx) return;
+      const ctx: AudioContext = new Ctx();
+      audioCtxRef.current = ctx;
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      ctx.createMediaStreamSource(stream).connect(analyser);
+      const data = new Uint8Array(analyser.fftSize);
+      let quietFrames = 0;
+      meterActiveRef.current = true;
+      meterTimerRef.current = setInterval(() => {
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) {
+          const x = (data[i] - 128) / 128;
+          sum += x * x;
+        }
+        const rms = Math.sqrt(sum / data.length);
+        if (rms > peakLevelRef.current) peakLevelRef.current = rms;
+        setMicLevel(Math.min(1, rms * 6));
+        quietFrames = rms < MIC_QUIET_RMS ? quietFrames + 1 : 0;
+        setMicSilentWarn(quietFrames >= 50); // ~5 s sin captar nada
+      }, 100);
+    } catch {
+      // Sin medidor: el dictado sigue funcionando, solo que sin esta ayuda.
+    }
+  }
+
+  function stopLevelMeter() {
+    meterTokenRef.current++;
+    if (meterTimerRef.current) {
+      clearInterval(meterTimerRef.current);
+      meterTimerRef.current = null;
+    }
+    if (audioCtxRef.current) {
+      audioCtxRef.current.close().catch(() => {});
+      audioCtxRef.current = null;
+    }
+    if (meterStreamRef.current) {
+      meterStreamRef.current.getTracks().forEach((t) => t.stop());
+      meterStreamRef.current = null;
+    }
+    setMicLevel(0);
+    setMicSilentWarn(false);
+    setInterimText("");
+  }
+
   function cleanupAll() {
     isManuallyStoppedRef.current = true;
+    stopLevelMeter();
 
     if (restartTimerRef.current) {
       clearTimeout(restartTimerRef.current);
@@ -244,12 +325,19 @@ export default function VoiceDictationButton({
 
         recognition.onresult = (event: any) => {
           let chunk = "";
+          let interim = "";
           for (let i = event.resultIndex; i < event.results.length; i++) {
             const res = event.results[i];
-            if (res.isFinal && res[0]?.transcript) {
-              chunk += res[0].transcript + " ";
+            const piece = res[0]?.transcript || "";
+            if (res.isFinal) {
+              if (piece) chunk += piece + " ";
+            } else {
+              interim += piece;
             }
           }
+
+          // Lo que se esta diciendo se muestra junto al boton; se escribe en el campo al quedar final.
+          setInterimText(interim.trim());
 
           if (chunk.trim()) {
             appendTextToTarget(chunk);
@@ -290,6 +378,7 @@ export default function VoiceDictationButton({
 
         recognition.onend = () => {
           recognitionRef.current = null;
+          setInterimText("");
 
           // Si el usuario no presionó detener, reiniciar con una instancia nueva (imprescindible en Safari y Chrome)
           if (!isManuallyStoppedRef.current) {
@@ -306,6 +395,7 @@ export default function VoiceDictationButton({
         recognitionRef.current = recognition;
         recognition.start();
         setState("listening-live");
+        startLevelMeter();
       } catch (err: any) {
         console.warn("[VoiceDictation] No se pudo instanciar WebSpeech:", err);
         // Fallback a grabación de audio
@@ -342,6 +432,7 @@ export default function VoiceDictationButton({
       });
 
       mediaStreamRef.current = stream;
+      startLevelMeter(stream);
 
       // Seleccionar el formato de audio mejor soportado por el navegador
       let mimeType = "";
@@ -379,6 +470,14 @@ export default function VoiceDictationButton({
 
         if (audioChunksRef.current.length === 0) {
           setState("idle");
+          return;
+        }
+
+        // Si el medidor funciono y el microfono nunca capto voz, no se envia: el modelo inventaria texto.
+        if (meterActiveRef.current && peakLevelRef.current < MIC_SILENCE_RMS) {
+          setErrorMessage("No se captó audio. Revisa que el micrófono correcto esté activo y con volumen.");
+          setState("idle");
+          setRecordSeconds(0);
           return;
         }
 
@@ -446,6 +545,7 @@ export default function VoiceDictationButton({
 
   function stopAll() {
     isManuallyStoppedRef.current = true;
+    stopLevelMeter();
 
     if (restartTimerRef.current) {
       clearTimeout(restartTimerRef.current);
@@ -612,6 +712,33 @@ export default function VoiceDictationButton({
             ✨ Preciso IA
           </button>
         </div>
+      )}
+
+      {(isListening || isRecording) && (
+        <span
+          className="inline-flex items-center gap-1"
+          title="Nivel del micrófono: si la barra no se mueve cuando hablas, el micrófono no está captando audio."
+        >
+          <span aria-hidden className="text-[11px]">🎙️</span>
+          <span className="h-1.5 w-14 rounded-full bg-slate-200 overflow-hidden">
+            <span
+              className="block h-full bg-emerald-500 transition-[width] duration-100"
+              style={{ width: `${Math.round(micLevel * 100)}%` }}
+            />
+          </span>
+        </span>
+      )}
+
+      {isListening && interimText && (
+        <span className="text-[11px] italic text-slate-500 max-w-[260px] truncate" aria-live="polite">
+          {interimText}
+        </span>
+      )}
+
+      {(isListening || isRecording) && micSilentWarn && (
+        <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+          No se oye nada: revisa tu micrófono
+        </span>
       )}
 
       {/* Si el usuario está usando Firefox o si la red forzó modo Audio IA, se indica sutilmente */}
