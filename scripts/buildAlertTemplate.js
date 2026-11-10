@@ -255,6 +255,25 @@ function buildAlertTemplate() {
   const serializedXml = new XMLSerializer().serializeToString(doc);
   console.log(`XML Serializado con éxito. Longitud: ${serializedXml.length}, Párrafos: ${doc.getElementsByTagName('w:p').length}`);
 
+  // El fondo de página trae impreso "Ministerio de Educación, Deporte y Cultura" arriba a la derecha, justo donde
+  // van el escudo y el membrete del colegio: se usa el mismo fondo con ese texto borrado.
+  const fondoPath = path.join(process.cwd(), 'templates', 'assets', 'NOTIFICACION_DE_ALERTA_fondo.png');
+  if (fs.existsSync(fondoPath)) {
+    zip.file('word/media/image1.png', fs.readFileSync(fondoPath));
+  }
+
+  // Año lectivo del encabezado: antes quedaba fijo en "2025-2026".
+  const headerFile = zip.file('word/header1.xml');
+  if (headerFile) {
+    const headerXml = headerFile.asText().replace(
+      /(<w:t(?: [^>]*)?>)AÑO LECTIVO 202(<\/w:t>)([\s\S]*?)(<\/w:p>)/,
+      (_all, open, close, rest, endP) =>
+        open + 'AÑO LECTIVO {{anio_lectivo}}' + close +
+        rest.replace(/(<w:t(?: [^>]*)?>)(?:5|-202|6)(<\/w:t>)/g, '$1$2') + endP
+    );
+    zip.file('word/header1.xml', headerXml);
+  }
+
   zip.file('word/document.xml', serializedXml);
   const outBuffer = zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' });
   fs.writeFileSync(templatePath, outBuffer);

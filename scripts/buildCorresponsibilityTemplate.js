@@ -190,6 +190,15 @@ const newDocXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 </w:document>
 `;
 
+// En párrafos justificados Word estira las líneas que terminan en salto manual (los acuerdos van una por línea).
+const settingsFile = zip.file('word/settings.xml');
+if (settingsFile) {
+  const settingsXml = settingsFile.asText();
+  if (!settingsXml.includes('w:doNotExpandShiftReturn') && settingsXml.includes('<w:compat>')) {
+    zip.file('word/settings.xml', settingsXml.replace('<w:compat>', '<w:compat><w:doNotExpandShiftReturn/>'));
+  }
+}
+
 zip.file('word/document.xml', newDocXml);
 fs.writeFileSync(destPath, zip.generate({ type: 'nodebuffer' }));
 console.log('✅ Plantilla oficial generada con éxito en:', destPath);
