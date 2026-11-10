@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { currentSchoolYearText } from "@/lib/schoolYearText";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { logAudit } from "@/lib/audit";
+import { stripStandardLevel } from "@/lib/documentStandards";
 
 export interface ActionState {
   error: string | null;
@@ -36,7 +37,7 @@ export async function createActionPlan(prevState: ActionState, formData: FormDat
   const coordinatorName = str(formData, "coordinator_name") || session.user.name || "Coordinador DECE";
   const analystsData = str(formData, "analysts_data") || "[]";
   const availableResources = str(formData, "available_resources") || "";
-  const itemsData = str(formData, "items_data") || "[]";
+  const itemsData = stripStandardLevel(str(formData, "items_data") || "[]");
   const evaluationNotes = str(formData, "evaluation_notes") || "";
   const elaboratedBy = str(formData, "elaborated_by") || "[]";
   const reviewedBy = str(formData, "reviewed_by") || "";
@@ -128,7 +129,7 @@ export async function updateActionPlan(planId: string, prevState: ActionState, f
   const coordinatorName = str(formData, "coordinator_name") || "Coordinador DECE";
   const analystsData = str(formData, "analysts_data") || "[]";
   const availableResources = str(formData, "available_resources") || "";
-  const itemsData = str(formData, "items_data") || "[]";
+  const itemsData = stripStandardLevel(str(formData, "items_data") || "[]");
   const evaluationNotes = str(formData, "evaluation_notes") || "";
   const elaboratedBy = str(formData, "elaborated_by") || "[]";
   const reviewedBy = str(formData, "reviewed_by") || "";

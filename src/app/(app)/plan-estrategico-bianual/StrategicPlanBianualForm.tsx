@@ -1317,7 +1317,7 @@ export default function StrategicPlanBianualForm({
                             updateItemField(item.id, "evaluation_indicator", e.target.value)
                           }
                           className="textarea w-full text-xs bg-slate-50 text-slate-700"
-                          placeholder="E.D2.C2.DE9.c. Número de espacios de sensibilización ejecutados sobre los planificados..."
+                          placeholder="E.D2.C2.DE9. Número de espacios de sensibilización ejecutados sobre los planificados..."
                         />
                         <p className="text-[10px] text-slate-400 mt-0.5">
                           Cita el código del Estándar de Calidad DECE que corresponda.

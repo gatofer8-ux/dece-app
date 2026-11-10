@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { DECE_QUALITY_STANDARDS } from "./actionPlan";
+import { DECE_QUALITY_STANDARDS, DEFAULT_ACTION_PLAN_ITEMS, parseActionPlanItems } from "./actionPlan";
+import { parseBianualAxisItems } from "./strategicPlanBianual";
 import {
   DOCUMENT_STANDARDS,
   STANDARD_PRINT_TEXT,
@@ -113,8 +114,28 @@ describe("contraste con el documento oficial de Estándares de Calidad DECE", ()
     }
   });
 
-  it("los códigos del catálogo llevan nivel de logro válido (a-d) o ninguno", () => {
-    for (const c of DECE_QUALITY_STANDARDS) expect(c.code).toMatch(/^E\.D\d\.C\d\.DE\d+(\.[a-d])?$/);
+  it("los códigos del catálogo son códigos base, sin letra de nivel", () => {
+    for (const c of DECE_QUALITY_STANDARDS) expect(c.code).toMatch(/^E\.D\d\.C\d\.DE\d+$/);
+  });
+});
+
+describe("Plan de Acción y Plan Estratégico: sin letra de nivel (la pone el auditor)", () => {
+  const LEVEL_ANYWHERE = /E\.D\d\.C\d\.DE\d+\.[a-dA-D]\b/;
+
+  it("la plantilla del Plan de Acción no trae letras de nivel en ningún campo", () => {
+    expect(JSON.stringify(DEFAULT_ACTION_PLAN_ITEMS)).not.toMatch(LEVEL_ANYWHERE);
+    expect(JSON.stringify(DEFAULT_ACTION_PLAN_ITEMS)).toContain("E.D3.C1.DE12.");
+  });
+
+  it("los planes ya guardados con letra se leen sin ella (Plan de Acción y Estratégico)", () => {
+    const stored = JSON.stringify([{ id: "1", expected_goal_standard: "E.D3.C1.DE12.c.\nRealizar la intervención", supplies_inputs: "Acta (E.D3.C1.DE12.c.)" }]);
+    const items = parseActionPlanItems(stored);
+    expect(JSON.stringify(items)).not.toMatch(LEVEL_ANYWHERE);
+    expect(items[0].expected_goal_standard).toBe("E.D3.C1.DE12.\nRealizar la intervención");
+
+    const bianual = parseBianualAxisItems(JSON.stringify([{ id: "1", evaluation_indicator: "E.D2.C1.DE7.c. Dos actividades por curso" }]));
+    expect(JSON.stringify(bianual)).not.toMatch(LEVEL_ANYWHERE);
+    expect(JSON.stringify(bianual)).toContain("E.D2.C1.DE7. Dos actividades por curso");
   });
 });
 

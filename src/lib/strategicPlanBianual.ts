@@ -1,3 +1,4 @@
+import { stripStandardLevel } from "./documentStandards";
 // Catálogo y plantilla base del PLAN ESTRATÉGICO BIANUAL del Departamento de
 // Consejería Estudiantil (DECE).
 //
@@ -60,7 +61,7 @@ export const DEFAULT_BIANUAL_AXIS_ITEMS: StrategicBianualAxisItem[] = [
       '1. Planificar e implementar los procesos de Orientación Vocacional y Profesional (OVP) por subniveles, de forma transversal desde el nivel inicial hasta el bachillerato.\n2. Aplicar herramientas de intereses profesionales y vocacionales de manera individual y grupal.\n3. Desarrollar la retroalimentación de resultados con estudiantes y sus representantes legales.\n4. Capacitar a docentes tutores en herramientas de proyecto de vida para sostener el proceso en el aula.',
     responsible: 'Equipo DECE (Coordinación y Analistas) en articulación con docentes tutores y Vicerrectorado.',
     evaluation_indicator:
-      'E.D2.C1.DE6.c. Número de estudiantes de 10mo EGB y 3ro BGU con herramientas de intereses profesionales y vocacionales aplicadas y retroalimentadas, sobre el total de matriculados en esos niveles (meta: 100% en cada año lectivo del bianio).',
+      'E.D2.C1.DE6. Número de estudiantes de 10mo EGB y 3ro BGU con herramientas de intereses profesionales y vocacionales aplicadas y retroalimentadas, sobre el total de matriculados en esos niveles (meta: 100% en cada año lectivo del bianio).',
     execution_term: `Octubre a junio de cada año lectivo del periodo: ${YEAR_1_TOKEN} y ${YEAR_2_TOKEN}.`,
   },
   {
@@ -71,7 +72,7 @@ export const DEFAULT_BIANUAL_AXIS_ITEMS: StrategicBianualAxisItem[] = [
       '1. Ejecutar estrategias de introspección y empoderamiento sobre derechos de niñas, niños y adolescentes en cada grado o curso.\n2. Desarrollar campañas institucionales de promoción de derechos (minutos cívicos, carteleras y productos educomunicacionales).\n3. Socializar con estudiantes y familias las rutas de exigibilidad y restitución de derechos.',
     responsible: 'Equipo DECE, docentes tutores y Consejo Estudiantil.',
     evaluation_indicator:
-      'E.D2.C1.DE7.c. Dos actividades de sensibilización, diálogo o capacitación sobre derechos ejecutadas por grado o curso, por año lectivo, con registro de asistencia e informe técnico de cumplimiento.',
+      'E.D2.C1.DE7. Dos actividades de sensibilización, diálogo o capacitación sobre derechos ejecutadas por grado o curso, por año lectivo, con registro de asistencia e informe técnico de cumplimiento.',
     execution_term: `Dos jornadas por año lectivo: primer y segundo quimestre de ${YEAR_1_TOKEN} y de ${YEAR_2_TOKEN}.`,
   },
   {
@@ -82,7 +83,7 @@ export const DEFAULT_BIANUAL_AXIS_ITEMS: StrategicBianualAxisItem[] = [
       '1. Elaborar los documentos técnicos (informes, registros y material de talleres) que respalden los procesos de acompañamiento y seguimiento psicosocial.\n2. Actualizar los expedientes de bienestar estudiantil de la población asignada a cada profesional.\n3. Consolidar y respaldar periódicamente la matriz institucional de riesgos psicosociales.',
     responsible: 'Coordinación DECE y cada profesional según la población estudiantil asignada.',
     evaluation_indicator:
-      'E.D1.C1.DE1.d. Porcentaje de expedientes y documentos técnicos de los 4 ejes de acción elaborados y actualizados respecto de lo planificado (meta: 100% al cierre de cada año lectivo del bianio).',
+      'E.D1.C1.DE1. Porcentaje de expedientes y documentos técnicos de los 4 ejes de acción elaborados y actualizados respecto de lo planificado (meta: 100% al cierre de cada año lectivo del bianio).',
     execution_term: `Permanente durante todo el periodo bianual ${YEAR_1_TOKEN} - ${YEAR_2_TOKEN}, con cortes de verificación trimestrales.`,
   },
 
@@ -95,7 +96,7 @@ export const DEFAULT_BIANUAL_AXIS_ITEMS: StrategicBianualAxisItem[] = [
       '1. Desarrollar talleres de prevención de violencias (física, psicológica y sexual) con estudiantes, por subniveles, con enfoque de derechos y autoprotección.\n2. Socializar las rutas y protocolos de actuación frente a hechos de violencia con docentes, familias y estudiantes.\n3. Implementar la metodología de recorrido participativo y campañas de autocuidado del cuerpo ("Semáforo corporal") en los niveles iniciales.',
     responsible: 'Equipo DECE con apoyo de docentes tutores y la máxima autoridad institucional.',
     evaluation_indicator:
-      'E.D2.C2.DE9.c. Dos espacios de sensibilización sobre prevención de violencias por grado o curso y por año lectivo, con registros de asistencia firmados e informes técnicos; reducción porcentual de casos reincidentes respecto de la línea base del primer año.',
+      'E.D2.C2.DE9. Dos espacios de sensibilización sobre prevención de violencias por grado o curso y por año lectivo, con registros de asistencia firmados e informes técnicos; reducción porcentual de casos reincidentes respecto de la línea base del primer año.',
     execution_term: `Primer quimestre de ${YEAR_1_TOKEN} (línea base y talleres) y refuerzo en el primer quimestre de ${YEAR_2_TOKEN}.`,
   },
   {
@@ -106,7 +107,7 @@ export const DEFAULT_BIANUAL_AXIS_ITEMS: StrategicBianualAxisItem[] = [
       '1. Facilitar talleres de prevención del acoso escolar y ciberacoso, empatía digital y uso seguro de redes sociales.\n2. Conformar y acompañar brigadas estudiantiles de buen trato y convivencia digital.\n3. Asesorar a docentes y familias en la identificación temprana y el manejo institucional de casos de acoso y ciberacoso.',
     responsible: 'Equipo DECE, docentes tutores, Comisión de Convivencia Armónica y brigadas estudiantiles.',
     evaluation_indicator:
-      'E.D2.C2.DE9.c. Número de cursos de básica media, superior y bachillerato con talleres de prevención de acoso escolar y ciberacoso ejecutados por año lectivo (meta: 100%), con informe técnico de cumplimiento del estándar.',
+      'E.D2.C2.DE9. Número de cursos de básica media, superior y bachillerato con talleres de prevención de acoso escolar y ciberacoso ejecutados por año lectivo (meta: 100%), con informe técnico de cumplimiento del estándar.',
     execution_term: `Noviembre a diciembre de ${YEAR_1_TOKEN} y de ${YEAR_2_TOKEN}, con seguimiento permanente de casos.`,
   },
   {
@@ -117,7 +118,7 @@ export const DEFAULT_BIANUAL_AXIS_ITEMS: StrategicBianualAxisItem[] = [
       '1. Ejecutar talleres de prevención integral del uso y consumo de drogas ("Mitos, realidades y toma responsable de decisiones") articulados al proyecto de vida.\n2. Desarrollar jornadas de sensibilización con familias sobre factores protectores y detección temprana del consumo.\n3. Articular con el Ministerio de Salud Pública y la red interinstitucional local las acciones de prevención y derivación.',
     responsible: 'Equipo DECE en articulación con el MSP, Policía Comunitaria/DINAPEN y docentes tutores.',
     evaluation_indicator:
-      'E.D2.C2.DE9.c. Dos espacios de sensibilización sobre prevención del uso y consumo de drogas por año lectivo, dirigidos a estudiantes, docentes y familias, con registro de asistencia e informe técnico.',
+      'E.D2.C2.DE9. Dos espacios de sensibilización sobre prevención del uso y consumo de drogas por año lectivo, dirigidos a estudiantes, docentes y familias, con registro de asistencia e informe técnico.',
     execution_term: `Primer quimestre de ${YEAR_1_TOKEN} y de ${YEAR_2_TOKEN}, con campañas de refuerzo en el mes de junio de cada año.`,
   },
   {
@@ -128,7 +129,7 @@ export const DEFAULT_BIANUAL_AXIS_ITEMS: StrategicBianualAxisItem[] = [
       '1. Desarrollar charlas-taller de promoción de la salud mental, manejo emocional y redes de apoyo entre pares.\n2. Aplicar herramientas de tamizaje de factores de riesgo suicida y conductas autolesivas en los niveles priorizados.\n3. Capacitar a docentes y familias en primeros auxilios psicológicos y en la ruta institucional frente a ideación o intento autolítico.\n4. Activar la derivación oportuna a la red externa de salud mental en los casos que lo requieran.',
     responsible: 'Equipo DECE (profesional de psicología clínica/educativa) con el MSP y la máxima autoridad.',
     evaluation_indicator:
-      'E.D2.C2.DE9.c. y E.D3.C1.DE11.c. Porcentaje de estudiantes con factores de riesgo identificados que reciben acompañamiento psicosocial y/o derivación externa documentada (meta: 100% en cada año lectivo del bianio).',
+      'E.D2.C2.DE9. y E.D3.C1.DE11. Porcentaje de estudiantes con factores de riesgo identificados que reciben acompañamiento psicosocial y/o derivación externa documentada (meta: 100% en cada año lectivo del bianio).',
     execution_term: `Segundo quimestre de ${YEAR_1_TOKEN} y de ${YEAR_2_TOKEN}; atención de casos de forma permanente.`,
   },
   {
@@ -139,7 +140,7 @@ export const DEFAULT_BIANUAL_AXIS_ITEMS: StrategicBianualAxisItem[] = [
       '1. Ejecutar las actividades de la ENEIS por subnivel, conforme al cronograma institucional y a los lineamientos ministeriales.\n2. Facilitar talleres sobre derechos sexuales y reproductivos, afectividad y postergación del inicio sexual temprano.\n3. Desarrollar jornadas con familias sobre acompañamiento afectivo-sexual y comunicación asertiva.\n4. Acompañar y garantizar la permanencia escolar de estudiantes en estado de gestación o maternidad/paternidad temprana.',
     responsible: 'Equipo DECE, comisión ENEIS institucional y docentes tutores.',
     evaluation_indicator:
-      'E.D2.C2.DE9.c. Porcentaje de actividades ENEIS ejecutadas respecto de las planificadas por año lectivo (meta: 100%) y número de casos de embarazo adolescente con plan de permanencia escolar activo.',
+      'E.D2.C2.DE9. Porcentaje de actividades ENEIS ejecutadas respecto de las planificadas por año lectivo (meta: 100%) y número de casos de embarazo adolescente con plan de permanencia escolar activo.',
     execution_term: `Todo el año lectivo ${YEAR_1_TOKEN} y todo el año lectivo ${YEAR_2_TOKEN}, según cronograma ENEIS.`,
   },
   {
@@ -150,7 +151,7 @@ export const DEFAULT_BIANUAL_AXIS_ITEMS: StrategicBianualAxisItem[] = [
       '1. Implementar círculos restaurativos y prácticas restaurativas para la resolución pacífica de conflictos entre estudiantes.\n2. Capacitar a docentes y autoridades en metodología restaurativa y acuerdos de convivencia.\n3. Asesorar a la máxima autoridad y a las instancias de solución alternativa de conflictos en estrategias de cultura de paz y no violencia.',
     responsible: 'Equipo DECE, Comisión de Convivencia Armónica y máxima autoridad institucional.',
     evaluation_indicator:
-      'E.D4.C1.DE14.c. Número de círculos y prácticas restaurativas aplicados con acta de acuerdos firmada, sobre el total de conflictos derivados al departamento en cada año lectivo del bianio.',
+      'E.D4.C1.DE14. Número de círculos y prácticas restaurativas aplicados con acta de acuerdos firmada, sobre el total de conflictos derivados al departamento en cada año lectivo del bianio.',
     execution_term: `Permanente durante el periodo ${YEAR_1_TOKEN} - ${YEAR_2_TOKEN}, con capacitación docente al inicio de cada año lectivo.`,
   },
   {
@@ -161,7 +162,7 @@ export const DEFAULT_BIANUAL_AXIS_ITEMS: StrategicBianualAxisItem[] = [
       '1. Ejecutar la Escuela para Familias con temáticas de crianza positiva, comunicación asertiva y establecimiento de límites.\n2. Desarrollar talleres sobre factores protectores familiares frente a los riesgos psicosociales priorizados.\n3. Suscribir actas de corresponsabilidad con las familias de estudiantes en seguimiento psicosocial.',
     responsible: 'Equipo DECE con el Comité Central de Padres, Madres y Representantes Legales.',
     evaluation_indicator:
-      'E.D2.C2.DE9.c. Al menos dos espacios de sensibilización y diálogo con familias por año lectivo, con registro de asistencia firmado e informe técnico de cumplimiento del estándar.',
+      'E.D2.C2.DE9. Al menos dos espacios de sensibilización y diálogo con familias por año lectivo, con registro de asistencia firmado e informe técnico de cumplimiento del estándar.',
     execution_term: `Una jornada por quimestre en ${YEAR_1_TOKEN} y en ${YEAR_2_TOKEN} (cuatro jornadas en el bianio).`,
   },
   {
@@ -172,7 +173,7 @@ export const DEFAULT_BIANUAL_AXIS_ITEMS: StrategicBianualAxisItem[] = [
       '1. Establecer el registro y seguimiento mensual de alertas tempranas por ausentismo reiterado, en coordinación con Secretaría e Inspección General.\n2. Asesorar a docentes tutores en la notificación oportuna de alertas y en el acompañamiento socioemocional en el aula.\n3. Realizar visitas, llamadas y entrevistas familiares de acompañamiento a estudiantes en riesgo de abandono.\n4. Elaborar e implementar planes de permanencia escolar para los casos identificados.',
     responsible: 'Equipo DECE, Inspección General, Secretaría y docentes tutores.',
     evaluation_indicator:
-      'E.D2.C2.DE8.c. Porcentaje de estudiantes con alerta de ausentismo que cuentan con acompañamiento y plan de permanencia documentado (meta: 100%) y reducción de la tasa de abandono respecto del primer año del bianio.',
+      'E.D2.C2.DE8. Porcentaje de estudiantes con alerta de ausentismo que cuentan con acompañamiento y plan de permanencia documentado (meta: 100%) y reducción de la tasa de abandono respecto del primer año del bianio.',
     execution_term: `Seguimiento mensual durante todo el periodo ${YEAR_1_TOKEN} - ${YEAR_2_TOKEN}, con informe consolidado al cierre de cada año lectivo.`,
   },
 
@@ -185,7 +186,7 @@ export const DEFAULT_BIANUAL_AXIS_ITEMS: StrategicBianualAxisItem[] = [
       '1. Receptar los informes psicopedagógicos de la UDAI u otras instancias avaladas y registrar las derivaciones.\n2. Elaborar e implementar el plan de atención y seguimiento psicosocial de cada estudiante con NEE.\n3. Acompañar a docentes en la aplicación de las recomendaciones psicosociales en el aula.',
     responsible: 'Equipo DECE en articulación con la UDAI, el Departamento de Inclusión y docentes tutores.',
     evaluation_indicator:
-      'E.D2.C3.DE10.c. Porcentaje de estudiantes con NEE derivados que cuentan con plan de atención y seguimiento psicosocial implementado y verificado (meta: 100% en cada año lectivo del bianio).',
+      'E.D2.C3.DE10. Porcentaje de estudiantes con NEE derivados que cuentan con plan de atención y seguimiento psicosocial implementado y verificado (meta: 100% en cada año lectivo del bianio).',
     execution_term: `Todo el año lectivo ${YEAR_1_TOKEN} y todo el año lectivo ${YEAR_2_TOKEN}.`,
   },
   {
@@ -196,7 +197,7 @@ export const DEFAULT_BIANUAL_AXIS_ITEMS: StrategicBianualAxisItem[] = [
       '1. Desarrollar espacios de orientación y sensibilización sobre diversidad, inclusión educativa y no discriminación.\n2. Difundir productos educomunicacionales dirigidos a la población estudiantil en situación de vulnerabilidad.\n3. Coordinar con la máxima autoridad la aplicación de medidas de acción afirmativa.',
     responsible: 'Equipo DECE, máxima autoridad institucional y Junta Académica.',
     evaluation_indicator:
-      'E.D2.C3.DE10.c. Número de espacios de sensibilización sobre inclusión educativa ejecutados con registro de asistencia, y actas de coordinación de medidas de acción afirmativa suscritas por año lectivo.',
+      'E.D2.C3.DE10. Número de espacios de sensibilización sobre inclusión educativa ejecutados con registro de asistencia, y actas de coordinación de medidas de acción afirmativa suscritas por año lectivo.',
     execution_term: `Primer quimestre de ${YEAR_1_TOKEN} y de ${YEAR_2_TOKEN}, con productos educomunicacionales permanentes.`,
   },
   {
@@ -207,7 +208,7 @@ export const DEFAULT_BIANUAL_AXIS_ITEMS: StrategicBianualAxisItem[] = [
       '1. Identificar y registrar a estudiantes en situación de doble o múltiple vulnerabilidad.\n2. Generar alertas ante la autoridad institucional o distrital cuando existan situaciones que afecten los procesos de inclusión.\n3. Asesorar a estudiantes y familias sobre la oferta educativa ordinaria y extraordinaria, en articulación con la UDAI.',
     responsible: 'Equipo DECE, UDAI y máxima autoridad institucional.',
     evaluation_indicator:
-      'E.D2.C3.DE10.c. Porcentaje de estudiantes en doble o múltiple vulnerabilidad con atención psicosocial prioritaria y ficha de seguimiento activa (meta: 100%).',
+      'E.D2.C3.DE10. Porcentaje de estudiantes en doble o múltiple vulnerabilidad con atención psicosocial prioritaria y ficha de seguimiento activa (meta: 100%).',
     execution_term: `Permanente durante el periodo ${YEAR_1_TOKEN} - ${YEAR_2_TOKEN}.`,
   },
 
@@ -220,7 +221,7 @@ export const DEFAULT_BIANUAL_AXIS_ITEMS: StrategicBianualAxisItem[] = [
       '1. Aplicar la ficha de observación y la entrevista socioemocional en los diferentes espacios educativos.\n2. Identificar alertas reportadas por docentes en las Juntas de Docentes de Grado o Curso.\n3. Desarrollar la valoración o diagnóstico situacional (historia de vida, línea de vida, factores de riesgo y protectores).',
     responsible: 'Equipo DECE con los docentes tutores de cada grado o curso.',
     evaluation_indicator:
-      'E.D3.C1.DE11.c. Dos técnicas y/o herramientas de detección aplicadas por año lectivo, con registros en el expediente de bienestar estudiantil.',
+      'E.D3.C1.DE11. Dos técnicas y/o herramientas de detección aplicadas por año lectivo, con registros en el expediente de bienestar estudiantil.',
     execution_term: `Todo el año lectivo ${YEAR_1_TOKEN} y todo el año lectivo ${YEAR_2_TOKEN}.`,
   },
   {
@@ -231,7 +232,7 @@ export const DEFAULT_BIANUAL_AXIS_ITEMS: StrategicBianualAxisItem[] = [
       '1. Elaborar y ejecutar el plan de atención psicosocial individual y/o grupal de cada caso.\n2. Socializar con docentes las estrategias de acompañamiento mediante acta de socialización del caso.\n3. Mantener el seguimiento periódico con la familia y con las instancias externas que receptaron la derivación.\n4. Actualizar mensualmente la matriz institucional de riesgos psicosociales.',
     responsible: 'Equipo DECE (profesional asignado al caso) y Coordinación DECE.',
     evaluation_indicator:
-      'E.D3.C1.DE12.c. y E.D1.C1.DE2.c. Porcentaje de casos de riesgo psicosocial con plan de atención ejecutado y ficha de seguimiento actualizada (meta: 100%), con registro mensual en la matriz de riesgos.',
+      'E.D3.C1.DE12. y E.D1.C1.DE2. Porcentaje de casos de riesgo psicosocial con plan de atención ejecutado y ficha de seguimiento actualizada (meta: 100%), con registro mensual en la matriz de riesgos.',
     execution_term: `Permanente durante el periodo ${YEAR_1_TOKEN} - ${YEAR_2_TOKEN}, con actualización mensual de la matriz.`,
   },
   {
@@ -242,7 +243,7 @@ export const DEFAULT_BIANUAL_AXIS_ITEMS: StrategicBianualAxisItem[] = [
       '1. Implementar el plan de acompañamiento y restitución a víctimas de violencia.\n2. Asesorar a la máxima autoridad en la implementación de las medidas de protección y reparación dispuestas por las autoridades competentes.\n3. Desarrollar espacios de sensibilización con la comunidad educativa para evitar la repetición de hechos y la revictimización.',
     responsible: 'Equipo DECE, máxima autoridad institucional y red externa de protección (JCPD, Fiscalía, DINAPEN, MSP).',
     evaluation_indicator:
-      'E.D3.C1.DE13.c. Porcentaje de casos de violencia con plan de acompañamiento y restitución implementado y acta de asesoramiento a la autoridad suscrita (meta: 100%).',
+      'E.D3.C1.DE13. Porcentaje de casos de violencia con plan de acompañamiento y restitución implementado y acta de asesoramiento a la autoridad suscrita (meta: 100%).',
     execution_term: `Permanente durante el periodo ${YEAR_1_TOKEN} - ${YEAR_2_TOKEN}, según la connotación de cada caso.`,
   },
   {
@@ -253,7 +254,7 @@ export const DEFAULT_BIANUAL_AXIS_ITEMS: StrategicBianualAxisItem[] = [
       '1. Actualizar el mapeo de instancias internas y externas de atención psicológica, psicopedagógica, de salud y de protección de derechos.\n2. Gestionar reuniones de coordinación con la red interinstitucional local.\n3. Realizar el seguimiento de los casos derivados a instancias externas hasta su cierre técnico.',
     responsible: 'Coordinación DECE y profesionales asignados a la articulación externa.',
     evaluation_indicator:
-      'E.D3.C1.DE12.c. Matriz de actores externos actualizada y al menos dos actas de reunión de articulación interinstitucional por año lectivo del bianio.',
+      'E.D3.C1.DE12. Matriz de actores externos actualizada y al menos dos actas de reunión de articulación interinstitucional por año lectivo del bianio.',
     execution_term: `Diciembre y mayo de ${YEAR_1_TOKEN} y de ${YEAR_2_TOKEN}.`,
   },
 ];
@@ -367,7 +368,8 @@ export function parseBianualAxisItems(raw: any): StrategicBianualAxisItem[] {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw;
   try {
-    const parsed = JSON.parse(raw);
+    // Planes guardados antes de este cambio traen la letra de nivel (".c"); el nivel lo determina el auditor.
+    const parsed = JSON.parse(stripStandardLevel(raw));
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
