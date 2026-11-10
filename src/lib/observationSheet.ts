@@ -1,7 +1,7 @@
 import type { ObservationSubnivel, ObservationRiskLevel, ObservationContext } from "./types";
 
 /**
- * Catálogo textual fiel a "FICHA DE OBSERVACIÓN PSICOSOCIAL – DECE" (E.D3.C1.DE11.c.),
+ * Catálogo textual fiel a "FICHA DE OBSERVACIÓN PSICOSOCIAL – DECE" (E.D3.C1.DE11.),
  * formato checklist de uso institucional, no diagnóstica.
  */
 

@@ -67,6 +67,7 @@ export const DOCUMENT_STANDARDS = {
   hecho_violencia: ["E.D1.C1.DE2", "E.D3.C1.DE13"],
   informe_bimensual: ["E.D3.C1.DE13", "E.D1.C1.DE2"],
   acta_identificacion_alertas: ["E.D1.C2.DE3"],
+  // El Word de la junta ya imprime este código en su propia celda "Estándar" (docxJuntasCurso.ts).
   junta_curso: ["E.D1.C2.DE3"],
   plan_accion: ["E.D1.C3.DE5"],
   plan_estrategico: ["E.D1.C3.DE5", "E.D2.C2.DE9"],
