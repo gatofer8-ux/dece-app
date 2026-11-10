@@ -25,6 +25,7 @@ import {
   type EneisFichaTecnicaAvanceItem,
   type EneisFichaTecnicaFirma,
 } from "./eneisFichaTecnica";
+import { injectStandardsIntoDocx } from "../docxStandards";
 
 /**
  * Ficha Técnica del Equipo Escolar — réplica fiel del formato propio de la
@@ -233,5 +234,5 @@ export async function generateEneisFichaTecnicaDocx(
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "eneis");
 }

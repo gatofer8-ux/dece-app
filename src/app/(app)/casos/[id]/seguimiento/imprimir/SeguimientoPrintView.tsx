@@ -218,6 +218,7 @@ export default function SeguimientoPrintView({
           intactos en ambos formatos (vista impresa y .doc exportado). */}
       <div id="printable-content" className="p-8 print:p-0 text-sm">
         <DocumentHeader
+          docKind="ficha_seguimiento"
           title="Seguimiento de la Atención Psicosocial"
           institutionName={institution?.name}
           sealImage={institution?.seal_image}

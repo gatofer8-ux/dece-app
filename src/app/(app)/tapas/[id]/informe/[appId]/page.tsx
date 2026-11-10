@@ -45,6 +45,7 @@ export default async function TapasInformePage({ params }: { params: { id: strin
       <div id="printable-content" className="p-6 print:p-0 font-serif text-black">
         <style>{`@media print { @page { size: A4; margin: 1.6cm; } }`}</style>
         <DocumentHeader
+          docKind="ovp"
           title="Perfil de Talentos — Juego de Arquetipos (TaPas)"
           subtitle="Orientación Vocacional y Profesional — Departamento de Consejería Estudiantil"
           institutionName={institution.name}

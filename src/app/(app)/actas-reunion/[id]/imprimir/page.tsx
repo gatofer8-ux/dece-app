@@ -60,6 +60,7 @@ export default async function ImprimirActaReunionPage({ params }: { params: { id
       <div id="printable-content" className="p-6 print:p-0 text-black">
         <style>{`@media print { @page { size: A4; margin: 1.4cm; } }`}</style>
         <DocumentHeader
+          docKind="acta_reunion"
           title={`Acta de Reunión${m.title_suffix ? ` ${m.title_suffix}` : ""}`}
           subtitle="Ministerio de Educación — Departamento de Consejería Estudiantil (DECE)"
           institutionName={institution.name}

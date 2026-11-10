@@ -108,7 +108,7 @@ export default function AuthorityAdvisoryForm({
           />
           <input
             name="standard_code"
-            placeholder="Estándar de Calidad DECE, ej. E.D3.C1.DE13.c"
+            placeholder="Estándar de Calidad DECE, ej. E.D3.C1.DE13"
             className="input"
           />
         </div>

@@ -22,6 +22,7 @@ import { TAPAS_FAMILIES, ARCHETYPE_MAP, type TapasFamily } from "@/lib/tapas/arc
 import { IPPJ_SCALE_META, IPPJ_DISCLAIMER, type IppjScale } from "./ippjInstrument";
 import { studentGradeLabel } from "@/lib/studentCourse";
 import { currentSchoolYearText } from "@/lib/schoolYearText";
+import { injectStandardsIntoDocx } from "../docxStandards";
 
 const FONT = "Calibri";
 const NAVY = "1F3864";
@@ -556,5 +557,5 @@ export async function generateConsolidatedVocationalReportDocx(data: Consolidate
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "ovp");
 }

@@ -31,6 +31,7 @@ import {
 } from "./strategicPlanBianual";
 import type { StrategicBianualPlanRow, ActionPlanSignatory } from "./types";
 import { parseDocxSignatures, createDocxSignatureParagraphs, createDocxCustodyCalloutTable } from "./docxCustodyHelper";
+import { injectStandardsIntoDocx } from "./docxStandards";
 
 const FONT = "Calibri";
 const NAVY = "1B365D";
@@ -502,5 +503,5 @@ export async function generateStrategicPlanBianualDocx(
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "plan_estrategico");
 }

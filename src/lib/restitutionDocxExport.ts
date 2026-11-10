@@ -39,6 +39,7 @@ import {
 } from "./restitutionPlan";
 import { formatStudentCourseFull } from "./studentCourse";
 import { formatDate } from "@/components/ui";
+import { injectStandardsIntoDocx } from "./docxStandards";
 
 export interface RestitutionInstitutionInfo {
   id?: string;
@@ -1000,5 +1001,5 @@ export async function generateRestitutionPlanDocx(data: {
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "plan_restitucion");
 }

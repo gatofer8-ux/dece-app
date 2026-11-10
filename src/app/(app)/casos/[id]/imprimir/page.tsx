@@ -42,6 +42,7 @@ export default async function ImprimirCasoPage({ params }: { params: { id: strin
       <PrintButton />
       <div id="printable-content" className="p-8 print:p-0 text-sm">
         <DocumentHeader
+          docKind="expediente_caso"
           title={`EXPEDIENTE DE ATENCIÓN PSICOSOCIAL — CASO N° ${caseFile.code}`}
           subtitle="Departamento de Consejería Estudiantil (DECE) · Ecuador"
           institutionName={institution?.name}

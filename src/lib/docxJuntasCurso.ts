@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
+import { injectStandardsIntoDocx } from "./docxStandards";
 import { db } from "./db";
 import type {
   CourseBoardReportRow,
@@ -281,5 +282,5 @@ export async function generateCourseBoardReportDocx(opts: {
   const data = formatCourseBoardReportTemplateData(opts.report, opts.institution);
   doc.render(data);
 
-  return doc.getZip().generate({ type: "nodebuffer" });
+  return injectStandardsIntoDocx(doc.getZip().generate({ type: "nodebuffer" }), "junta_curso");
 }

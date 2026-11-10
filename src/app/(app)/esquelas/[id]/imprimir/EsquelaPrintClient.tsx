@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { DeceEsquelaRow, InstitutionRow } from "@/lib/types";
 import { formatDate } from "@/components/ui";
+import StandardsBlock from "@/components/StandardsBlock";
 
 export default function EsquelaPrintClient({
   esquela,
@@ -68,6 +69,7 @@ export default function EsquelaPrintClient({
         <div className="text-center font-bold text-[12px] uppercase tracking-wider text-slate-900 bg-slate-100 py-1 rounded border border-slate-200">
           CONVOCATORIA DE ASISTENCIA AL DEPARTAMENTO DE CONSEJERÍA ESTUDIANTIL (DECE)
         </div>
+        <StandardsBlock docKind="esquela_citacion" />
 
         {/* Datos del Estudiante y Representante */}
         <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10.5px] bg-slate-50/70 p-2 rounded border border-slate-200">

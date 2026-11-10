@@ -63,6 +63,7 @@ export default async function OvpProcessReportPage() {
         <style>{`@media print { @page { size: A4; margin: 1.4cm; } }`}</style>
         
         <DocumentHeader
+          docKind="ovp"
           title="Informe Técnico del Proceso Institucional de OVP"
           subtitle="Departamento de Consejería Estudiantil — DECE"
           institutionName={data.institution.name}

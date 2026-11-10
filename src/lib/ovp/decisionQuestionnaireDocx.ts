@@ -19,6 +19,7 @@ import {
 } from "docx";
 import { currentSchoolYearText } from "@/lib/schoolYearText";
 import { studentGradeLabel } from "@/lib/studentCourse";
+import { injectStandardsIntoDocx } from "../docxStandards";
 
 const FONT = "Calibri";
 const NAVY = "1F3864";
@@ -351,5 +352,5 @@ export async function generateDecisionQuestionnaireDocx(input: DecisionQuestionn
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "ovp");
 }

@@ -6,6 +6,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { formatDate } from "@/components/ui";
 import type { CaseFileRow, StudentRow, CaseInterviewRow, UserRow, InstitutionRow } from "@/lib/types";
 import PrintButton from "@/components/PrintButton";
+import StandardsBlock from "@/components/StandardsBlock";
 
 export default async function ImprimirEntrevistaPage({ params }: { params: { id: string; interviewId: string } }) {
   const session = await requireRole(["ADMIN", "DECE"]);
@@ -124,6 +125,7 @@ export default async function ImprimirEntrevistaPage({ params }: { params: { id:
         <div className="border border-black font-bold text-center text-[12px] sm:text-[13px] py-1 mb-2 bg-white tracking-wide uppercase">
           ENTREVISTA SEMIESTRUCTURADA A ESTUDIANTES / REPRESENTANTES
         </div>
+        <StandardsBlock docKind="entrevista_estudiante" className="mb-2" />
 
         {interview.physical_file_ref && (
           <div className="mb-3 p-2 border border-amber-300 bg-amber-50/70 text-[8pt] rounded text-amber-900 flex items-center justify-between">

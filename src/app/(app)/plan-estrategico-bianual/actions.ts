@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { logAudit } from "@/lib/audit";
+import { stripStandardLevel } from "@/lib/documentStandards";
 
 export interface ActionState {
   error: string | null;
@@ -45,7 +46,7 @@ function readFields(formData: FormData) {
     socioeconomic_condition: str(formData, "socioeconomic_condition"),
     general_objective: str(formData, "general_objective"),
     specific_objectives: str(formData, "specific_objectives") || "[]",
-    axis_items_data: str(formData, "axis_items_data") || "[]",
+    axis_items_data: stripStandardLevel(str(formData, "axis_items_data") || "[]"),
     elaborated_by: str(formData, "elaborated_by") || "[]",
     reviewed_by: str(formData, "reviewed_by"),
     approved_by: str(formData, "approved_by"),

@@ -79,7 +79,7 @@ export default async function ImprimirInformeAcompanamientoPage({
 
       <div id="printable-content" className="p-6 print:p-0 text-black">
         <style>{`@media print { @page { size: A4; margin: 1.3cm; } }`}</style>
-        <DocumentHeader title="Informe de Acompañamiento a Víctimas de Violencia" subtitle="Departamento de Consejería Estudiantil — DECE" institutionName={institution.name} sealImage={institution.seal_image} compact />
+        <DocumentHeader docKind="informe_acompanamiento" title="Informe de Acompañamiento a Víctimas de Violencia" subtitle="Departamento de Consejería Estudiantil — DECE" institutionName={institution.name} sealImage={institution.seal_image} compact />
         <p className="text-center font-bold text-[11pt] my-3 uppercase">
           Informe de acompañamiento a víctimas frente a situaciones de violencia detectadas en el ámbito educativo
         </p>

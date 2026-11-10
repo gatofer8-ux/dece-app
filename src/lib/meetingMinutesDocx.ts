@@ -26,6 +26,7 @@ import {
   DEPENDENCIA_LABEL,
 } from "./meetingMinutes";
 import { createDocxCustodyCalloutTable } from "./docxCustodyHelper";
+import { injectStandardsIntoDocx } from "./docxStandards";
 
 const FONT = "Calibri";
 const NAVY = "1F3864";
@@ -259,5 +260,5 @@ export async function generateMeetingMinutesDocx(m: MeetingMinutesRowLike, insti
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "acta_reunion");
 }

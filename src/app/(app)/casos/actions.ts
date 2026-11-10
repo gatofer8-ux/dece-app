@@ -26,6 +26,7 @@ import {
   MAX_ATTACHMENT_SIZE,
 } from "@/lib/uploads";
 import { getTodayEcuador } from "@/components/ui";
+import { stripStandardLevel } from "@/lib/documentStandards";
 
 // Valores de catálogo aceptados. Un valor fuera de rango (formulario manipulado)
 // se coacciona al valor por defecto en vez de propagarse a la base.
@@ -1510,7 +1511,7 @@ export async function createAuthorityAdvisoryAct(
       act_time: str(formData, "act_time"),
       act_place: str(formData, "act_place"),
       issuing_entity: str(formData, "issuing_entity"),
-      standard_code: str(formData, "standard_code"),
+      standard_code: stripStandardLevel(str(formData, "standard_code") ?? "") || null,
       participants: JSON.stringify(participants),
       background: JSON.stringify(background),
       measures: JSON.stringify(measures),
@@ -3459,7 +3460,7 @@ export async function updateAuthorityAdvisoryAct(
       act_time: str(formData, "act_time"),
       act_place: str(formData, "act_place"),
       issuing_entity: str(formData, "issuing_entity"),
-      standard_code: str(formData, "standard_code"),
+      standard_code: stripStandardLevel(str(formData, "standard_code") ?? "") || null,
       participants: JSON.stringify(participants),
       background: JSON.stringify(background),
       measures: JSON.stringify(measures),

@@ -1244,7 +1244,7 @@ DIRECTRICES TÉCNICAS OBLIGATORIAS:
 1. OBJETIVOS REALES Y CUMPLIBLES: la meta y las acciones deben ser alcanzables con ${Math.max(1, opts.professionalsList.length)} profesional(es) para ${opts.studentsCount || 0} estudiantes, con los recursos y la condición socioeconómica descritos. No propongas actividades costosas, materiales inaccesibles ni atención individual masiva.
 2. La meta debe ser medible y estar formulada a DOS AÑOS (el bianio completo), no a un solo año lectivo.
 3. Las acciones deben ser una lista numerada de pasos concretos y verificables.
-4. El indicador de evaluación debe ser cuantificable y citar el código del Estándar de Calidad DECE correspondiente (ej. "E.D2.C2.DE9.c.").
+4. El indicador de evaluación debe ser cuantificable y citar el código del Estándar de Calidad DECE correspondiente (ej. "E.D2.C2.DE9.").
 5. Los plazos de ejecución deben abarcar los DOS años lectivos del periodo ${opts.periodText || "bianual"} (ej. "Primer quimestre de cada año lectivo del bianio", "Hasta junio del primer año y octubre del segundo año").
 6. Los responsables deben escogerse entre: ${opts.professionalsList.join(", ") || "Equipo DECE"}. Si la labor es compartida, indica "Equipo DECE" y las instancias articuladas.
 

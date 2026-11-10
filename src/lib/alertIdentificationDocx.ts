@@ -25,6 +25,7 @@ import {
 } from "./alertIdentification";
 import { RISK_TYPE_LABELS, type RiskType } from "./types";
 import { createDocxCustodyCalloutTable } from "./docxCustodyHelper";
+import { injectStandardsIntoDocx } from "./docxStandards";
 
 /**
  * Acta de Identificación de Alertas (Junta de Curso) — réplica fiel del
@@ -256,5 +257,5 @@ export async function generateAlertIdentificationDocx(
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "acta_identificacion_alertas");
 }

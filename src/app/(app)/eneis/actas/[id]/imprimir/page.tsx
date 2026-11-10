@@ -6,6 +6,7 @@ import PrintButton from "@/components/PrintButton";
 import { parseEneisActaParticipants, parseEneisActaCompromisos } from "@/lib/eneis/eneisActas";
 import { getEneisActaHeaderInfo } from "@/lib/eneis/eneisActaHeader";
 import type { EneisActaRow, InstitutionRow } from "@/lib/types";
+import StandardsBlock from "@/components/StandardsBlock";
 
 function fmt(d: string | null | undefined) {
   if (!d) return "—";
@@ -68,6 +69,7 @@ export default async function ImprimirEneisActaPage({ params }: { params: { id: 
           <p className="text-xs font-bold">INSTITUCIÓN EDUCATIVA &quot;{header.institutionName}&quot;</p>
           <p className="text-xs font-bold">ACTA N° {header.actaNumero}</p>
         </div>
+        <StandardsBlock docKind="eneis" className="mb-3" />
 
         <table className="w-full border-collapse">
           <tbody>

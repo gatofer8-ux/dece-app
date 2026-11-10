@@ -20,6 +20,8 @@ import {
   parseStringList,
   type AttendeeType,
 } from "@/lib/dailyAttention";
+import { attentionRegisterKind } from "@/lib/documentStandards";
+import { createStandardsParagraphs } from "@/lib/docxStandards";
 
 const FONT = "Calibri";
 const NAVY_COLOR = "2F5496";
@@ -386,7 +388,7 @@ export async function generateDailyAttentionDocx(params: {
           }),
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            spacing: { before: 0, after: 140 },
+            spacing: { before: 0, after: 60 },
             children: [
               new TextRun({
                 text: `Departamento de Consejería Estudiantil (DECE)  |  ${periodLabel}`,
@@ -397,6 +399,7 @@ export async function generateDailyAttentionDocx(params: {
               }),
             ],
           }),
+          ...createStandardsParagraphs(attentionRegisterKind(tipo), { font: FONT, size: 15, afterLast: 120 }),
           new Table({
             width: { size: USABLE_W, type: WidthType.DXA },
             rows: tableRows,

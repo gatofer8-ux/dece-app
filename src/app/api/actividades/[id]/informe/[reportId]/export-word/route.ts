@@ -4,7 +4,9 @@ import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { resolveAttachmentPath } from "@/lib/uploads";
 import { generateActivityReportDocx, type ActivityReportPhoto } from "@/lib/activityReportDocx";
-import type { ActivityReportRow, InstitutionRow } from "@/lib/types";
+import { injectStandardsIntoDocx } from "@/lib/docxStandards";
+import { getActivityStandards } from "@/lib/documentStandards";
+import type { ActivityAxis, ActivityReportRow, InstitutionRow } from "@/lib/types";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string; reportId: string } }) {
   const session = await getSession();
@@ -32,7 +34,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string;
     }
   }
 
-  const buffer = await generateActivityReportDocx({ report, institution, photos });
+  const activity = db
+    .prepare("SELECT axis FROM activities WHERE id = ? AND institution_id = ?")
+    .get(params.id, report.institution_id) as { axis: ActivityAxis } | undefined;
+  const generated = await generateActivityReportDocx({ report, institution, photos });
+  const buffer = activity ? injectStandardsIntoDocx(generated, getActivityStandards(activity.axis)) : generated;
   const safe = (report.tema || report.activity_name || "Informe_de_Taller").replace(/[^a-zA-Z0-9-_]/g, "_").slice(0, 80);
   return new NextResponse(buffer, {
     headers: {

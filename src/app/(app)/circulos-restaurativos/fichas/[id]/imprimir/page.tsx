@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import PrintButton from "@/components/PrintButton";
 import { QUESTION_STAGES, splitLines } from "@/lib/restorativeCircleFicha";
 import type { RestorativeCircleFichaRow } from "@/lib/types";
+import StandardsBlock from "@/components/StandardsBlock";
 
 function fmt(d: string | null | undefined) {
   if (!d) return "";
@@ -79,6 +80,7 @@ export default async function ImprimirFichaCirculoPage({ params }: { params: { i
         <style>{`@media print { @page { size: A4; margin: 2cm; } }`}</style>
 
         <h1 className="text-center text-[22pt] font-bold mb-4">FICHA CÍRCULO RESTAURATIVO</h1>
+        <StandardsBlock docKind="circulo_restaurativo" className="mb-3" />
 
         <h2 className="font-bold text-[13pt] mb-1.5">DATOS GENERALES</h2>
         <table className="w-full border-collapse mb-2">

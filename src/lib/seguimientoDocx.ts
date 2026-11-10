@@ -32,6 +32,7 @@ import fs from "fs";
 import { INTERVENTION_TYPE_LABELS } from "@/lib/types";
 import { currentSchoolYearSpaced } from "@/lib/schoolYearText";
 import type { CaseActionRow, InstitutionRow, StudentRow } from "@/lib/types";
+import { injectStandardsIntoDocx } from "./docxStandards";
 
 const FONT_NAME = "Calibri";
 const TITLE_BLUE = "2F5496";
@@ -329,5 +330,5 @@ export async function generateSeguimientoDocx(data: SeguimientoDocxData): Promis
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "ficha_seguimiento");
 }

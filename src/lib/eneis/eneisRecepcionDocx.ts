@@ -19,6 +19,7 @@ import {
 } from "docx";
 import { currentSchoolYearText } from "@/lib/schoolYearText";
 import type { EneisFichaRow } from "./eneisSessions";
+import { injectStandardsIntoDocx } from "../docxStandards";
 
 const FONT = "Calibri";
 const NAVY = "1F3864";
@@ -162,5 +163,5 @@ export async function generateEneisRecepcionDocx(
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "eneis");
 }

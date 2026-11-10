@@ -28,6 +28,7 @@ import {
   ManagementReportSignatureItem,
 } from "./types";
 import { createDocxSignatureParagraphs, createDocxCustodyCalloutTable } from "./docxCustodyHelper";
+import { injectStandardsIntoDocx } from "./docxStandards";
 
 function getImageBuffer(fileName: string): Buffer | null {
   try {
@@ -1167,5 +1168,5 @@ export async function generateAnnualManagementReportDocx(data: {
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "informe_gestion");
 }

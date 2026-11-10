@@ -7,6 +7,7 @@ import { parseJsonArray, ordinalWord, type ParticipantEntry } from "@/lib/author
 import PrintButton from "@/components/PrintButton";
 import DocumentHeader from "@/components/DocumentHeader";
 import DocumentFooter from "@/components/DocumentFooter";
+import { stripStandardLevel } from "@/lib/documentStandards";
 
 export default async function ImprimirActaAsesoramientoAutoridadPage({
   params,
@@ -71,7 +72,7 @@ export default async function ImprimirActaAsesoramientoAutoridadPage({
           sealImage={institution.seal_image}
         />
         {act.standard_code && (
-          <p className="text-center text-xs text-slate-500 mb-4">Estándar de Calidad DECE: {act.standard_code}</p>
+          <p className="text-center text-xs text-slate-500 mb-4">Estándar de Calidad DECE: {stripStandardLevel(act.standard_code)}</p>
         )}
 
         {act.physical_file_ref && (
@@ -181,7 +182,7 @@ export default async function ImprimirActaAsesoramientoAutoridadPage({
             <p className="whitespace-pre-wrap">{act.conclusion || "—"}</p>
             <p>
               {act.standard_code
-                ? `En cumplimiento del Estándar de Calidad DECE ${act.standard_code}. Para constancia, firman los comparecientes.`
+                ? `En cumplimiento del Estándar de Calidad DECE ${stripStandardLevel(act.standard_code)}. Para constancia, firman los comparecientes.`
                 : "Para constancia, firman los comparecientes."}
             </p>
           </div>

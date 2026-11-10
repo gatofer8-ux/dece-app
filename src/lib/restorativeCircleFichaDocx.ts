@@ -17,6 +17,7 @@ import {
 import { QUESTION_STAGES, splitLines } from "./restorativeCircleFicha";
 import type { RestorativeCircleFichaRow } from "./types";
 import { createDocxCustodyCalloutTable } from "./docxCustodyHelper";
+import { injectStandardsIntoDocx } from "./docxStandards";
 
 const FONT = "Times New Roman";
 const BODY = 24; // 12pt
@@ -318,5 +319,5 @@ export async function generateRestorativeCircleFichaDocx(
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "circulo_restaurativo");
 }

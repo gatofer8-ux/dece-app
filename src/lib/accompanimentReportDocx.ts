@@ -36,6 +36,7 @@ import {
   EXT_REFERRAL_INSTANCES,
   PSYCHOSOCIAL_REFERRAL_OPTIONS,
 } from "./accompanimentReport";
+import { injectStandardsIntoDocx } from "./docxStandards";
 
 // Calca del formato oficial: una sola tabla continua, todo el cuerpo con
 // relleno gris claro (F2F2F2), franjas de sección en gris medio (BFBFBF /
@@ -329,5 +330,5 @@ export async function generateAccompanimentReportDocx(
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "informe_acompanamiento");
 }

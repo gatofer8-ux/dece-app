@@ -8,6 +8,7 @@ import { LEGAL_BASIS_TEXT, parseStringList } from "@/lib/situationalReport";
 import { currentSchoolYearText } from "@/lib/schoolYearText";
 import { formatStudentCourseFull } from "@/lib/studentCourse";
 import PrintButton from "@/components/PrintButton";
+import StandardsBlock from "@/components/StandardsBlock";
 
 function computeAge(birthDate?: string | null) {
   if (!birthDate) return "";
@@ -122,6 +123,7 @@ export default async function ImprimirInformeSituacionalPage({
                   <div className="text-center mt-6">
                     <h1 className="text-xl font-bold text-[#1E3A8A] font-serif">INFORME TÉCNICO SITUACIONAL</h1>
                     <p className="text-sm text-gray-500 font-serif">Informe General</p>
+                    <StandardsBlock docKind="informe_situacional" className="mt-2 text-left" />
                   </div>
                 </div>
               </td>

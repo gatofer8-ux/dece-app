@@ -63,6 +63,7 @@ export default async function OvpInformePage({
       <div id="printable-content" className="p-6 print:p-0 font-serif text-black">
         <style>{`@media print { @page { size: A4; margin: 1.6cm; } }`}</style>
         <DocumentHeader
+          docKind="ovp"
           title="Informe de Orientación Vocacional y Profesional"
           subtitle="Inventario de Preferencias Profesionales para Jóvenes (IPPJ) — Departamento de Consejería Estudiantil"
           institutionName={institution.name}

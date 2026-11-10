@@ -11,6 +11,7 @@ import {
 import type { StrategicBianualPlanRow, ActionPlanSignatory } from "@/lib/types";
 import { type DualSignatureData } from "@/components/DualSignatureModal";
 import PrintButton from "@/components/PrintButton";
+import StandardsBlock from "@/components/StandardsBlock";
 
 export default async function ImprimirPlanEstrategicoBianualPage({
   params,
@@ -98,6 +99,7 @@ export default async function ImprimirPlanEstrategicoBianualPage({
           <div className="text-xs font-bold text-slate-700">
             PERIODO BIANUAL {plan.period_text}
           </div>
+          <StandardsBlock docKind="plan_estrategico" className="text-left" />
         </div>
 
         {/* Datos informativos */}
