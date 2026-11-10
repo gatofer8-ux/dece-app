@@ -292,7 +292,7 @@ export default async function CitasPage({
 
                               {a.case_file_id ? (
                                 <Link
-                                  href={`/casos/${a.case_file_id}/entrevistas/nueva?cita=${a.id}`}
+                                  href={`/casos/${a.case_file_id}/entrevistas/elegir?cita=${a.id}`}
                                   className="text-[11px] text-brand-700 font-semibold hover:underline"
                                   title="Abrir Entrevista en el caso"
                                 >

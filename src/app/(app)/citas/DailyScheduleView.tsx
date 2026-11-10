@@ -113,7 +113,7 @@ export default function DailyScheduleView({
       await updateAppointmentStatus(targetAppt.id, "ATENDIDA");
       setAttendedModalAppt(null);
       if (targetAppt.case_file_id) {
-        router.push(`/casos/${targetAppt.case_file_id}/entrevistas/nueva?cita=${targetAppt.id}`);
+        router.push(`/casos/${targetAppt.case_file_id}/entrevistas/elegir?cita=${targetAppt.id}`);
       } else {
         const studentParam = targetAppt.student_id ? `&estudiante=${targetAppt.student_id}` : "";
         const studentNameParam = targetAppt.student_name ? `&estudiante_nombre=${encodeURIComponent(targetAppt.student_name)}` : "";
@@ -425,7 +425,7 @@ export default function DailyScheduleView({
 
                     {appt.case_file_id ? (
                       <Link
-                        href={`/casos/${appt.case_file_id}/entrevistas/nueva?cita=${appt.id}`}
+                        href={`/casos/${appt.case_file_id}/entrevistas/elegir?cita=${appt.id}`}
                         className="text-xs text-brand-700 font-semibold bg-white border border-brand-200 px-2 py-1 rounded-lg hover:bg-brand-50"
                         title="Abrir Entrevista Inicial en el caso"
                       >

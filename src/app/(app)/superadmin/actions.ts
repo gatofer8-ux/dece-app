@@ -140,6 +140,8 @@ export async function deleteInstitutionSecure(data: {
       db.prepare("DELETE FROM case_restitution_plans WHERE institution_id = ?").run(institutionId);
       db.prepare("DELETE FROM case_observation_sheets WHERE institution_id = ?").run(institutionId);
       db.prepare("DELETE FROM case_interviews WHERE institution_id = ?").run(institutionId);
+      db.prepare("DELETE FROM student_question_interviews WHERE institution_id = ?").run(institutionId);
+      db.prepare("DELETE FROM institution_document_formats WHERE institution_id = ?").run(institutionId);
       db.prepare("DELETE FROM case_risk_matrix_entries WHERE institution_id = ?").run(institutionId);
 
       // Eliminar acciones e intervenciones ligadas a casos de esta institucion
