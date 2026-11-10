@@ -13,6 +13,7 @@ import {
   TableLayoutType,
 } from "docx";
 import { formatPeriodoReporte, type ReporteAvanceRow } from "./eneisReporteAvances";
+import { injectStandardsIntoDocx } from "../docxStandards";
 
 /**
  * "Reporte de avances" mensual por materia/docente — réplica fiel del
@@ -119,5 +120,5 @@ export async function generateEneisReporteAvancesDocx(rows: ReporteAvanceRow[], 
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "eneis");
 }

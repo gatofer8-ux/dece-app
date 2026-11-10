@@ -16,6 +16,7 @@ import { db } from "@/lib/db";
 import { requireRole, requireInstitutionId } from "@/lib/session";
 import { parseActionPlanItems, parseActionPlanAnalysts, parseActionPlanSignatories } from "@/lib/actionPlan";
 import type { ActionPlanRow, ActionPlanSignatory } from "@/lib/types";
+import { injectStandardsIntoDocx } from "@/lib/docxStandards";
 
 export async function GET(
   req: NextRequest,
@@ -232,7 +233,7 @@ export async function GET(
     ],
   });
 
-  const buffer = await Packer.toBuffer(doc);
+  const buffer = injectStandardsIntoDocx(await Packer.toBuffer(doc), "plan_accion");
   const filename = `Plan_Accion_DECE_${plan.school_year_text.replace(/\s+/g, "_")}.docx`;
 
   return new NextResponse(buffer, {

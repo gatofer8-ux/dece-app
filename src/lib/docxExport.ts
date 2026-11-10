@@ -49,6 +49,7 @@ import type {
 import { LEGAL_BASIS_TEXT, parseStringList } from "./situationalReport";
 import { currentSchoolYearText } from "./schoolYearText";
 import { parseProcessesData } from "./bimonthlyReport";
+import { createStandardsParagraphs, injectStandardsIntoDocx } from "./docxStandards";
 import { formatDate } from "@/components/ui";
 import { parseOfficialObservationData } from "./observationSheet";
 import { parseJsonArray } from "./violenceReport";
@@ -757,7 +758,7 @@ activeYear?: SchoolYearRow | null;
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "informe_situacional");
 }
 
 /**
@@ -842,7 +843,7 @@ export async function generateCaseDocx(opts: {
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "expediente_caso");
 }
 
 function parseDatePartsViolence(dateStr?: string | null) {
@@ -1981,7 +1982,7 @@ export async function generateViolenceReportDocx(opts: {
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "hecho_violencia");
 }
 
 /**
@@ -2538,7 +2539,7 @@ export async function generateObservationSheetDocx(opts: {
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "ficha_observacion");
 }
 
 /**
@@ -3300,7 +3301,7 @@ export async function generateReferralDocx(opts: {
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "derivacion");
 }
 
 /**
@@ -3878,7 +3879,7 @@ export async function generateBimonthlyReportDocx(report: BimonthlyReportRow): P
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "informe_bimensual");
 }
 
 
@@ -4206,7 +4207,7 @@ export async function generateCorresponsibilityActDocx(opts: {
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "acta_corresponsabilidad");
 }
 
 
@@ -4328,6 +4329,7 @@ export async function generateInterviewDocx(opts: {
     })
   );
 
+  children.push(...createStandardsParagraphs("entrevista_estudiante", { font: FONT_NAME }));
   children.push(new Paragraph({ spacing: { after: 50 } }));
 
   // DATOS PERSONALES (sin recuadro de foto, calca fiel al formato ministerial)
@@ -5137,7 +5139,7 @@ export async function generateCarePlanDocx(opts: {
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "plan_atencion");
 }
 
 
@@ -5662,5 +5664,5 @@ export async function generateSocializationActDocx(opts: {
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "acta_socializacion");
 }

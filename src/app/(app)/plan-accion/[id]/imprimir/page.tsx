@@ -5,6 +5,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { parseActionPlanItems, parseActionPlanAnalysts, parseActionPlanSignatories } from "@/lib/actionPlan";
 import type { ActionPlanRow, ActionPlanItem, ActionPlanAnalyst, ActionPlanSignatory } from "@/lib/types";
 import PrintButton from "@/components/PrintButton";
+import StandardsBlock from "@/components/StandardsBlock";
 
 export default async function ImprimirPlanAccionPage({ params }: { params: { id: string } }) {
   const session = await requireRole(["ADMIN", "DECE", "AUTORIDAD", "DISTRITO"]);
@@ -91,6 +92,7 @@ export default async function ImprimirPlanAccionPage({ params }: { params: { id:
           <div className="text-xs font-bold text-slate-700">
             AÑO LECTIVO {plan.school_year_text}
           </div>
+          <StandardsBlock docKind="plan_accion" className="text-left" />
         </div>
 
         {/* Tabla Informativa de Cabecera Oficial */}

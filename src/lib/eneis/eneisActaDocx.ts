@@ -24,6 +24,7 @@ import {
   createDocxCustodyCalloutTable,
   type DocxSignerInfo,
 } from "@/lib/docxCustodyHelper";
+import { injectStandardsIntoDocx } from "../docxStandards";
 
 /**
  * Acta de reunión ENEIS — réplica fiel del formato propio de seguimiento
@@ -297,5 +298,5 @@ export async function generateEneisActaDocx(a: EneisActaRowLike, header: EneisAc
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "eneis");
 }

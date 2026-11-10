@@ -5,6 +5,7 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import type { CaseFileRow, StudentRow, BimonthlyReportRow } from "@/lib/types";
 import { parseProcessesData } from "@/lib/bimonthlyReport";
 import PrintButton from "@/components/PrintButton";
+import StandardsBlock from "@/components/StandardsBlock";
 
 export default async function ImprimirInformeBimensualPage({
   params,
@@ -113,6 +114,7 @@ export default async function ImprimirInformeBimensualPage({
             Año lectivo {report.school_year_text} (Meses: {report.period_months})
           </h2>
         </div>
+        <StandardsBlock docKind="informe_bimensual" className="mb-2" />
 
         {/* 1. Datos Informativos Institucionales */}
         <table className="w-full border-collapse border border-black text-xs">

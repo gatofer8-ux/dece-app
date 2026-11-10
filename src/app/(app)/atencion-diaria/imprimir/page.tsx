@@ -12,6 +12,7 @@ import {
 } from "@/lib/dailyAttention";
 import PrintButton from "@/components/PrintButton";
 import DocumentHeader from "@/components/DocumentHeader";
+import { attentionRegisterKind } from "@/lib/documentStandards";
 import DocumentFooter from "@/components/DocumentFooter";
 
 export default async function ImprimirAtencionDiariaPage({
@@ -80,6 +81,7 @@ export default async function ImprimirAtencionDiariaPage({
       </div>
       <div id="printable-content" className="p-6 print:p-0 text-[9px] leading-tight">
         <DocumentHeader
+          docKind={attentionRegisterKind(tipo)}
           title={titleByType[tipo]}
           subtitle={`Departamento de Consejería Estudiantil${searchParams.mes ? ` · Período: ${searchParams.mes}` : ""}`}
           institutionName={institution.name}

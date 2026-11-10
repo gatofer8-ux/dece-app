@@ -26,6 +26,7 @@ import {
 import { formatDate } from "@/components/ui";
 import { type DualSignatureData } from "@/components/DualSignatureModal";
 import { formatStudentCourseFull } from "@/lib/studentCourse";
+import StandardsBlock from "@/components/StandardsBlock";
 
 export default async function ImprimirPlanRestitucionPage({
   params,
@@ -260,6 +261,7 @@ export default async function ImprimirPlanRestitucionPage({
             <p className="text-[11px] font-bold">
               Fecha de elaboración: {formattedElabDate}
             </p>
+            <StandardsBlock docKind="plan_restitucion" className="mt-1 text-left" />
           </div>
 
           {/* TABLA 1: DIAGNÓSTICO Y ANÁLISIS */}

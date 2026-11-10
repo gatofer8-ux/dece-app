@@ -105,6 +105,7 @@ export default async function ImprimirFichaObservacionPage({
 
       <div id="printable-content" className="p-8 print:p-2 text-xs font-['Arial',sans-serif] text-black leading-tight">
         <DocumentHeader
+          docKind="ficha_observacion"
           title="Ficha de Observación"
           subtitle="Departamento de Consejería Estudiantil — DECE"
           institutionName={institution.name}

@@ -21,6 +21,7 @@ import {
 import { currentSchoolYearText } from "@/lib/schoolYearText";
 import { studentGradeLabel } from "@/lib/studentCourse";
 import { groupEntriesByParallel, type ScheduleEntry } from "./interviewSchedule";
+import { injectStandardsIntoDocx } from "../docxStandards";
 
 const FONT = "Calibri";
 const NAVY = "1F3864";
@@ -241,5 +242,5 @@ export async function generateInterviewScheduleDocx(input: InterviewScheduleDocI
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "ovp");
 }

@@ -2,10 +2,14 @@
 // Basado en la imagen corporativa oficial del Ministerio de Educación, Deporte y Cultura ("El Nuevo Ecuador")
 
 import { currentSchoolYearSpaced } from "@/lib/schoolYearText";
+import type { DocumentKind, DocumentStandardLine } from "@/lib/documentStandards";
+import StandardsBlock from "./StandardsBlock";
 
 export default function DocumentHeader({
   title,
   subtitle,
+  docKind,
+  standards,
   institutionName,
   sealImage,
   schoolYear,
@@ -14,6 +18,10 @@ export default function DocumentHeader({
 }: {
   title: string;
   subtitle?: string;
+  /** Tipo de documento: imprime bajo el título los Estándares de Calidad DECE que evidencia. */
+  docKind?: DocumentKind;
+  /** Códigos explícitos (p. ej. según el eje de una actividad); tienen prioridad sobre `docKind`. */
+  standards?: DocumentStandardLine[];
   institutionName?: string;
   sealImage?: string | null;
   schoolYear?: string;
@@ -99,6 +107,9 @@ export default function DocumentHeader({
           </p>
         )}
       </div>
+
+      {/* Codificación según los Estándares de Calidad DECE (como en el registro físico) */}
+      <StandardsBlock docKind={docKind} standards={standards} className="mt-1.5" />
     </header>
   );
 }

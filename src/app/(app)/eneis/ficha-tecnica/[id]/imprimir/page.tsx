@@ -17,6 +17,7 @@ import {
   ENEIS_FIRMAS_DISTRITALES_ROLES,
 } from "@/lib/eneis/eneisFichaTecnica";
 import type { EneisFichaTecnicaRow, InstitutionRow } from "@/lib/types";
+import StandardsBlock from "@/components/StandardsBlock";
 
 function fmt(d: string | null | undefined) {
   if (!d) return "—";
@@ -60,6 +61,7 @@ export default async function ImprimirEneisFichaTecnicaPage({ params }: { params
 
         <p className="text-center font-bold text-base">FICHA TÉCNICA DEL EQUIPO ESCOLAR</p>
         <p className="text-center font-semibold text-xs mb-3">Implementación de Educación Integral en Sexualidad en Instituciones Educativas</p>
+        <StandardsBlock docKind="eneis" className="mb-3" />
 
         <p><strong>Coordinación zonal / Distrito:</strong> {f.coordinacion_zonal_distrito || "—"}</p>
         <p><strong>Nombre de la institución educativa:</strong> {institution.name}</p>

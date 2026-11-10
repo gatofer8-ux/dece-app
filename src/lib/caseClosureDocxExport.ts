@@ -28,6 +28,7 @@ import type {
   CaseClosureReportRow,
 } from "./types";
 import type { BimonthlyConsolidatedItem } from "./caseClosureReport";
+import { injectStandardsIntoDocx } from "./docxStandards";
 
 const COLOR_STEEL_BLUE = "366092";
 const COLOR_BORDER = "366092";
@@ -1108,5 +1109,5 @@ export async function generateCaseClosureReportDocx(data: {
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "informe_cierre");
 }

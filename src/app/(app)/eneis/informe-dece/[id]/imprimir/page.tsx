@@ -11,6 +11,7 @@ import {
 } from "@/lib/eneis/eneisInformeDece";
 import { getEneisInformeDeceNumero } from "@/lib/eneis/eneisInformeDeceNumero";
 import type { EneisInformeDeceRow, InstitutionRow } from "@/lib/types";
+import StandardsBlock from "@/components/StandardsBlock";
 
 function fmt(d: string | null | undefined) {
   const m = (d || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -60,6 +61,7 @@ export default async function ImprimirEneisInformeDecePage({ params }: { params:
         <p className="text-sm font-bold">INSTITUCIÓN EDUCATIVA: {institution.name}</p>
         <p className="text-sm font-bold">CODIGO AMIE: {institution.amie_code || "—"}</p>
         <p className="text-sm font-bold mb-3">MES Y AÑO: {formatPeriodoDece(informe.periodo)}</p>
+        <StandardsBlock docKind="eneis" className="mb-3" />
 
         <table className="w-full border-collapse">
           <tbody>

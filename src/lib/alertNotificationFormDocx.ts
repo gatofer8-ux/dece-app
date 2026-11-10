@@ -19,6 +19,7 @@ import {
   ALERT_NOTIFICATION_INTERVENTION_QUESTIONS,
 } from "./alertNotificationForm";
 import { RISK_TYPE_LABELS, type RiskType } from "./types";
+import { injectStandardsIntoDocx } from "./docxStandards";
 
 /**
  * Ficha de Notificación de Alerta — réplica fiel del formato original
@@ -187,5 +188,5 @@ export async function generateAlertNotificationFormDocx(
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "alerta_notificacion");
 }

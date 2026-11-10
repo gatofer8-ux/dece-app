@@ -11,6 +11,7 @@ import {
   ENEIS_DIAGNOSTICO_GUIA_PREGUNTAS,
 } from "@/lib/eneis/eneisDiagnostico";
 import type { EneisDiagnosticoRow, InstitutionRow } from "@/lib/types";
+import StandardsBlock from "@/components/StandardsBlock";
 
 function fmt(d: string | null | undefined) {
   if (!d) return "—";
@@ -54,6 +55,7 @@ export default async function ImprimirEneisDiagnosticoPage({ params }: { params:
         <style>{`@media print { @page { size: A4; margin: 1.4cm; } }`}</style>
 
         <p className="text-center font-bold text-base mb-4">INFORME DEL DIAGNÓSTICO INSTITUCIONAL</p>
+        <StandardsBlock docKind="eneis" className="mb-3" />
 
         <p className="font-bold mb-1">DATOS INFORMATIVOS:</p>
         <p><strong>Zona:</strong> {d.zona || "—"}</p>

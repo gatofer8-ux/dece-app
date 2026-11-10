@@ -11,6 +11,7 @@ import type {
 import { type BimonthlyConsolidatedItem } from "@/lib/caseClosureReport";
 import { getCaseBimonthlyReports } from "@/lib/caseClosureReportServer";
 import PrintButton from "@/components/PrintButton";
+import StandardsBlock from "@/components/StandardsBlock";
 
 export default async function ImprimirInformeCierrePage({
   params,
@@ -210,6 +211,7 @@ export default async function ImprimirInformeCierrePage({
             <tr>
               <td className="border-none p-0">
                 <div className="px-[50px] sm:px-[60px] print:px-[19mm] text-[11px] leading-[1.45] text-slate-900 pt-3 print:pt-0">
+                  <StandardsBlock docKind="informe_cierre" className="mb-2" />
                   {/* ============================================================ */}
                   {/* TABLA 1: DATOS GENERALES (COLORES EXACTOS DEL MODELO: TEXTO AZUL, FONDO BLANCO) */}
                   {/* ============================================================ */}

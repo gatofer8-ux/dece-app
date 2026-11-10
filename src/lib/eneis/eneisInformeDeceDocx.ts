@@ -19,6 +19,7 @@ import {
   createDocxSignatureParagraphs,
   createDocxCustodyCalloutTable,
 } from "@/lib/docxCustodyHelper";
+import { injectStandardsIntoDocx } from "../docxStandards";
 
 /**
  * Informe mensual de actividades DECE ("INFORME DE ACTIVIDADES Nº ...") —
@@ -167,5 +168,5 @@ export async function generateEneisInformeDeceDocx(
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "eneis");
 }

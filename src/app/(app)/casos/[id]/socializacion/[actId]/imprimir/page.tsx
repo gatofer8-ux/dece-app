@@ -83,6 +83,7 @@ export default async function ImprimirActaSocializacionPage({ params }: { params
 
       <div id="printable-content" className="p-8 print:p-0 text-sm">
         <DocumentHeader
+          docKind="acta_socializacion"
           title="Acta de Socialización de Estudiantes en Situación de Vulnerabilidad"
           subtitle="Departamento de Consejería Estudiantil"
           institutionName={institution.name}

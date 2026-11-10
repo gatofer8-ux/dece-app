@@ -183,6 +183,7 @@ export default async function ImprimirDerivacionPage({ params }: { params: { id:
 
       <div id="printable-content" className="p-4 print:p-0 text-[9pt] leading-tight text-black">
                 <DocumentHeader
+          docKind="derivacion"
           title="Ficha de Derivación"
           subtitle="Departamento de Consejería Estudiantil — DECE"
           institutionName={institution.name}

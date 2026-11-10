@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
+import { injectStandardsIntoDocx } from "./docxStandards";
 import type { CaseAlertNotificationRow } from "./types";
 
 export interface AlertDocxData {
@@ -119,5 +120,5 @@ export async function generateAlertDocxBuffer(
   const data = formatAlertTemplateData(alert);
   doc.render(data);
 
-  return doc.getZip().generate({ type: "nodebuffer" });
+  return injectStandardsIntoDocx(doc.getZip().generate({ type: "nodebuffer" }), "alerta_notificacion");
 }

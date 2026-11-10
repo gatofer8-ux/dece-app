@@ -64,6 +64,7 @@ export default async function ConsolidatedVocationalPage({
         <style>{`@media print { @page { size: A4; margin: 1.5cm; } }`}</style>
 
         <DocumentHeader
+          docKind="ovp"
           title="Informe Psicopedagógico de Orientación Vocacional y Profesional"
           subtitle="Evaluación Vocacional Integrada: Talentos (TaPas) + Intereses (IPPJ - MINEDUC) + Proyecto de Vida"
           institutionName={institution.name}

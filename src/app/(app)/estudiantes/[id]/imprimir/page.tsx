@@ -94,6 +94,7 @@ export default async function ImprimirFichaEstudiantePage({ params }: { params: 
       <PrintButton fileNamePrefix={`ficha-estudiante-${student.full_name.replace(/\s+/g, "-").toLowerCase()}`} />
       <div id="printable-content" className="p-6 print:p-0 text-[11px] leading-snug">
         <DocumentHeader
+          docKind="ficha_estudiantil"
           title="Ficha personal del estudiante"
           subtitle="Departamento de Consejería Estudiantil — DECE"
           institutionName={institution.name}

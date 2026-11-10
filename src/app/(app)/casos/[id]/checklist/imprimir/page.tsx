@@ -58,6 +58,7 @@ export default async function ImprimirChecklistPage({
       <PrintButton />
       <div id="printable-content" className="p-8 print:p-0 text-sm">
         <DocumentHeader
+          docKind="checklist_expediente"
           title={TITLES[category]}
           subtitle="Departamento de Consejería Estudiantil (DECE)"
           institutionName={institution?.name}

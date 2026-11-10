@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireSession, requireInstitutionId } from "@/lib/session";
 import { getCircleConsentById } from "@/lib/restorativeCircleConsent";
 import PrintButton from "@/components/PrintButton";
+import StandardsBlock from "@/components/StandardsBlock";
 
 export default async function ImprimirCirculoConsentPage({
   params,
@@ -102,6 +103,7 @@ export default async function ImprimirCirculoConsentPage({
             className="w-full h-auto object-contain"
           />
         </div>
+        <StandardsBlock docKind="circulo_restaurativo" className="mb-2" />
 
         {/* Tabla principal unificada */}
         <table className="w-full border-collapse border border-black text-[13px] leading-[1.35]">

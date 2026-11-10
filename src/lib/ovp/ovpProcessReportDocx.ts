@@ -18,6 +18,7 @@ import {
   TableLayoutType,
 } from "docx";
 import type { OvpProcessReportData } from "./ovpProcessReportData";
+import { injectStandardsIntoDocx } from "../docxStandards";
 
 const FONT = "Cambria";
 const HEADING_BLUE = "17365D";
@@ -439,5 +440,5 @@ export async function generateOvpProcessReportDocx(data: OvpProcessReportData): 
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "ovp");
 }

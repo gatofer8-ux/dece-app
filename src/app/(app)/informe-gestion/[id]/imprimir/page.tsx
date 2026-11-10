@@ -14,6 +14,7 @@ import type {
   PreventionProjectRow,
   ManagementReportSignatureItem,
 } from "@/lib/types";
+import StandardsBlock from "@/components/StandardsBlock";
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return "";
@@ -141,6 +142,7 @@ export default async function PrintAnnualReportPage({
                     <h1 className="text-sm sm:text-base font-bold text-[#1E3A8A] uppercase tracking-wide">
                       {report.title_topic}
                     </h1>
+                    <StandardsBlock docKind="informe_gestion" className="mt-1 text-left" />
                   </div>
                 </div>
               </td>

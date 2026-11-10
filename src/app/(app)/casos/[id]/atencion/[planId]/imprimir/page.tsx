@@ -85,6 +85,7 @@ export default async function ImprimirPlanAtencionPage({ params }: { params: { i
 
       <div id="printable-content" className="p-8 print:p-0 text-sm">
         <DocumentHeader
+          docKind="plan_atencion"
           title="Plan de Atención Psicosocial y Seguimiento"
           subtitle="Departamento de Consejería Estudiantil"
           institutionName={institution.name}

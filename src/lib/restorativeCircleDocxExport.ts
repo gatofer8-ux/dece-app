@@ -19,6 +19,7 @@ import path from "path";
 import fs from "fs";
 import type { RestorativeCircleConsentRow } from "./types";
 import { createDocxCustodyCalloutTable } from "./docxCustodyHelper";
+import { injectStandardsIntoDocx } from "./docxStandards";
 
 const FONT_FAMILY = "Times New Roman";
 const FONT_SIZE = 20; // 10 pt in half-points
@@ -780,5 +781,5 @@ export async function generateRestorativeCircleDocx(
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "circulo_restaurativo");
 }

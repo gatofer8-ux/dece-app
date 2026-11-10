@@ -13,6 +13,7 @@ import {
 } from "@/lib/alertIdentification";
 import { RISK_TYPE_LABELS, type RiskType } from "@/lib/types";
 import type { InstitutionRow } from "@/lib/types";
+import StandardsBlock from "@/components/StandardsBlock";
 
 function fmt(d: string | null | undefined) {
   if (!d) return "—";
@@ -52,6 +53,7 @@ export default async function ImprimirAlertaIdentificacionPage({ params }: { par
 
       <div id="printable-content" className="p-6 print:p-0 text-black" style={{ color: NAVY }}>
         <style>{`@media print { @page { size: A4; margin: 1.4cm; } }`}</style>
+        <StandardsBlock docKind="acta_identificacion_alertas" className="mb-2" />
 
         <table className="w-full border-collapse">
           <tbody>

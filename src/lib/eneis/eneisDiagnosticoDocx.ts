@@ -21,6 +21,7 @@ import {
   type EneisDiagnosticoResultadoEje,
   type EneisDiagnosticoResponsable,
 } from "./eneisDiagnostico";
+import { injectStandardsIntoDocx } from "../docxStandards";
 
 /**
  * Informe del Diagnóstico Institucional sobre la ENEIS — réplica fiel del
@@ -209,5 +210,5 @@ export async function generateEneisDiagnosticoDocx(
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "eneis");
 }

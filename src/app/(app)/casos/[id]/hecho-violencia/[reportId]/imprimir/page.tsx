@@ -7,6 +7,7 @@ import type { CaseFileRow, StudentRow, ViolenceReportRow, InstitutionRow } from 
 import { parseJsonArray } from "@/lib/violenceReport";
 import { formatStudentCourseFull } from "@/lib/studentCourse";
 import PrintButton from "@/components/PrintButton";
+import StandardsBlock from "@/components/StandardsBlock";
 
 function parseDateParts(dateStr?: string | null) {
   if (!dateStr) return { day: "", month: "", year: "" };
@@ -158,6 +159,7 @@ export default async function ImprimirInformeHechoViolenciaPage({
             ANEXO 1. FORMATO: INFORME DE REPORTE DEL HECHO DE VIOLENCIA
           </h2>
         </div>
+        <StandardsBlock docKind="hecho_violencia" className="mb-2" />
 
         {/* Tabla Inicial: Datos del Informe */}
         <table className="w-full border-collapse border border-[#808080] mb-2 bg-[#F6F6F6] text-sm">

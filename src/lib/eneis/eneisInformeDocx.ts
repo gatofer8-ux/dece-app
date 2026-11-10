@@ -20,6 +20,7 @@ import {
 import { ENEIS_BASE_LEGAL, ENEIS_INFORME_OBJETIVO } from "./eneisInformeBaseLegal";
 import type { EneisInformeRow } from "./eneisInformes";
 import type { InformeTablas } from "./eneisInformeCompute";
+import { injectStandardsIntoDocx } from "../docxStandards";
 
 const FONT = "Calibri";
 const NAVY = "1F3864";
@@ -260,5 +261,5 @@ export async function generateEneisInformeDocx(
     ],
   });
 
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "eneis");
 }

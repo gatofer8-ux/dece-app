@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
+import { injectStandardsIntoDocx } from "./docxStandards";
 import type { CaseCorresponsibilityActRow, StudentRow } from "./types";
 
 const MONTH_NAMES = [
@@ -113,5 +114,5 @@ export async function generateCorresponsibilityDocxBuffer(
   const data = formatCorresponsibilityTemplateData(act, student);
   doc.render(data);
 
-  return doc.getZip().generate({ type: "nodebuffer" });
+  return injectStandardsIntoDocx(doc.getZip().generate({ type: "nodebuffer" }), "acta_corresponsabilidad");
 }

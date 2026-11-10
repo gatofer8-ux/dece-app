@@ -4,7 +4,8 @@ import { requireRole, requireInstitutionId } from "@/lib/session";
 import { db } from "@/lib/db";
 import PrintButton from "@/components/PrintButton";
 import DocumentHeader from "@/components/DocumentHeader";
-import type { ActivityReportRow, InstitutionRow } from "@/lib/types";
+import { getActivityStandards } from "@/lib/documentStandards";
+import type { ActivityAxis, ActivityReportRow, InstitutionRow } from "@/lib/types";
 
 function fmt(d: string | null | undefined) {
   if (!d) return "—";
@@ -27,6 +28,9 @@ export default async function ImprimirInformeTallerPage({
     .get(params.reportId, institutionId) as ActivityReportRow | undefined;
   if (!r) notFound();
   const institution = db.prepare("SELECT * FROM institutions WHERE id = ?").get(institutionId) as InstitutionRow;
+  const activity = db
+    .prepare("SELECT axis FROM activities WHERE id = ? AND institution_id = ?")
+    .get(params.id, institutionId) as { axis: ActivityAxis } | undefined;
   let signaturesList: { signer_id?: string; tipo: "digital" | "fisica"; firma_data_url?: string; observacion?: string }[] = [];
   if (r.signatures_json) {
     try {
@@ -61,7 +65,7 @@ export default async function ImprimirInformeTallerPage({
 
       <div id="printable-content" className="p-6 print:p-0 font-serif text-black">
         <style>{`@media print { @page { size: A4; margin: 1.4cm; } }`}</style>
-        <DocumentHeader title="Informe de Talleres" subtitle="Departamento de Consejería Estudiantil — DECE" institutionName={institution.name} sealImage={institution.seal_image} compact />
+        <DocumentHeader title="Informe de Talleres" standards={activity ? getActivityStandards(activity.axis) : undefined} subtitle="Departamento de Consejería Estudiantil — DECE" institutionName={institution.name} sealImage={institution.seal_image} compact />
 
         <table className="w-full border-collapse mt-3">
           <tbody>

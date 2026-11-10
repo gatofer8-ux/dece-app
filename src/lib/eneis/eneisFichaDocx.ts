@@ -20,6 +20,7 @@ import {
 import { currentSchoolYearText } from "@/lib/schoolYearText";
 import type { EneisFichaRow } from "./eneisSessions";
 import { getMaterialLabel } from "./eneisMaterialesCatalog";
+import { injectStandardsIntoDocx } from "../docxStandards";
 
 const FONT = "Calibri";
 const NAVY = "1F3864";
@@ -212,5 +213,5 @@ async function packDoc(children: (Paragraph | Table)[], title: string): Promise<
       },
     ],
   });
-  return await Packer.toBuffer(doc);
+  return injectStandardsIntoDocx(await Packer.toBuffer(doc), "eneis");
 }
