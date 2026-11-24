@@ -3,6 +3,7 @@ import path from "path";
 import { db } from "@/lib/db";
 import { UPLOADS_DIR } from "@/lib/uploads";
 import { ARCHETYPES } from "./archetypes";
+import { BUILTIN_DECK_KEYS, builtinCardUrl } from "./builtinDeck";
 
 /**
  * Mazo de cartillas ilustradas por institución. Cada institución sube su propia
@@ -95,4 +96,18 @@ export function matchArchetypeKey(cardName: string): string | null {
     }
   }
   return best && best.score >= 0.5 ? best.key : null;
+}
+
+/**
+ * URL de la cartilla de cada arquetipo: la que subió la institución si existe; si no, la
+ * incluida en la app. `uploadedUrl` arma la ruta de la cartilla subida (juego público o panel).
+ */
+export function resolveDeckUrls(
+  institutionId: string,
+  uploadedUrl: (key: string) => string
+): Record<string, string> {
+  const uploaded = getDeckKeySet(institutionId);
+  const out: Record<string, string> = {};
+  for (const key of BUILTIN_DECK_KEYS) out[key] = uploaded.has(key) ? uploadedUrl(key) : builtinCardUrl(key);
+  return out;
 }

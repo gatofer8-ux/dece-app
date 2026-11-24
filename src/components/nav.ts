@@ -40,7 +40,7 @@ export const NAV_ITEMS: NavItem[] = [
   // Orientación Vocacional y Profesional (OVP)
   { href: "/ovp", label: "Aplicaciones IPPJ", icon: "🧭", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Orientación Vocacional y Profesional (OVP)" },
   { href: "/ovp/cronograma", label: "Cronogramas de citas", icon: "🗓️", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Orientación Vocacional y Profesional (OVP)" },
-  { href: "/tapas", label: "Juego de arquetipos (TaPas)", icon: "🃏", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Orientación Vocacional y Profesional (OVP)" },
+  { href: "/tapas", label: "TaPas (talentos y pasiones)", icon: "🃏", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "Orientación Vocacional y Profesional (OVP)" },
 
   // ENEIS
   { href: "/eneis", label: "Fichas de Aplicación ENEIS", icon: "🧩", roles: ["SUPERADMIN", "ADMIN", "DECE", "AUTORIDAD"], group: "ENEIS" },

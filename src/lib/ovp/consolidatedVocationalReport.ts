@@ -108,7 +108,7 @@ export function getStudentVocationalSynthesis(
   let tapasApp = db
     .prepare(
       `SELECT * FROM tapas_applications 
-       WHERE institution_id = ? AND student_id = ? AND status = 'FINALIZADA'
+       WHERE institution_id = ? AND student_id = ? AND status = 'FINALIZADA' AND instrument = 'ARQUETIPOS'
        ORDER BY finished_at DESC LIMIT 1`
     )
     .get(institutionId, studentId) as TapasApplicationRow | undefined;
@@ -117,7 +117,7 @@ export function getStudentVocationalSynthesis(
     tapasApp = db
       .prepare(
         `SELECT * FROM tapas_applications 
-         WHERE institution_id = ? AND LOWER(TRIM(student_name)) = LOWER(TRIM(?)) AND status = 'FINALIZADA'
+         WHERE institution_id = ? AND LOWER(TRIM(student_name)) = LOWER(TRIM(?)) AND status = 'FINALIZADA' AND instrument = 'ARQUETIPOS'
          ORDER BY finished_at DESC LIMIT 1`
       )
       .get(institutionId, student.full_name) as TapasApplicationRow | undefined;

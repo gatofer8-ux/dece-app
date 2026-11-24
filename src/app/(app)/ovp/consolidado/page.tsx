@@ -35,7 +35,7 @@ export default async function OvpConsolidadoDashboardPage({
   const tapasApps = db
     .prepare(
       `SELECT id, session_id, student_id, LOWER(TRIM(student_name)) as s_name, status, finished_at 
-       FROM tapas_applications WHERE institution_id = ?`
+       FROM tapas_applications WHERE institution_id = ? AND instrument = 'ARQUETIPOS'`
     )
     .all(institutionId) as { id: string; session_id: string; student_id: string | null; s_name: string; status: string; finished_at: string | null }[];
 

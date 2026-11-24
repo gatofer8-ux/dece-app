@@ -146,7 +146,7 @@ export async function importTapasDeckFromPdf(
   });
 
   const missingArchetypes = Object.keys(ARCHETYPE_MAP)
-    .filter((k) => !cards[k])
+    .filter((k) => !Object.prototype.hasOwnProperty.call(cards, k))
     .map((k) => ARCHETYPE_MAP[k].name);
 
   return {
