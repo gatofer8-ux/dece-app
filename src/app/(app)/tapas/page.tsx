@@ -4,6 +4,8 @@ import { requireSession, requireInstitutionId } from "@/lib/session";
 import { canManageStudents, roleHomePath } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { PageHeader, EmptyState, formatDate, Badge } from "@/components/ui";
+import { TAPAS_INSTRUMENTS, TAPAS_NIVELES, isTapasInstrument, isTapasNivel } from "@/lib/tapas/niveles";
+import { parsePlan } from "@/lib/tapas/plan";
 import type { TapasSessionRow } from "@/lib/types";
 
 export default async function TapasPage() {
@@ -26,8 +28,8 @@ export default async function TapasPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Juego de arquetipos (TaPas)"
-        description="Herramienta de Orientación Vocacional y Profesional (Proyecto TaPas – VVOB / MinEduc). El estudiante clasifica 74 arquetipos, arma sus grupos de talentos y los ordena. Se juega por un enlace, sin cuenta."
+        title="TaPas — Talentos y Pasiones"
+        description="Herramientas de Orientación Vocacional y Profesional del Proyecto TaPas (VVOB / MinEduc): tarjetas de arquetipos, perfil de talentos y experimento de talento, para Inicial, Básica y Bachillerato. Se juega por un enlace, sin cuenta; cada aplicación tiene su informe individual y uno colectivo."
         action={
           canManage ? (
             <div className="flex flex-wrap items-center gap-2">
@@ -63,6 +65,7 @@ export default async function TapasPage() {
               <thead>
                 <tr>
                   <th>Aplicación</th>
+                  <th>Herramienta</th>
                   <th>Curso</th>
                   <th>Código</th>
                   <th>Estado</th>
@@ -78,6 +81,10 @@ export default async function TapasPage() {
                     <tr key={s.id}>
                       <td className="text-sm font-semibold text-slate-900">
                         <Link href={`/tapas/${s.id}`} className="hover:underline text-brand-700">{s.title}</Link>
+                      </td>
+                      <td className="text-xs text-slate-600">
+                        {s.plan_json && parsePlan(s).instruments.length > 1 ? `🗂️ Proceso TaPas (${parsePlan(s).instruments.length} hojas)` : isTapasInstrument(s.instrument) ? `${TAPAS_INSTRUMENTS[s.instrument].emoji} ${TAPAS_INSTRUMENTS[s.instrument].label.split(":")[0]}` : "—"}
+                        <span className="block text-[11px] text-slate-400">Nivel {isTapasNivel(s.nivel) ? TAPAS_NIVELES[s.nivel].label : "—"}</span>
                       </td>
                       <td className="text-xs text-slate-600">
                         {[s.course, s.parallel && `"${s.parallel}"`, s.jornada].filter(Boolean).join(" ") || "—"}

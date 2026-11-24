@@ -950,6 +950,12 @@ export interface TapasSessionRow {
   status: "ABIERTA" | "CERRADA";
   opens_at: string | null;
   closes_at: string | null;
+  /** Instrumento TaPas: ARQUETIPOS | PERFIL_V1 | PERFIL_V2 | EXPERIMENTO. */
+  instrument: string;
+  /** Nivel educativo: INICIAL | BASICA | BACHILLERATO. */
+  nivel: string;
+  /** Proceso con varias hojas (JSON de TapasPlan). NULL = una sola herramienta. */
+  plan_json: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -968,6 +974,11 @@ export interface TapasApplicationRow {
   reflection: string | null;
   future_letter: string | null;
   result_json: string | null;
+  /** Respuestas del perfil de talentos o del experimento (JSON). */
+  data_json: string | null;
+  instrument: string;
+  /** Misma persona en todas las hojas de un proceso. */
+  participant_id: string | null;
   started_at: string;
   finished_at: string | null;
   updated_at: string;

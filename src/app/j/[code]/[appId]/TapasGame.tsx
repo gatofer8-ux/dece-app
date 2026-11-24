@@ -3,18 +3,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ARCHETYPES,
   ARCHETYPE_MAP,
   TAPAS_FAMILIES,
   TAPAS_CHOICES,
-  MIN_IDENTIFIED,
-  MIN_GROUPS,
-  MAX_GROUPS,
   type TapasChoice,
 } from "@/lib/tapas/archetypes";
+import {
+  TAPAS_NIVELES,
+  INICIAL_MEANINGS,
+  archetypesForNivel,
+  fillCopy,
+  type TapasNivel,
+} from "@/lib/tapas/niveles";
+import { BUILTIN_CATEGORY_CARDS } from "@/lib/tapas/builtinDeck";
+import ReadAloudButton from "@/components/tapas/ReadAloudButton";
 import { saveTapasProgress, finalizeTapasApplication, suggestGroupName } from "../actions";
 
-type Phase = "clasificar" | "ajuste" | "agrupar" | "ordenar" | "cierre";
+type Phase = "conocer" | "clasificar" | "ajuste" | "agrupar" | "ordenar" | "favoritas" | "cierre";
 type Classification = Record<string, TapasChoice>;
 interface Group {
   id: string;
@@ -22,18 +27,41 @@ interface Group {
   archetypes: string[];
 }
 
-function ArchetypeCard({ k, small, img }: { k: string; small?: boolean; img?: string }) {
+/**
+ * ¿Ya respondió esta tarjeta? No basta con `classification[key]`: hay una tarjeta «constructor»
+ * y `{}.constructor` existe en todo objeto de JavaScript, así que contaría como respondida.
+ */
+function isAnswered(classification: Record<string, TapasChoice>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(classification, key);
+}
+
+function meaningOf(key: string, nivel: TapasNivel): string {
+  const a = ARCHETYPE_MAP[key];
+  if (!a) return "";
+  return nivel === "INICIAL" ? INICIAL_MEANINGS[key] || a.meaning : a.meaning;
+}
+
+function ArchetypeCard({
+  k,
+  nivel,
+  small,
+  img,
+  hideMeaning,
+}: {
+  k: string;
+  nivel: TapasNivel;
+  small?: boolean;
+  img?: string;
+  hideMeaning?: boolean;
+}) {
   const a = ARCHETYPE_MAP[k];
   if (!a) return null;
   const fam = TAPAS_FAMILIES[a.familia];
   return (
-    <div
-      className={`rounded-xl border-2 bg-white overflow-hidden ${small ? "" : "shadow-sm"}`}
-      style={{ borderColor: fam.color }}
-    >
+    <div className={`rounded-xl border-2 bg-white overflow-hidden ${small ? "" : "shadow-sm"}`} style={{ borderColor: fam.color }}>
       {img ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={img} alt={a.name} className="w-full aspect-[62/88] object-contain bg-white" />
+        <img src={img} alt={a.name} className={`w-full aspect-[62/88] object-contain bg-white ${small ? "" : "max-h-[46vh] mx-auto"}`} draggable={false} />
       ) : (
         <div
           className={`flex items-center justify-center ${small ? "text-2xl py-2" : "text-5xl py-6"}`}
@@ -42,10 +70,12 @@ function ArchetypeCard({ k, small, img }: { k: string; small?: boolean; img?: st
           {a.emoji}
         </div>
       )}
-      <div className={`px-2.5 ${small ? "py-1.5" : "py-3"}`}>
-        <p className={`font-bold text-slate-900 ${small ? "text-[11px] leading-tight" : "text-sm"}`}>{a.name}</p>
-        {!small && <p className="text-xs text-slate-500 mt-1 leading-snug">{a.meaning}</p>}
-      </div>
+      {(small || !img) && (
+        <div className={`px-2.5 ${small ? "py-1.5" : "py-3"}`}>
+          <p className={`font-bold text-slate-900 ${small ? "text-[11px] leading-tight" : "text-sm"}`}>{a.name}</p>
+          {!small && !hideMeaning && <p className="text-xs text-slate-500 mt-1 leading-snug">{meaningOf(k, nivel)}</p>}
+        </div>
+      )}
     </div>
   );
 }
@@ -54,43 +84,73 @@ export default function TapasGame({
   code,
   appId,
   studentName,
+  nivel,
   initialClassification,
   initialGroups,
   initialReflection,
   initialLetter,
   deck,
+  hubHref,
 }: {
   code: string;
   appId: string;
   studentName: string;
+  nivel: TapasNivel;
   initialClassification: Classification;
   initialGroups: Group[];
   initialReflection: string;
   initialLetter: string;
   deck: Record<string, string>;
+  /** Enlace a «Mis hojas» cuando la hoja es parte de un proceso de varias hojas. */
+  hubHref?: string;
 }) {
   const router = useRouter();
-  const Card = ({ k, small }: { k: string; small?: boolean }) => (
-    <ArchetypeCard k={k} small={small} img={deck[k]} />
+  const cfg = TAPAS_NIVELES[nivel];
+  const cards = useMemo(() => archetypesForNivel(nivel), [nivel]);
+  const cardKeys = useMemo(() => new Set(cards.map((c) => c.key)), [cards]);
+  const favoritasFlow = cfg.arquetiposFlow === "FAVORITAS";
+  const inicial = nivel === "INICIAL";
+  const vars = { n: cards.length, min: cfg.minGroups, max: cfg.maxGroups, minId: cfg.minIdentified };
+
+  const renderCard = (k: string, small?: boolean, hideMeaning?: boolean) => (
+    <ArchetypeCard k={k} nivel={nivel} small={small} img={deck[k]} hideMeaning={hideMeaning} />
   );
+
   const storeKey = `tapas:${appId}`;
-  const [phase, setPhase] = useState<Phase>("clasificar");
-  const [cardIndex, setCardIndex] = useState(0);
+  // Retomar donde se quedó (el juego puede repartirse en varias horas de clase)
+  const [phase, setPhase] = useState<Phase>(() => {
+    const cls = initialClassification || {};
+    const answeredInit = cards.filter((a) => isAnswered(cls, a.key)).length;
+    if (cards.length > 0 && answeredInit >= cards.length) {
+      if (favoritasFlow) return "favoritas";
+      const si = cards.filter((a) => cls[a.key] === "SI").length;
+      const duda = cards.filter((a) => cls[a.key] === "DUDA").length;
+      if (si < cfg.minIdentified && duda > 0) return "ajuste";
+      return "agrupar";
+    }
+    if (answeredInit > 0) return "clasificar";
+    return inicial ? "clasificar" : "conocer";
+  });
+  const [cardIndex, setCardIndex] = useState(() => {
+    const first = cards.findIndex((a) => !isAnswered(initialClassification || {}, a.key));
+    return first >= 0 ? first : 0;
+  });
   const [classification, setClassification] = useState<Classification>(initialClassification || {});
   const [groups, setGroups] = useState<Group[]>(
     initialGroups && initialGroups.length
       ? initialGroups
-      : [
-          { id: "g1", name: "", archetypes: [] },
-          { id: "g2", name: "", archetypes: [] },
-          { id: "g3", name: "", archetypes: [] },
-        ]
+      : Array.from({ length: Math.max(cfg.minGroups, 1) }, (_, i) => ({ id: `g${i + 1}`, name: "", archetypes: [] }))
+  );
+  const [favorites, setFavorites] = useState<string[]>(() =>
+    favoritasFlow ? (initialGroups || []).map((g) => g.archetypes[0]).filter(Boolean) : []
   );
   const [activeGroup, setActiveGroup] = useState<string>("g1");
   const [reflection, setReflection] = useState(initialReflection || "");
   const [letter, setLetter] = useState(initialLetter || "");
+  const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [dragOver, setDragOver] = useState<TapasChoice | null>(null);
   const dirty = useRef(false);
 
   useEffect(() => {
@@ -100,8 +160,14 @@ export default function TapasGame({
         const saved = JSON.parse(raw);
         if (saved.classification && Object.keys(saved.classification).length >= Object.keys(initialClassification || {}).length) {
           setClassification(saved.classification);
+          const first = cards.findIndex((a) => !isAnswered(saved.classification, a.key));
+          if (first > 0) {
+            setCardIndex(first);
+            setPhase((ph) => (ph === "conocer" ? "clasificar" : ph));
+          }
         }
         if (Array.isArray(saved.groups) && saved.groups.length) setGroups(saved.groups);
+        if (Array.isArray(saved.favorites)) setFavorites(saved.favorites);
         if (saved.reflection) setReflection(saved.reflection);
         if (saved.letter) setLetter(saved.letter);
       }
@@ -113,19 +179,25 @@ export default function TapasGame({
 
   useEffect(() => {
     try {
-      localStorage.setItem(storeKey, JSON.stringify({ classification, groups, reflection, letter }));
+      localStorage.setItem(storeKey, JSON.stringify({ classification, groups, favorites, reflection, letter }));
     } catch {
       /* noop */
     }
     dirty.current = true;
-  }, [classification, groups, reflection, letter, storeKey]);
+  }, [classification, groups, favorites, reflection, letter, storeKey]);
+
+  /** Grupos tal como se guardan: en Inicial, cada favorita es un grupo de una tarjeta, en el orden elegido. */
+  function groupsForSave(): { name: string; archetypes: string[] }[] {
+    if (favoritasFlow) return favorites.map((k) => ({ name: ARCHETYPE_MAP[k]?.name || k, archetypes: [k] }));
+    return groups.map((g) => ({ name: g.name, archetypes: g.archetypes }));
+  }
 
   async function persist() {
     if (!dirty.current) return;
     try {
       await saveTapasProgress(code, appId, {
         classification,
-        groups: groups.map((g) => ({ name: g.name, archetypes: g.archetypes })),
+        groups: groupsForSave(),
         reflection,
         future_letter: letter,
       });
@@ -135,34 +207,47 @@ export default function TapasGame({
     }
   }
 
+  useEffect(() => {
+    if (phase !== "clasificar" || Object.keys(classification).length === 0) return;
+    const timer = setTimeout(() => {
+      persist();
+    }, 1500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classification, phase]);
+
   const identified = useMemo(
-    () => ARCHETYPES.filter((a) => classification[a.key] === "SI").map((a) => a.key),
-    [classification]
+    () => cards.filter((a) => classification[a.key] === "SI").map((a) => a.key),
+    [classification, cards]
   );
-  const dudas = useMemo(
-    () => ARCHETYPES.filter((a) => classification[a.key] === "DUDA").map((a) => a.key),
-    [classification]
-  );
-  const answered = Object.keys(classification).length;
+  const dudas = useMemo(() => cards.filter((a) => classification[a.key] === "DUDA").map((a) => a.key), [classification, cards]);
+  const answered = cards.filter((a) => isAnswered(classification, a.key)).length;
+  const choices = cfg.twoChoices ? TAPAS_CHOICES.filter((c) => c.value !== "DUDA") : TAPAS_CHOICES;
+  const current = cards[Math.min(cardIndex, cards.length - 1)];
 
   function choose(choice: TapasChoice) {
-    const a = ARCHETYPES[cardIndex];
-    setClassification((c) => ({ ...c, [a.key]: choice }));
-    if (cardIndex < ARCHETYPES.length - 1) setCardIndex((i) => i + 1);
+    setClassification((c) => ({ ...c, [current.key]: choice }));
+    if (cardIndex < cards.length - 1) setCardIndex((i) => i + 1);
   }
 
   async function afterClasificar() {
     setError(null);
-    if (answered < ARCHETYPES.length) {
+    if (answered < cards.length) {
       setError("Todavía hay tarjetas sin responder.");
       return;
     }
-    await persist();
-    if (identified.length < MIN_IDENTIFIED && dudas.length > 0) {
-      setPhase("ajuste");
-    } else {
-      setPhase("agrupar");
+    if (identified.length < cfg.minIdentified && dudas.length === 0) {
+      setError(
+        favoritasFlow
+          ? `Elige «${cfg.copy.choiceLabels.SI}» en al menos ${cfg.minIdentified} tarjetas. Puedes volver atrás y cambiar algunas.`
+          : `Necesitas al menos ${cfg.minIdentified} tarjetas con las que te identifiques. Vuelve atrás y revisa tus respuestas.`
+      );
+      return;
     }
+    await persist();
+    if (favoritasFlow) setPhase("favoritas");
+    else if (identified.length < cfg.minIdentified && dudas.length > 0) setPhase("ajuste");
+    else setPhase("agrupar");
     window.scrollTo({ top: 0 });
   }
 
@@ -198,8 +283,8 @@ export default function TapasGame({
   async function afterAgrupar() {
     setError(null);
     const filled = groups.filter((g) => g.archetypes.length > 0);
-    if (filled.length < MIN_GROUPS) {
-      setError(`Arma al menos ${MIN_GROUPS} grupos con tarjetas.`);
+    if (filled.length < cfg.minGroups) {
+      setError(`Arma al menos ${cfg.minGroups} grupos con tarjetas.`);
       return;
     }
     if (filled.some((g) => !g.name.trim())) {
@@ -224,15 +309,19 @@ export default function TapasGame({
 
   async function submit() {
     setError(null);
-    if (!reflection.trim()) {
+    if (cfg.requireReflection && !reflection.trim()) {
       setError("Escribe una reflexión antes de enviar.");
+      return;
+    }
+    if (inicial && !reflection.trim()) {
+      setError("Toca una carita para contarnos cómo te sentiste.");
       return;
     }
     setSubmitting(true);
     try {
       const res = await finalizeTapasApplication(code, appId, {
         classification,
-        groups: groups.map((g) => ({ name: g.name, archetypes: g.archetypes })),
+        groups: groupsForSave(),
         reflection,
         future_letter: letter,
       });
@@ -253,27 +342,53 @@ export default function TapasGame({
     }
   }
 
-  const phaseNum = { clasificar: 1, ajuste: 2, agrupar: 3, ordenar: 4, cierre: 5 }[phase];
+  const phaseList: Phase[] = favoritasFlow
+    ? ["clasificar", "favoritas", "cierre"]
+    : ["conocer", "clasificar", "ajuste", "agrupar", "ordenar", "cierre"];
+  const phaseNum = Math.max(0, phaseList.indexOf(phase));
+  const step = 100 / phaseList.length;
   const progress =
-    phase === "clasificar" ? (answered / ARCHETYPES.length) * 20 : (phaseNum - 1) * 20 + (phase === "cierre" ? 15 : 5);
+    phase === "clasificar"
+      ? (phaseNum + answered / cards.length) * step
+      : (phaseNum + 0.5) * step;
+
+  const phaseLabel: Record<Phase, string> = {
+    conocer: "Conoce las tarjetas",
+    clasificar: `Tarjeta ${Math.min(cardIndex + 1, cards.length)}/${cards.length}`,
+    ajuste: "Ajuste",
+    agrupar: "Agrupa",
+    ordenar: "Ordena",
+    favoritas: "Tus favoritas",
+    cierre: "Cierre",
+  };
+
+  function goBack() {
+    setError(null);
+    const prev: Record<Phase, Phase> = {
+      conocer: "conocer",
+      clasificar: inicial ? "clasificar" : "conocer",
+      ajuste: "clasificar",
+      agrupar: identified.length < cfg.minIdentified ? "ajuste" : "clasificar",
+      ordenar: "agrupar",
+      favoritas: "clasificar",
+      cierre: favoritasFlow ? "favoritas" : "ordenar",
+    };
+    setPhase(prev[phase]);
+    window.scrollTo({ top: 0 });
+  }
+
+  const dictCards = cards.filter((a) => {
+    const q = search.trim().toLowerCase();
+    return !q || a.name.toLowerCase().includes(q) || a.meaning.toLowerCase().includes(q);
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 py-6 px-4">
       <div className="max-w-xl mx-auto">
         <div className="mb-3">
           <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-            <span>{studentName}</span>
-            <span>
-              {phase === "clasificar"
-                ? `Tarjeta ${Math.min(cardIndex + 1, ARCHETYPES.length)}/${ARCHETYPES.length}`
-                : phase === "ajuste"
-                ? "Ajuste"
-                : phase === "agrupar"
-                ? "Agrupa"
-                : phase === "ordenar"
-                ? "Ordena"
-                : "Cierre"}
-            </span>
+            {hubHref ? <a href={hubHref} className="font-semibold text-emerald-700">← Mis hojas · {studentName}</a> : <span>{studentName}</span>}
+            <span>{phaseLabel[phase]}</span>
           </div>
           <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
             <div className="h-full bg-emerald-600 transition-all" style={{ width: `${Math.min(100, progress)}%` }} />
@@ -281,29 +396,110 @@ export default function TapasGame({
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6">
-          {/* ---------- CLASIFICAR ---------- */}
-          {phase === "clasificar" && (
+          {/* ---------- CONOCER (diccionario de tarjetas, manual p. 25) ---------- */}
+          {phase === "conocer" && (
             <div>
-              <p className="text-sm text-slate-600 mb-3">¿Te identificas con esta forma de ser o de hacer las cosas?</p>
-              <Card k={ARCHETYPES[cardIndex].key} />
-              <div className="grid grid-cols-3 gap-2 mt-4">
-                {TAPAS_CHOICES.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => choose(opt.value)}
-                    className="rounded-xl border-2 py-3 text-xs font-semibold flex flex-col items-center gap-1"
-                    style={{
-                      borderColor: classification[ARCHETYPES[cardIndex].key] === opt.value ? opt.color : "#e2e8f0",
-                      backgroundColor: classification[ARCHETYPES[cardIndex].key] === opt.value ? `${opt.color}18` : "#fff",
-                      color: opt.color,
-                    }}
-                  >
-                    <span className="text-2xl">{opt.emoji}</span>
-                    {opt.label}
-                  </button>
+              <h2 className="font-bold text-slate-900 mb-1">Conoce las tarjetas</h2>
+              <p className="text-sm text-slate-600 mb-3">
+                Antes de jugar, mira qué significa cada tarjeta. Así podrás elegir mejor. Hay {cards.length}.
+              </p>
+              {cfg.readAloud && <ReadAloudButton text={`Vas a ver ${cards.length} tarjetas. Mira qué significa cada una antes de jugar.`} className="mb-3" />}
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar una tarjeta…"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base mb-3"
+              />
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[52vh] overflow-y-auto pr-1">
+                {dictCards.map((a) => (
+                  <div key={a.key} className="rounded-xl border border-slate-200 overflow-hidden bg-white">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {deck[a.key] ? <img src={deck[a.key]} alt={a.name} className="w-full aspect-[62/88] object-contain" loading="lazy" /> : <div className="text-4xl text-center py-4">{a.emoji}</div>}
+                    <p className="px-2 py-1.5 text-[11px] leading-snug text-slate-600">{meaningOf(a.key, nivel)}</p>
+                  </div>
+                ))}
+                {dictCards.length === 0 && <p className="col-span-full text-sm text-slate-400">No hay tarjetas con ese texto.</p>}
+              </div>
+              <div className="mt-3 rounded-lg bg-emerald-50 border border-emerald-100 p-3 text-sm text-slate-700 space-y-1">
+                {cfg.copy.intro.map((s, i) => (
+                  <p key={i}>
+                    {i + 1}. {fillCopy(s, vars)}
+                  </p>
                 ))}
               </div>
+              <div className="flex justify-end mt-5">
+                <button type="button" onClick={() => { setPhase("clasificar"); window.scrollTo({ top: 0 }); }} className="rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white">
+                  Empezar a jugar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ---------- CLASIFICAR ---------- */}
+          {phase === "clasificar" && current && (
+            <div>
+              {inicial && cardIndex === 0 && answered === 0 && (
+                <div className="mb-3 rounded-lg bg-emerald-50 border border-emerald-100 p-3 text-sm text-slate-700 space-y-1">
+                  {cfg.copy.intro.map((s, i) => (
+                    <p key={i}>{fillCopy(s, vars)}</p>
+                  ))}
+                </div>
+              )}
+              <p className="text-sm text-slate-600 mb-3">{cfg.copy.clasificarPrompt}</p>
+              <div key={current.key} draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", current.key)}>
+                {renderCard(current.key, false, inicial)}
+              </div>
+              {cards[cardIndex + 1] && deck[cards[cardIndex + 1].key] && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={deck[cards[cardIndex + 1].key]} alt="" aria-hidden className="hidden" />
+              )}
+              {cfg.readAloud && (
+                <div className="mt-2 flex justify-center">
+                  <ReadAloudButton text={`${current.name}. ${meaningOf(current.key, nivel)}`} />
+                </div>
+              )}
+              {inicial && <p className="text-center text-base font-semibold text-slate-800 mt-2">{meaningOf(current.key, nivel)}</p>}
+
+              <div className={`grid gap-2 mt-4 ${choices.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                {choices.map((opt) => {
+                  const selected = classification[current.key] === opt.value;
+                  const catImg = !inicial ? BUILTIN_CATEGORY_CARDS[opt.value] : null;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => choose(opt.value)}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setDragOver(opt.value);
+                      }}
+                      onDragLeave={() => setDragOver(null)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDragOver(null);
+                        choose(opt.value);
+                      }}
+                      aria-label={cfg.copy.choiceLabels[opt.value]}
+                      className={`rounded-xl border-2 overflow-hidden flex flex-col items-center gap-1 ${inicial ? "py-5 text-sm" : "pb-2 text-xs"} font-semibold transition-transform ${dragOver === opt.value ? "scale-105" : ""}`}
+                      style={{
+                        borderColor: selected || dragOver === opt.value ? opt.color : "#e2e8f0",
+                        backgroundColor: selected ? `${opt.color}18` : "#fff",
+                        color: opt.color,
+                      }}
+                    >
+                      {catImg ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={catImg} alt="" className="w-full aspect-[10/7] object-cover" draggable={false} />
+                      ) : (
+                        <span className={inicial ? "text-6xl" : "text-2xl"}>{opt.emoji}</span>
+                      )}
+                      <span className="px-1 leading-tight">{cfg.copy.choiceLabels[opt.value]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {!inicial && <p className="text-[11px] text-slate-400 text-center mt-1.5">Toca una categoría o arrastra la tarjeta hasta ella.</p>}
+
               <div className="flex items-center justify-between mt-5">
                 <button
                   type="button"
@@ -313,14 +509,14 @@ export default function TapasGame({
                 >
                   Atrás
                 </button>
-                {cardIndex >= ARCHETYPES.length - 1 && answered >= ARCHETYPES.length ? (
+                {cardIndex >= cards.length - 1 && answered >= cards.length ? (
                   <button type="button" onClick={afterClasificar} className="rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white">
                     Continuar
                   </button>
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setCardIndex((i) => Math.min(ARCHETYPES.length - 1, i + 1))}
+                    onClick={() => setCardIndex((i) => Math.min(cards.length - 1, i + 1))}
                     className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-600"
                   >
                     Saltar
@@ -328,7 +524,9 @@ export default function TapasGame({
                 )}
               </div>
               <p className="text-[11px] text-slate-400 mt-3">
-                Te identificas con {identified.length} tarjetas hasta ahora. Responde rápido y con sinceridad.
+                {inicial
+                  ? `Te gustaron ${identified.length} tarjetas.`
+                  : `Te identificas con ${identified.length} tarjetas hasta ahora. Responde rápido y con sinceridad.`}
               </p>
             </div>
           )}
@@ -337,14 +535,11 @@ export default function TapasGame({
           {phase === "ajuste" && (
             <div>
               <h2 className="font-bold text-slate-900 mb-1">Un ajuste rápido</h2>
-              <p className="text-sm text-slate-600 mb-3">
-                Necesitas al menos {MIN_IDENTIFIED} tarjetas con las que te identifiques (llevas {identified.length}).
-                De estas que marcaste con dudas, toca las que sí van contigo.
-              </p>
+              <p className="text-sm text-slate-600 mb-3">{fillCopy(cfg.copy.ajusteHelp, { ...vars, min: cfg.minIdentified, n: identified.length })}</p>
               <div className="grid grid-cols-2 gap-2">
                 {dudas.map((k) => (
                   <button key={k} type="button" onClick={() => setClassification((c) => ({ ...c, [k]: "SI" }))} className="text-left">
-                    <Card k={k} small />
+                    {renderCard(k, true)}
                   </button>
                 ))}
               </div>
@@ -352,7 +547,7 @@ export default function TapasGame({
                 <button
                   type="button"
                   onClick={afterAjuste}
-                  disabled={identified.length < MIN_IDENTIFIED && dudas.length > 0}
+                  disabled={identified.length < cfg.minIdentified && dudas.length > 0}
                   className="rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
                 >
                   Continuar
@@ -365,10 +560,8 @@ export default function TapasGame({
           {phase === "agrupar" && (
             <div>
               <h2 className="font-bold text-slate-900 mb-1">Arma tus grupos de talentos</h2>
-              <p className="text-sm text-slate-600 mb-3">
-                Junta las tarjetas que se parecen entre sí en {MIN_GROUPS} a {MAX_GROUPS} grupos. Elige un grupo y toca
-                las tarjetas para agregarlas o quitarlas. Ponle a cada grupo un nombre que empiece con un verbo.
-              </p>
+              <p className="text-sm text-slate-600 mb-3">{fillCopy(cfg.copy.agruparHelp, vars)}</p>
+              {cfg.readAloud && <ReadAloudButton text={fillCopy(cfg.copy.agruparHelp, vars)} className="mb-3" />}
 
               <div className="space-y-2 mb-4">
                 {groups.map((g, gi) => (
@@ -388,7 +581,7 @@ export default function TapasGame({
                         value={g.name}
                         onChange={(e) => setGroups((gs) => gs.map((x) => (x.id === g.id ? { ...x, name: e.target.value } : x)))}
                         onFocus={() => setActiveGroup(g.id)}
-                        placeholder="Ej. Proteger la justicia"
+                        placeholder={cfg.copy.groupPlaceholder}
                         className="flex-1 rounded border border-slate-300 px-2 py-1.5 text-sm"
                       />
                       {g.archetypes.length > 0 && (
@@ -396,7 +589,7 @@ export default function TapasGame({
                           ✨ IA
                         </button>
                       )}
-                      {groups.length > MIN_GROUPS && (
+                      {groups.length > cfg.minGroups && (
                         <button
                           type="button"
                           onClick={() => {
@@ -410,13 +603,11 @@ export default function TapasGame({
                       )}
                     </div>
                     {g.archetypes.length > 0 && (
-                      <p className="text-[11px] text-slate-500 mt-1 pl-8">
-                        {g.archetypes.map((k) => ARCHETYPE_MAP[k]?.name).join(" · ")}
-                      </p>
+                      <p className="text-[11px] text-slate-500 mt-1 pl-8">{g.archetypes.map((k) => ARCHETYPE_MAP[k]?.name).join(" · ")}</p>
                     )}
                   </div>
                 ))}
-                {groups.length < MAX_GROUPS && (
+                {groups.length < cfg.maxGroups && (
                   <button
                     type="button"
                     onClick={() => {
@@ -435,14 +626,12 @@ export default function TapasGame({
                 Toca una tarjeta para ponerla en el grupo {groups.findIndex((g) => g.id === activeGroup) + 1}
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[55vh] overflow-y-auto pr-1">
-                {identified.map((k) => {
+                {identified.filter((k) => cardKeys.has(k)).map((k) => {
                   const g = groupOf(k);
                   const inActive = groups.find((x) => x.id === activeGroup)?.archetypes.includes(k);
                   return (
                     <button key={k} type="button" onClick={() => toggleInActiveGroup(k)} className="relative text-left">
-                      <div className={inActive ? "ring-2 ring-emerald-500 rounded-xl" : g ? "opacity-50" : ""}>
-                        <Card k={k} small />
-                      </div>
+                      <div className={inActive ? "ring-2 ring-emerald-500 rounded-xl" : g ? "opacity-50" : ""}>{renderCard(k, true)}</div>
                       {g && (
                         <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-slate-700 text-white text-[10px] font-bold flex items-center justify-center">
                           {groups.findIndex((x) => x.id === g.id) + 1}
@@ -465,7 +654,7 @@ export default function TapasGame({
           {phase === "ordenar" && (
             <div>
               <h2 className="font-bold text-slate-900 mb-1">Ordena tus grupos</h2>
-              <p className="text-sm text-slate-600 mb-3">Del talento que sientes más fuerte (arriba) al menos fuerte (abajo).</p>
+              <p className="text-sm text-slate-600 mb-3">{cfg.copy.ordenarHelp}</p>
               <div className="space-y-2">
                 {groups.map((g, gi) => (
                   <div key={g.id} className="flex items-center gap-2 rounded-lg border border-slate-200 p-3">
@@ -489,38 +678,100 @@ export default function TapasGame({
             </div>
           )}
 
+          {/* ---------- FAVORITAS (Inicial) ---------- */}
+          {phase === "favoritas" && (
+            <div>
+              <h2 className="font-bold text-slate-900 mb-1">¡Tus 3 tarjetas favoritas!</h2>
+              <p className="text-sm text-slate-600 mb-2">{cfg.copy.favoritasHelp}</p>
+              <ReadAloudButton text={cfg.copy.favoritasHelp} className="mb-3" />
+              <div className="grid grid-cols-3 gap-2">
+                {identified.map((k) => {
+                  const pos = favorites.indexOf(k);
+                  return (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() =>
+                        setFavorites((f) => (f.includes(k) ? f.filter((x) => x !== k) : f.length < cfg.maxGroups ? [...f, k] : f))
+                      }
+                      className="relative text-left"
+                    >
+                      <div className={pos >= 0 ? "ring-4 ring-amber-400 rounded-xl" : ""}>{renderCard(k, true, true)}</div>
+                      {pos >= 0 && (
+                        <span className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-amber-400 text-slate-900 text-lg font-bold flex items-center justify-center shadow">
+                          {pos === 0 ? "⭐" : pos + 1}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {error && <p className="mt-3 text-sm text-rose-600">{error}</p>}
+              <div className="flex justify-end mt-5">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (favorites.length === 0) return setError("Toca al menos una tarjeta favorita.");
+                    setError(null);
+                    await persist();
+                    setPhase("cierre");
+                    window.scrollTo({ top: 0 });
+                  }}
+                  className="rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white"
+                >
+                  Continuar
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* ---------- CIERRE ---------- */}
           {phase === "cierre" && (
             <div className="space-y-4">
               <h2 className="font-bold text-slate-900">Para cerrar</h2>
-              <div>
-                <label className="block text-sm font-medium text-slate-800 mb-1">
-                  ¿Qué descubriste sobre ti con este juego? ¿Cómo se conecta con lo que quieres estudiar o hacer?
-                </label>
-                <textarea value={reflection} onChange={(e) => setReflection(e.target.value)} rows={4} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-800 mb-1">Una carta breve a tu yo del futuro (opcional)</label>
-                <textarea value={letter} onChange={(e) => setLetter(e.target.value)} rows={4} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base" placeholder="Querido/a yo del futuro..." />
-              </div>
+              {inicial ? (
+                <div>
+                  <label className="block text-sm font-medium text-slate-800 mb-2">{cfg.copy.cierreReflection}</label>
+                  <ReadAloudButton text={cfg.copy.cierreReflection} className="mb-3" />
+                  <div className="flex justify-center gap-3">
+                    {[
+                      { e: "😊", t: "Me sentí feliz" },
+                      { e: "😐", t: "Me sentí normal" },
+                      { e: "😟", t: "No me gustó" },
+                    ].map((o) => (
+                      <button
+                        key={o.e}
+                        type="button"
+                        onClick={() => setReflection(`${o.e} ${o.t}`)}
+                        aria-label={o.t}
+                        className={`text-5xl rounded-2xl border-2 p-3 ${reflection.startsWith(o.e) ? "border-emerald-500 bg-emerald-50" : "border-slate-200"}`}
+                      >
+                        {o.e}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-800 mb-1">{cfg.copy.cierreReflection}</label>
+                    <textarea value={reflection} onChange={(e) => setReflection(e.target.value)} rows={4} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-800 mb-1">{cfg.copy.cierreLetter}</label>
+                    <textarea value={letter} onChange={(e) => setLetter(e.target.value)} rows={4} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base" placeholder="Querido yo del futuro…" />
+                  </div>
+                </>
+              )}
               <p className="text-xs text-slate-500">Al enviar, tu perfil de talentos queda disponible para el DECE de tu institución.</p>
             </div>
           )}
 
-          {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
+          {error && phase !== "favoritas" && <p className="mt-4 text-sm text-rose-600">{error}</p>}
 
-          {(phase === "ajuste" || phase === "agrupar" || phase === "ordenar" || phase === "cierre") && (
+          {phase !== "clasificar" && phase !== "conocer" && (
             <div className="mt-4 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  setError(null);
-                  setPhase(phase === "cierre" ? "ordenar" : phase === "ordenar" ? "agrupar" : phase === "agrupar" ? (identified.length < MIN_IDENTIFIED ? "ajuste" : "clasificar") : "clasificar");
-                  window.scrollTo({ top: 0 });
-                }}
-                disabled={submitting}
-                className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-600 disabled:opacity-40"
-              >
+              <button type="button" onClick={goBack} disabled={submitting} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-600 disabled:opacity-40">
                 Atrás
               </button>
               {phase === "cierre" && (
@@ -530,6 +781,7 @@ export default function TapasGame({
               )}
             </div>
           )}
+          {phase === "clasificar" && error && <p className="mt-3 text-sm text-rose-600">{error}</p>}
         </div>
 
         <p className="text-center text-[11px] text-slate-400 mt-3">

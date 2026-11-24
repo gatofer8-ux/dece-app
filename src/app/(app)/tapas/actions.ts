@@ -11,6 +11,9 @@ import { getSelectedSchoolYear } from "@/lib/schoolYear";
 import { generateUniqueTapasCode } from "@/lib/tapas/tapasSessions";
 import { suggestTapasGroupName, suggestTapasAreas } from "@/lib/ai";
 import { ARCHETYPE_MAP } from "@/lib/tapas/archetypes";
+import { TAPAS_INSTRUMENTS, TAPAS_NIVELES, isTapasInstrument, resolveInstrumentAndNivel, type TapasInstrument, type TapasNivel } from "@/lib/tapas/niveles";
+import { buildPlan, parsePlan } from "@/lib/tapas/plan";
+import type { TapasSessionRow } from "@/lib/types";
 
 export async function createTapasSession(formData: FormData) {
   const session = await requireRole(["ADMIN", "DECE"]);
@@ -18,7 +21,25 @@ export async function createTapasSession(formData: FormData) {
   const year = await getSelectedSchoolYear(institutionId);
 
   const id = randomUUID();
-  const title = str(formData, "title") || "Juego de arquetipos TaPas";
+  let instrument: TapasInstrument;
+  let nivel: TapasNivel;
+  let planJson: string | null = null;
+  if (str(formData, "tipo") === "PROCESO") {
+    const built = buildPlan(formData.getAll("instruments"), str(formData, "nivel"), str(formData, "modo"), str(formData, "minutos_hora"));
+    if (!built.ok) throw new Error(built.error);
+    nivel = built.nivel;
+    instrument = built.plan.instruments[0];
+    // Con una sola hoja marcada se guarda como aplicación simple.
+    if (built.plan.instruments.length > 1) planJson = JSON.stringify(built.plan);
+  } else {
+    const resolved = resolveInstrumentAndNivel(str(formData, "instrument"), str(formData, "nivel"));
+    if (!resolved.ok) throw new Error(resolved.error);
+    instrument = resolved.instrument;
+    nivel = resolved.nivel;
+  }
+  const title =
+    str(formData, "title") ||
+    (planJson ? `Proceso TaPas — ${TAPAS_NIVELES[nivel].label}` : `${TAPAS_INSTRUMENTS[instrument].label} — ${TAPAS_NIVELES[nivel].label}`);
   const course = str(formData, "course");
   const parallel = str(formData, "parallel");
   const jornada = str(formData, "jornada");
@@ -27,13 +48,31 @@ export async function createTapasSession(formData: FormData) {
   const code = generateUniqueTapasCode();
 
   db.prepare(
-    `INSERT INTO tapas_sessions (id, institution_id, created_by_id, school_year_id, title, course, parallel, jornada, access_code, status, opens_at, closes_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ABIERTA', ?, ?)`
-  ).run(id, institutionId, session.user.id, year?.id ?? null, title, course, parallel, jornada, code, opensAt, closesAt);
+    `INSERT INTO tapas_sessions (id, institution_id, created_by_id, school_year_id, title, course, parallel, jornada, access_code, status, opens_at, closes_at, instrument, nivel, plan_json)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ABIERTA', ?, ?, ?, ?, ?)`
+  ).run(id, institutionId, session.user.id, year?.id ?? null, title, course, parallel, jornada, code, opensAt, closesAt, instrument, nivel, planJson);
 
   logAudit({ userId: session.user.id, action: "CREAR", entityType: "TapasSession", entityId: id, institutionId });
   revalidatePath("/tapas");
   redirect(`/tapas/${id}`);
+}
+
+/** Habilita o cierra una hoja de un proceso de varias hojas (modalidad «en varias horas de clase»). */
+export async function setTapasHojaOpen(sessionId: string, instrument: string, open: boolean) {
+  const session = await requireRole(["ADMIN", "DECE"]);
+  const institutionId = requireInstitutionId(session);
+  const s = db.prepare("SELECT * FROM tapas_sessions WHERE id = ? AND institution_id = ?").get(sessionId, institutionId) as
+    | TapasSessionRow
+    | undefined;
+  if (!s || !s.plan_json || !isTapasInstrument(instrument)) return;
+  const plan = parsePlan(s);
+  if (!plan.instruments.includes(instrument)) return;
+  const nextOpen = open ? Array.from(new Set([...plan.open, instrument])) : plan.open.filter((i) => i !== instrument);
+  // Si se abren todas, sigue siendo «varias sesiones»: el DECE decide cuándo cerrar o abrir.
+  const next = { ...plan, modo: "VARIAS" as const, open: plan.instruments.filter((i) => nextOpen.includes(i)) };
+  db.prepare("UPDATE tapas_sessions SET plan_json = ?, updated_at = datetime('now') WHERE id = ?").run(JSON.stringify(next), sessionId);
+  logAudit({ userId: session.user.id, action: "EDITAR", entityType: "TapasSession", entityId: sessionId, institutionId });
+  revalidatePath(`/tapas/${sessionId}`);
 }
 
 export async function setTapasSessionStatus(id: string, status: "ABIERTA" | "CERRADA") {

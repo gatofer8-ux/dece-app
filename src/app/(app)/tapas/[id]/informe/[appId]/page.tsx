@@ -6,7 +6,9 @@ import PrintButton from "@/components/PrintButton";
 import DocumentHeader from "@/components/DocumentHeader";
 import { ARCHETYPE_MAP, TAPAS_FAMILIES, TAPAS_SOURCE, type TapasFamily } from "@/lib/tapas/archetypes";
 import type { TapasResult } from "@/lib/tapas/tapasScoring";
+import { archetypesForNivel, isTapasNivel } from "@/lib/tapas/niveles";
 import type { TapasSessionRow, TapasApplicationRow, InstitutionRow } from "@/lib/types";
+import InstrumentInforme, { recomendaciones } from "./InstrumentInforme";
 
 export default async function TapasInformePage({ params }: { params: { id: string; appId: string } }) {
   const session = await requireRole(["ADMIN", "DECE", "AUTORIDAD"]);
@@ -18,8 +20,12 @@ export default async function TapasInformePage({ params }: { params: { id: strin
   const app = db
     .prepare("SELECT * FROM tapas_applications WHERE id = ? AND session_id = ? AND institution_id = ?")
     .get(params.appId, params.id, institutionId) as TapasApplicationRow | undefined;
-  if (!s || !app || !app.result_json) notFound();
+  if (!s || !app) notFound();
   const institution = db.prepare("SELECT * FROM institutions WHERE id = ?").get(institutionId) as InstitutionRow;
+  if (app.instrument && app.instrument !== "ARQUETIPOS") return <InstrumentInforme s={s} app={app} institution={institution} />;
+  if (!app.result_json) notFound();
+  const nivel = isTapasNivel(s.nivel) ? s.nivel : "BACHILLERATO";
+  const totalCards = archetypesForNivel(nivel).length;
 
   const r = JSON.parse(app.result_json) as TapasResult;
   const p = "text-[10.5pt] text-justify leading-snug mb-1.5";
@@ -57,6 +63,7 @@ export default async function TapasInformePage({ params }: { params: { id: strin
         <p className={p}>
           <strong>Nombre:</strong> {app.student_name} &nbsp;·&nbsp;
           <strong>Curso:</strong> {[app.course_snapshot, app.parallel_snapshot].filter(Boolean).join(" ") || "—"} &nbsp;·&nbsp;
+          <strong>Nivel:</strong> {nivel === "INICIAL" ? "Inicial" : nivel === "BASICA" ? "Básica" : "Bachillerato"} &nbsp;·&nbsp;
           <strong>Fecha:</strong> {(app.finished_at || "").slice(0, 10)}
         </p>
 
@@ -70,7 +77,7 @@ export default async function TapasInformePage({ params }: { params: { id: strin
 
         <h2 className={h}>3. Familias de talento</h2>
         <p className={p}>
-          Los arquetipos con los que se identifica ({r.identifiedCount} de 74) se concentran en:{" "}
+          Los arquetipos con los que se identifica ({r.identifiedCount} de {totalCards}) se concentran en:{" "}
           <strong>
             {r.dominantFamilias.map((f) => TAPAS_FAMILIES[f as TapasFamily].label).join(", ")}
           </strong>
@@ -96,13 +103,11 @@ export default async function TapasInformePage({ params }: { params: { id: strin
         )}
 
         <h2 className={h}>{app.reflection ? "5." : "4."} Recomendaciones para el acompañamiento</h2>
-        <p className={p}>
-          Se recomienda una entrevista de orientación para contrastar estos grupos de talentos con los intereses
-          declarados por el estudiante, sus asignaturas y sus actividades de tiempo libre, e identificar con él o ella
-          entre 5 y 10 áreas de estudio o campos ocupacionales relacionados, de los cuales elegirá 3 para explorar,
-          considerando la oferta educativa cercana, los costos y las becas disponibles. Este perfil aporta a la
-          dimensión de autoconocimiento del Proyecto de Vida.
-        </p>
+        <ul className="list-disc pl-5 text-[10.5pt] leading-snug space-y-1">
+          {recomendaciones(nivel, "ARQUETIPOS").map((rec) => (
+            <li key={rec}>{rec}</li>
+          ))}
+        </ul>
 
         <p className="text-[8pt] text-slate-400 mt-6">Fuente: {TAPAS_SOURCE}</p>
       </div>

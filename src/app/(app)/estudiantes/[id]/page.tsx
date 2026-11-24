@@ -86,7 +86,7 @@ export default async function EstudianteDetallePage({ params }: { params: { id: 
   // 6. Orientación Vocacional (OVP / TaPas)
   const tapasApp = db
     .prepare(
-      "SELECT * FROM tapas_applications WHERE institution_id = ? AND (student_id = ? OR student_name = ?) AND status = 'FINALIZADA' ORDER BY finished_at DESC LIMIT 1"
+      "SELECT * FROM tapas_applications WHERE institution_id = ? AND (student_id = ? OR student_name = ?) AND status = 'FINALIZADA' AND instrument = 'ARQUETIPOS' ORDER BY finished_at DESC LIMIT 1"
     )
     .get(institutionId, student.id, student.full_name) as TapasApplicationRow | undefined;
 

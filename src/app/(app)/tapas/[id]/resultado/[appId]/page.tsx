@@ -5,9 +5,10 @@ import { db } from "@/lib/db";
 import { PageHeader } from "@/components/ui";
 import { ARCHETYPE_MAP, TAPAS_FAMILIES, type TapasFamily } from "@/lib/tapas/archetypes";
 import { TAPAS_INTERPRETATION, type TapasResult } from "@/lib/tapas/tapasScoring";
-import { getDeckKeySet } from "@/lib/tapas/cardDeck";
+import { resolveDeckUrls } from "@/lib/tapas/cardDeck";
 import type { TapasSessionRow, TapasApplicationRow } from "@/lib/types";
 import TapasAreasHelper from "./TapasAreasHelper";
+import InstrumentResult from "./InstrumentResult";
 
 export default async function TapasResultPage({ params }: { params: { id: string; appId: string } }) {
   const session = await requireRole(["ADMIN", "DECE", "AUTORIDAD"]);
@@ -19,12 +20,14 @@ export default async function TapasResultPage({ params }: { params: { id: string
   const app = db
     .prepare("SELECT * FROM tapas_applications WHERE id = ? AND session_id = ? AND institution_id = ?")
     .get(params.appId, params.id, institutionId) as TapasApplicationRow | undefined;
-  if (!s || !app || !app.result_json) notFound();
+  if (!s || !app) notFound();
+  if (app.instrument && app.instrument !== "ARQUETIPOS") return <InstrumentResult s={s} app={app} />;
+  if (!app.result_json) notFound();
 
   const r = JSON.parse(app.result_json) as TapasResult;
   const maxFam = Math.max(1, ...r.familias.map((f) => f.count));
-  const deckKeys = getDeckKeySet(institutionId);
-  const cardUrl = (k: string) => (deckKeys.has(k) ? `/api/tapas/deck-admin/${k}` : null);
+  const deckUrls = resolveDeckUrls(institutionId, (key) => `/api/tapas/deck-admin/${key}`);
+  const cardUrl = (k: string) => deckUrls[k] || null;
 
   return (
     <div className="space-y-6">

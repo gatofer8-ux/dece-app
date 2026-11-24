@@ -3,6 +3,13 @@ import { requireRole } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import PrintButton from "@/components/PrintButton";
 import {
+  TAPAS_INSTRUMENTS,
+  TAPAS_INSTRUMENT_KEYS,
+  TAPAS_NIVELES,
+  TAPAS_NIVEL_KEYS,
+  archetypesForNivel,
+} from "@/lib/tapas/niveles";
+import {
   ARCHETYPE_COUNT,
   MIN_IDENTIFIED,
   MIN_GROUPS,
@@ -138,11 +145,62 @@ export default async function TapasManualPage() {
         </ul>
 
         {/* ---------------------------------------------------------------- */}
-        <h2 className={h2}>3. A quién y cuándo aplicarlo</h2>
+        <h2 className={h2}>3. Las herramientas TaPas y los niveles (Inicial, Básica y Bachillerato)</h2>
+        <p className={p}>
+          El Manual de uso de las herramientas TaPas (VVOB, 2021) trae tres herramientas básicas. La plataforma las
+          incluye todas, cada una con su informe individual y un informe colectivo del proceso.
+        </p>
+        <ul className="list-disc pl-5 space-y-1.5 mb-2">
+          {TAPAS_INSTRUMENT_KEYS.map((k) => (
+            <li key={k} className={li}>
+              {TAPAS_INSTRUMENTS[k].emoji} <strong>{TAPAS_INSTRUMENTS[k].label}</strong> (manual {TAPAS_INSTRUMENTS[k].manualPages}).{" "}
+              {TAPAS_INSTRUMENTS[k].description}
+            </li>
+          ))}
+        </ul>
+        <p className={p}>
+          Los dos perfiles de talentos y el experimento se pueden usar solos o combinados: el perfil de talentos y las
+          tarjetas alimentan la elección del talento del <em>Experimento de talento</em>, que a su vez deja un nuevo
+          perfil.
+        </p>
+        <h3 className={h3}>Qué cambia según el nivel</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-xs my-2">
+            <thead>
+              <tr className="bg-slate-100 text-slate-700">
+                <th className="border border-slate-300 p-2 text-left">Nivel</th>
+                <th className="border border-slate-300 p-2 text-left">Tarjetas</th>
+                <th className="border border-slate-300 p-2 text-left">Herramientas</th>
+                <th className="border border-slate-300 p-2 text-left">Cómo se juega</th>
+              </tr>
+            </thead>
+            <tbody className="text-slate-700">
+              {TAPAS_NIVEL_KEYS.map((n) => (
+                <tr key={n}>
+                  <td className="border border-slate-300 p-2 font-semibold">
+                    {TAPAS_NIVELES[n].label}
+                    <span className="block font-normal text-slate-500">{TAPAS_NIVELES[n].cursos} · {TAPAS_NIVELES[n].edades}</span>
+                  </td>
+                  <td className="border border-slate-300 p-2">{archetypesForNivel(n).length}</td>
+                  <td className="border border-slate-300 p-2">{TAPAS_NIVELES[n].instruments.map((i) => TAPAS_INSTRUMENTS[i].label.split(":")[0]).join(", ")}</td>
+                  <td className="border border-slate-300 p-2">{TAPAS_NIVELES[n].description}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className={p}>
+          En <strong>Inicial</strong> conviene que la docente o el docente acompañe cada paso: la plataforma lee en voz
+          alta las tarjetas y las instrucciones, y las respuestas son caritas y dibujos. El experimento de talento no se
+          ofrece en Inicial porque requiere escribir y reflexionar.
+        </p>
+
+        {/* ---------------------------------------------------------------- */}
+        <h2 className={h2}>4. A quién y cuándo aplicarlo</h2>
         <ul className="list-disc pl-5 space-y-1 mb-2">
           <li className={li}>
-            Recomendado desde <strong>2.º de Bachillerato</strong> en adelante, cuando la decisión de estudios o trabajo
-            está cerca. También es útil en 10.º EGB como exploración temprana.
+            Para la <strong>elección de estudios o trabajo</strong>, desde 10.º EGB y sobre todo en Bachillerato (donde se
+            conecta con áreas de estudio y profesiones). En Inicial y Básica el foco es descubrir y desarrollar talentos.
           </li>
           <li className={li}>
             Momentos ideales: inicio del año lectivo (para orientar), o antes de la elección de figura profesional /
@@ -155,15 +213,15 @@ export default async function TapasManualPage() {
         </ul>
 
         {/* ---------------------------------------------------------------- */}
-        <h2 className={h2}>4. Cómo aplicarlo con la plataforma, en masa</h2>
+        <h2 className={h2}>5. Cómo aplicarlo con la plataforma, en masa</h2>
 
         <h3 className={h3}>Paso 1 — Preparación (una sola vez)</h3>
         <ul className="list-disc pl-5 space-y-1 mb-2">
           <li className={li}>
-            <strong>Cargar las cartillas.</strong> En <em>Juego de arquetipos → Cartillas</em>, sube el PDF oficial de
-            «Tarjetas de arquetipos» del Proyecto TaPas (descarga gratuita en{" "}
-            <span className="font-mono text-xs">ecuador.vvob.org/herramientas-TAPAS</span>). El sistema lo procesa en una
-            imagen por arquetipo. Si no lo cargas, el juego usa íconos genéricos.
+            <strong>Las cartillas ya están incluidas.</strong> La plataforma trae las 74 cartillas ilustradas oficiales
+            y las 3 tarjetas de categoría; no tienes que cargar nada. Si tu institución prefiere su propia copia, en{" "}
+            <em>TaPas → Cartillas</em> puedes subir el PDF oficial (descarga gratuita en{" "}
+            <span className="font-mono text-xs">ecuador.vvob.org/herramientas-TAPAS</span>) y reemplazará a las incluidas.
           </li>
           <li className={li}>
             <strong>Sesión previa de familiarización.</strong> Antes de jugar, revisa con el curso el significado de
@@ -175,8 +233,8 @@ export default async function TapasManualPage() {
         <h3 className={h3}>Paso 2 — Crear la aplicación para el curso</h3>
         <ul className="list-disc pl-5 space-y-1 mb-2">
           <li className={li}>
-            En <em>Juego de arquetipos → Nueva aplicación</em>, define título, curso, paralelo y jornada, y (opcional)
-            fechas de apertura y cierre.
+            En <em>TaPas → Nueva aplicación</em>, elige el <strong>nivel</strong> y la <strong>herramienta</strong>, define título,
+            curso, paralelo y jornada, y (opcional) fechas de apertura y cierre. Una aplicación = una herramienta para un grupo.
           </li>
           <li className={li}>
             Se genera un <strong>código de 6 letras</strong>, un <strong>enlace</strong> y un <strong>QR</strong>. Si
@@ -234,7 +292,7 @@ export default async function TapasManualPage() {
         </ul>
 
         {/* ---------------------------------------------------------------- */}
-        <h2 className={h2}>5. Después del juego: leer y acompañar</h2>
+        <h2 className={h2}>6. Después del juego: leer y acompañar</h2>
         <ul className="list-disc pl-5 space-y-1.5 mb-2">
           <li className={li}>
             <strong>Revisar el perfil de cada estudiante</strong> (grupos rankeados, arquetipos, familias, reflexión).
@@ -278,7 +336,7 @@ export default async function TapasManualPage() {
         </ul>
 
         {/* ---------------------------------------------------------------- */}
-        <h2 className={h2}>6. Buenas prácticas</h2>
+        <h2 className={h2}>7. Buenas prácticas</h2>
         <ul className="list-disc pl-5 space-y-1 mb-2">
           <li className={li}>Insiste en que <strong>no hay respuestas correctas</strong>; lo que vale es la honestidad.</li>
           <li className={li}>No interpretes el perfil «por» el estudiante: acompáñalo a que lo lea él o ella.</li>
