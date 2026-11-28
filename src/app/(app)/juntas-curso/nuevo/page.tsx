@@ -3,8 +3,13 @@ import { getUserCoverage, getInstitutionCoursesWithCounts } from "@/lib/distribu
 import { listSchoolYears, getSelectedSchoolYear } from "@/lib/schoolYear";
 import { getSignatureDefaults } from "@/lib/caseDocumentDefaults";
 import CourseBoardReportForm from "../CourseBoardReportForm";
+import ReporteJuntaDE3Form from "../ReporteJuntaDE3Form";
 
-export default async function NuevoInformeJuntaPage() {
+export default async function NuevoInformeJuntaPage({
+  searchParams,
+}: {
+  searchParams?: { formato?: string };
+}) {
   const session = await requireRole(["ADMIN", "DECE"]);
   const institutionId = requireInstitutionId(session);
 
@@ -49,6 +54,20 @@ export default async function NuevoInformeJuntaPage() {
   ];
 
   const coursesToUse = availableCourses.length > 0 ? availableCourses : fallbackCourses;
+
+  if (searchParams?.formato !== "anterior") {
+    return (
+      <div className="py-2">
+        <ReporteJuntaDE3Form
+          availableCourses={coursesToUse}
+          schoolYears={schoolYears}
+          selectedYearId={selectedYear?.id}
+          currentUserName={sig.deceProfessional.fullName || session.user.name || "Profesional DECE"}
+          currentRoleLabel={isCoordinatorOrAdmin ? "COORDINADOR/A DECE" : "ANALISTA DECE"}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="py-2">

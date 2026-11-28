@@ -12,3 +12,35 @@ export const DEFAULT_CONCLUSIONES = (trimesterLabel: string) =>
 
 export const DEFAULT_RECOMENDACIONES =
   `- Se recomienda a los docentes remitir al DECE los casos mediante fichas de notificación con la finalidad de evidenciar los procesos.\n- Se recomienda que los docentes tutores mantengan comunicación constante, pertinente y eficiente con los representantes legales según lo determina el Reglamento LOEI.\n- Comunicar al Profesional DECE los casos de posible vulneración de derechos para activar las rutas y protocolos adecuados para precautelar el interés superior del niño.\n- Agendar las citas con padres de familia con previa anticipación a la Profesional DECE para mantener una buena planificación de atención.`;
+
+/** Texto sugerido para "3.- Observaciones" del formato E.D1.C2.DE3 según las fichas de alerta registradas. */
+export function alertsObservation(count: number, schoolYear: string): string {
+  if (count <= 0) {
+    return `En el año lectivo ${schoolYear}, a la fecha, no existieron casos reportados por los docentes a través de la ficha de notificación de alerta.`;
+  }
+  return `En el año lectivo ${schoolYear}, a la fecha, existieron ${count} caso${count === 1 ? "" : "s"} reportado${count === 1 ? "" : "s"} por los docentes a través de la ficha de notificación de alerta.`;
+}
+
+/** Fecha local YYYY-MM-DD (toISOString usa UTC y en la noche de Ecuador ya da el día siguiente). */
+export function localIsoDate(d: Date = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Resumen de acciones del caso ("• Tipo: descripción" por línea) a viñetas cortas "-Tipo", como en el
+ * formato E.D1.C2.DE3. Se omiten las descripciones, que pueden traer nombres de familiares.
+ */
+export function actionTypesSummary(actions: string): string {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of (actions || "").split("\n")) {
+    const line = raw.replace(/^\s*[•\-*]\s*/, "").trim();
+    if (!line) continue;
+    const type = (line.includes(":") ? line.slice(0, line.indexOf(":")) : line).trim();
+    const key = type.toLowerCase();
+    if (!type || seen.has(key)) continue;
+    seen.add(key);
+    out.push(`-${type}`);
+  }
+  return out.join("\n");
+}

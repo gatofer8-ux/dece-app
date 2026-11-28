@@ -15,6 +15,7 @@ import {
   DEFAULT_RECOMENDACIONES,
 } from "./juntasCursoConstants";
 import { currentSchoolYearText } from "./schoolYearText";
+import { DE3_FORMAT, generateReporteJuntaDE3Docx } from "./docxJuntasDE3";
 
 export interface JuntasCursoDocxData {
   nombre_institucion: string;
@@ -252,6 +253,10 @@ export async function generateCourseBoardReportDocx(opts: {
   report: CourseBoardReportRow;
   institution?: InstitutionRow | null;
 }): Promise<Buffer> {
+  if (opts.report.report_format === DE3_FORMAT) {
+    return generateReporteJuntaDE3Docx(opts.report, opts.institution);
+  }
+
   const templatePath = path.join(
     process.cwd(),
     "templates",
