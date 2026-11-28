@@ -1692,6 +1692,10 @@ export interface CourseBoardReportCaseItem {
   case_code?: string;
   problematic: string;
   actions_taken: string;
+  /** Formato E.D1.C2.DE3: asesoramiento individual a profesionales de educación. */
+  teacher_advice?: string;
+  /** Formato E.D1.C2.DE3: observaciones del caso. */
+  observations?: string;
   recommendations: {
     coordination?: string; // Comunicación y Coordinación
     academic?: string; // Académico / Ajustes Razonables (DUA)
@@ -1734,6 +1738,10 @@ export interface CourseBoardReportRow {
   signature_type?: "DIGITAL" | "MANUSCRITA" | null;
   physical_file_ref?: string | null;
   physical_evidence_url?: string | null;
+  /** "INFORME_TECNICO" (formato anterior) o "REPORTE_DE3" (formato E.D1.C2.DE3). */
+  report_format?: string | null;
+  observaciones_generales?: string | null;
+  vicerrector_name?: string | null;
   created_at: string;
   updated_at: string;
 }

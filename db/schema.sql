@@ -1154,6 +1154,9 @@ CREATE TABLE IF NOT EXISTS course_board_reports (
   signature_type       TEXT DEFAULT 'MANUSCRITA',
   physical_file_ref    TEXT,
   physical_evidence_url TEXT,
+  report_format        TEXT NOT NULL DEFAULT 'INFORME_TECNICO',
+  observaciones_generales TEXT,
+  vicerrector_name     TEXT,
   created_at           TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at           TEXT NOT NULL DEFAULT (datetime('now'))
 );

@@ -5,6 +5,8 @@ import { getUserCoverage, getInstitutionCoursesWithCounts } from "@/lib/distribu
 import { listSchoolYears, getSelectedSchoolYear } from "@/lib/schoolYear";
 import { getSignatureDefaults } from "@/lib/caseDocumentDefaults";
 import CourseBoardReportForm from "../../CourseBoardReportForm";
+import ReporteJuntaDE3Form from "../../ReporteJuntaDE3Form";
+import { DE3_FORMAT } from "@/lib/docxJuntasDE3";
 
 export default async function EditarInformeJuntaPage({
   params,
@@ -54,6 +56,21 @@ export default async function EditarInformeJuntaPage({
       jornada: report.jornada,
       tutor_name: report.tutor_name || null,
     });
+  }
+
+  if (report.report_format === DE3_FORMAT) {
+    return (
+      <div className="py-2">
+        <ReporteJuntaDE3Form
+          report={report}
+          availableCourses={availableCourses}
+          schoolYears={schoolYears}
+          selectedYearId={report.school_year_id}
+          currentUserName={report.user_name || sig.deceProfessional.fullName || session.user.name || "Profesional DECE"}
+          currentRoleLabel={report.user_role_label || "ANALISTA DECE"}
+        />
+      </div>
+    );
   }
 
   return (
